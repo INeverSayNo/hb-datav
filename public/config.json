@@ -1,0 +1,28 @@
+{
+  "env": "development",
+  "successCodes": [0, "0", 200, "200"],
+  "gateway_url": {
+    "development": "/api"
+  },
+  "login_url": {
+    "development": "/login"
+  },
+  "file_url": {
+    "development": ""
+  },
+  "getfile_url": {
+    "development": ""
+  },
+  "jssdk_url": {
+    "development": ""
+  },
+  "request": {
+    "timeout": 90000,
+    "isJwt": true,
+    "tokenStorage": "localStorage",
+    "tokenKey": "JsToken",
+    "tokenPrefix": "bearer ",
+    "crypto": false,
+    "cryptoType": "Ecdh"
+  }
+}
