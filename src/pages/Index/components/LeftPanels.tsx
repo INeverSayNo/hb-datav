@@ -1,0 +1,513 @@
+import styled from "styled-components";
+import { BarChart, type BarSeriesOption } from "echarts/charts";
+import {
+  GridComponent,
+  TooltipComponent,
+  type GridComponentOption,
+  type TooltipComponentOption,
+} from "echarts/components";
+import type { ComposeOption } from "echarts/core";
+
+import Chart from "@/components/chart";
+import cyanRing from "@/assets/born-cyan-blue.png";
+import blueRing from "@/assets/horn-blue.png";
+import goldRing from "@/assets/horn-orage.png";
+import freightIcon from "@/assets/intermodal-statistics-volume.png";
+import tooltipBg from "@/assets/intermodal-statistics-echart-num-bg.png";
+import riseArrow from "@/assets/intermodal-statistics-rise-arrow.png"
+import chartHeaderTitleIcon from "@/assets/intermodal-statistics-title-arrow.png"
+import watewayIntermodalTransportChecked from "@/assets/wateway-intermodal-transport-checked.png"
+import watewayIntermodalTransportUnCheck from "@/assets/wateway-intermodal-transport-uncheck.png"
+
+
+import {
+  monthlyFreight,
+  overviewMetrics,
+  yearSummaries,
+  type OverviewMetric,
+} from "../data";
+import SectionTitle from "./SectionTitle";
+import { useState } from "react";
+
+const LeftRail = styled.aside`
+  position: absolute;
+  left: 70px;
+  top: 284px;
+  width: 1460px;
+  height: 1880px;
+  z-index: 2;
+`;
+
+const Panel = styled.section`
+  position: absolute;
+  left: 0;
+  width: 100%;
+`;
+
+const OverviewPanel = styled(Panel)`
+  top: 0;
+  height: 410px;
+`;
+
+const FreightPanel = styled(Panel)`
+  top: 448px;
+  height: 820px;
+`;
+
+const SummaryPanel = styled(Panel)`
+  top: 1300px;
+  height: 540px;
+`;
+
+const OverviewList = styled.div`
+  position: absolute;
+  left: 80px;
+  right: 35px;
+  top: 112px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+`;
+
+const OverviewItem = styled.div`
+  position: relative;
+  height: 260px;
+`;
+
+const Ring = styled.img`
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 262px;
+  height: 239px;
+  object-fit: contain;
+`;
+
+const OverviewText = styled.div`
+  position: absolute;
+  left: 146px;
+  top: 10px;
+  min-width: 260px;
+  color: #fff;
+  text-shadow: 0 0 14px rgba(101, 222, 255, 0.35);
+`;
+
+const MetricValue = styled.div`
+  font-size: 54px;
+  line-height: 62px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  white-space: nowrap;
+`;
+
+const MetricLabel = styled.div`
+  margin-top: 20px;
+  color: #c4d5df;
+  font-size: 30px;
+  line-height: 40px;
+  white-space: nowrap;
+`;
+
+const SummaryStats = styled.div`
+  position: absolute;
+  top: 116px;
+  left: 76px;
+  display: grid;
+  grid-template-columns: 570px 570px;
+  gap: 88px;
+`;
+
+const StatCard = styled.div`
+  display: flex;
+  align-items: center;
+  height: 180px;
+`;
+
+const FreightBadge = styled.img`
+  width: 169px;
+  height: 195px;
+  object-fit: contain;
+  margin-right: 38px;
+`;
+
+const TrendBadge = styled.div`
+  position: relative;
+  width: 146px;
+  height: 154px;
+  margin-right: 42px;
+  border: 5px solid rgba(39, 247, 237, 0.5);
+  clip-path: polygon(50% 0, 93% 24%, 93% 76%, 50% 100%, 7% 76%, 7% 24%);
+  background: radial-gradient(circle, rgba(0, 244, 226, 0.35), rgba(4, 55, 62, 0.08));
+  box-shadow: inset 0 0 25px rgba(0, 255, 240, 0.3);
+
+  &::after {
+    content: "▥";
+    position: absolute;
+    inset: 26px 18px;
+    display: grid;
+    place-items: center;
+    color: #25fff1;
+    font-size: 78px;
+    line-height: 1;
+    text-shadow: 0 0 18px currentColor;
+  }
+`;
+
+const StatContent = styled.div`
+  color: #d8e5ec;
+`;
+
+const StatLabel = styled.div`
+  margin-bottom: 8px;
+  font-size: 31px;
+  letter-spacing: 2px;
+`;
+
+const StatValue = styled.strong`
+  color: #fff;
+  font-size: 53px;
+  line-height: 64px;
+  letter-spacing: 3px;
+  text-shadow: 0 0 15px rgba(113, 218, 255, 0.38);
+`;
+
+const Unit = styled.span`
+  margin-left: 10px;
+  color: #c5d7df;
+  font-size: 30px;
+`;
+
+
+const RisingWrap = styled.div`
+  display: flex;
+  align-items: center;
+
+`
+
+const Rising = styled.img`
+  // display: inline-block;
+  width: 33px;
+  height: 46px;
+  margin-right: 14px;
+  // margin: 0 14px 5px 0;
+  // border-left: 13px solid transparent;
+  // border-right: 13px solid transparent;
+  // border-bottom: 24px solid #29fff3;
+  // filter: drop-shadow(0 0 8px #29fff3);
+`;
+
+const ChartHeader = styled.div`
+  position: absolute;
+  left: 72px;
+  right: 90px;
+  top: 310px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #a9c0cb;
+  font-size: 30px;
+  letter-spacing: 2px;
+`;
+
+
+const ChartHeaderTitleWrap = styled.div`
+  display: flex;
+  align-items: center;
+`
+const ChartHeaderTitleIcon = styled.img`
+  width: 22px;
+  height: 22px;
+`
+const ChartHeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 36px;
+  margin-left: 20px;
+`;
+
+const Legend = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: #c7dce5;
+
+  &::before {
+    content: "";
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: #16e8ed;
+    box-shadow: 0 0 12px #16e8ed;
+  }
+`;
+
+const ChartBox = styled.div`
+  position: absolute;
+  left: 66px;
+  right: 56px;
+  top: 370px;
+  height: 386px;
+`;
+
+const Tabs = styled.div`
+  position: absolute;
+  left: 88px;
+  top: 112px;
+  display: flex;
+  gap: 84px;
+`;
+
+const Tab = styled.button<{ $active?: boolean }>`
+  position:relative;
+  width: 232px;
+  height: 60px;
+  border: none;
+  background: transparent;
+  color: ${({ $active }) => ($active ? "#d8fff2" : "#90aeb4")};
+  font-size: 36px;
+  letter-spacing: 3px;
+  box-shadow: ${({ $active }) =>
+    $active ? "inset 0 0 18px rgba(0,255,157,.24), 0 0 10px rgba(0,255,157,.18)" : "none"};
+  cursor: pointer;
+  font-size: 36px;
+`;
+
+const TabItemText = styled.span`
+color: #FCFDFF;
+text-shadow: 0 0 30px #ffffff, 0 0 40px #ffffff;
+`
+
+const OverviewTabImg = styled.img`
+      position: absolute;
+    left: 0;
+    right: 0;
+    top:0;
+    height: 100%;
+    width: 100%;
+`
+
+
+const YearGrid = styled.div`
+  position: absolute;
+  left: 86px;
+  right: 78px;
+  top: 230px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 98px;
+`;
+
+const YearCard = styled.div`
+  text-align: center;
+  color: #e5f0f4;
+`;
+
+const Year = styled.div`
+  margin-bottom: 18px;
+  font-size: 42px;
+  font-weight: 700;
+`;
+
+const YearValue = styled.div`
+  height: 74px;
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(53, 151, 190, 0.75);
+  background: rgba(4, 28, 39, 0.45);
+  color: #fff;
+  font-size: 40px;
+  font-weight: 700;
+  box-shadow: inset 0 0 12px rgba(47, 181, 233, 0.07);
+
+  small {
+    margin-left: 5px;
+    font-size: 30px;
+    font-weight: 400;
+  }
+`;
+
+type FreightChartOption = ComposeOption<
+  BarSeriesOption | GridComponentOption | TooltipComponentOption
+>;
+
+const ringByTone: Record<OverviewMetric["tone"], string> = {
+  cyan: cyanRing,
+  blue: blueRing,
+  gold: goldRing,
+};
+
+function FreightChart() {
+  return (
+    <Chart<FreightChartOption>
+      use={[BarChart, GridComponent, TooltipComponent]}
+      option={{
+        animationDuration: 900,
+        grid: { left: 68, right: 20, top: 20, bottom: 46 },
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "line", lineStyle: { color: "#21e7eb" } },
+          backgroundColor: "rgba(3, 31, 42, .94)",
+          borderColor: "#21e7eb",
+          textStyle: { color: "#fff", fontSize: 28 },
+        },
+        xAxis: {
+          type: "category",
+          data: Array.from({ length: 12 }, (_, index) => `${index + 1}月`),
+          axisTick: { show: false },
+          axisLine: { lineStyle: { color: "rgba(82, 146, 164, .28)", width: 2 } },
+          axisLabel: { color: "#5e7c86", fontSize: 25, margin: 22 },
+        },
+        yAxis: {
+          type: "value",
+          min: 0,
+          max: 200,
+          interval: 50,
+          axisTick: { show: false },
+          axisLine: { show: false },
+          axisLabel: { color: "#5e7c86", fontSize: 25, margin: 20 },
+          splitLine: { lineStyle: { color: "rgba(42, 111, 125, .18)", width: 2 } },
+        },
+        series: [
+          {
+            type: "bar",
+            barWidth: 18,
+            data: monthlyFreight.map((value, index) =>
+              index === 6
+                ? {
+                    value,
+                    label: {
+                      show: true,
+                      position: "top",
+                      distance: 22,
+                      formatter: "138",
+                      color: "#eaffff",
+                      fontSize: 31,
+                      fontWeight: 700,
+                      backgroundColor: { image: tooltipBg },
+                      padding: [18, 30, 24, 30],
+                    },
+                  }
+                : value
+            ),
+            itemStyle: {
+              borderRadius: [10, 10, 0, 0],
+              color: {
+                type: "linear",
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: "#2cffff" },
+                  { offset: 0.35, color: "#08cfd6" },
+                  { offset: 1, color: "rgba(0, 96, 113, 0)" },
+                ],
+              },
+              shadowBlur: 18,
+              shadowColor: "rgba(20, 255, 245, .7)",
+            },
+          },
+        ],
+      }}
+    />
+  );
+}
+
+export default function LeftPanels() {
+
+  const [activeTab, setActiveTab] = useState(0);
+
+  const tabs = [
+    { label: "水铁联运" },
+    { label: "水水中转" },
+  ];
+
+
+  return (
+    <LeftRail aria-label="左侧数据面板">
+      <OverviewPanel>
+        <SectionTitle>全省多式联运整体数据概览</SectionTitle>
+        <OverviewList>
+          {overviewMetrics.map((metric) => (
+            <OverviewItem key={metric.label}>
+              <Ring src={ringByTone[metric.tone]} alt="" />
+              <OverviewText>
+                <MetricValue>{metric.value}</MetricValue>
+                <MetricLabel>{metric.label}</MetricLabel>
+              </OverviewText>
+            </OverviewItem>
+          ))}
+        </OverviewList>
+      </OverviewPanel>
+
+      <FreightPanel>
+        <SectionTitle>全省水铁联运货运量</SectionTitle>
+        <SummaryStats>
+          <StatCard>
+            <FreightBadge src={freightIcon} alt="" />
+            <StatContent>
+              <StatLabel>当期水铁货运量</StatLabel>
+              <StatValue>2546</StatValue>
+              <Unit>万TEU</Unit>
+            </StatContent>
+          </StatCard>
+          <StatCard>
+            <TrendBadge aria-hidden="true" />
+            <StatContent>
+              <StatLabel>当期同比</StatLabel>
+              <RisingWrap>
+                <Rising src={riseArrow}/>
+              <StatValue>23.8%</StatValue>
+              </RisingWrap>
+            </StatContent>
+          </StatCard>
+        </SummaryStats>
+        <ChartHeader>
+          <ChartHeaderTitleWrap>
+            <ChartHeaderTitleIcon src={chartHeaderTitleIcon}/>
+            <ChartHeaderTitle>数据统计（单位：万TEU）</ChartHeaderTitle>
+          </ChartHeaderTitleWrap>
+          <Legend>货运量</Legend>
+        </ChartHeader>
+        <ChartBox>
+          <FreightChart />
+        </ChartBox>
+      </FreightPanel>
+
+      <SummaryPanel>
+        <SectionTitle>武汉多式联运数据整体概况</SectionTitle>
+        <Tabs>
+  {tabs.map((tab, index) => (
+    <Tab
+      key={tab.label}
+      type="button"
+      $active={activeTab === index}
+      onClick={() => setActiveTab(index)}
+    >
+      <OverviewTabImg
+        src={activeTab === index ? watewayIntermodalTransportChecked : watewayIntermodalTransportUnCheck}
+      />
+      <TabItemText>{tab.label}</TabItemText>
+    </Tab>
+  ))}
+</Tabs>
+        <YearGrid>
+          {yearSummaries.map((summary) => (
+            <YearCard key={summary.year}>
+              <Year>{summary.year}</Year>
+              <YearValue>
+                {summary.volume}<small>万TEU</small>
+              </YearValue>
+              <YearValue>
+                {summary.amount}<small>万元</small>
+              </YearValue>
+            </YearCard>
+          ))}
+        </YearGrid>
+      </SummaryPanel>
+    </LeftRail>
+  );
+}
