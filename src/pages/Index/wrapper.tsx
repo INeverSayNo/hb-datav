@@ -7,7 +7,13 @@ import CenterControls from "./components/CenterControls";
 import DashboardHeader from "./components/DashboardHeader";
 import LeftPanels from "./components/LeftPanels";
 import RightPanels from "./components/RightPanels";
-import HubeiMap from "./map";
+import EChartsHubeiMap from "./map";
+import ThreeHubeiMap from "./map/three";
+
+const HubeiMap =
+  new URLSearchParams(window.location.search).get("map") === "echarts"
+    ? EChartsHubeiMap
+    : ThreeHubeiMap;
 
 const Dashboard = styled.div`
   position: relative;
