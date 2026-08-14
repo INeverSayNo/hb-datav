@@ -1,0 +1,103 @@
+import styled from "styled-components";
+
+import airwayIcon from "@/assets/map-airway.png";
+import railwayStationIcon from "@/assets/map-railway-station.png";
+import warehouseIcon from "@/assets/map-warehouse.png";
+import waterwayPortIcon from "@/assets/map-waterway-port.png";
+
+// 位置与尺寸按 demo.png 图例面板换算到 5600x2320 设计稿坐标
+const Panel = styled.section`
+  position: absolute;
+  left: 1780px;
+  top: 1875px;
+  width: 668px;
+  z-index: 3;
+  padding: 22px 30px 28px;
+  box-sizing: border-box;
+  border: 2px solid rgba(126, 165, 180, 0.45);
+  border-radius: 12px;
+  background: rgba(8, 28, 40, 0.78);
+  pointer-events: none;
+`;
+
+const Title = styled.h3`
+  margin: 0;
+  color: #f2f9fc;
+  font-size: 34px;
+  line-height: 44px;
+  font-weight: 700;
+  letter-spacing: 2px;
+`;
+
+const Grid = styled.div`
+  margin-top: 24px;
+  display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    column-gap: 30px;
+  row-gap: 24px;
+  align-items: center;
+`;
+
+const Item = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+`;
+
+const ColorSwatch = styled.i<{ $color: string }>`
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 3px;
+  background: ${({ $color }) => $color};
+`;
+
+const PinIcon = styled.img`
+  flex: none;
+  height: 46px;
+  width: auto;
+`;
+
+const Label = styled.span`
+  color: #e6f2f7;
+  font-size: 28px;
+  line-height: 36px;
+  white-space: nowrap;
+`;
+
+const NETWORK_ITEMS = [
+  { label: "公路网", color: "#5ad46c" },
+  { label: "铁路网", color: "#fafcfd" },
+  { label: "水运网", color: "#5ee7fb" },
+  { label: "航空", color: "#e11ef2" },
+];
+
+const NODE_ITEMS = [
+  { label: "核心港口", icon: waterwayPortIcon },
+  { label: "站点", icon: railwayStationIcon },
+  { label: "仓库", icon: warehouseIcon },
+  { label: "机场", icon: airwayIcon },
+];
+
+export default function MapLegend() {
+  return (
+    <Panel aria-label="地图图例">
+      <Title>图例</Title>
+      <Grid>
+        {NETWORK_ITEMS.map(({ label, color }) => (
+          <Item key={label}>
+            <ColorSwatch $color={color} />
+            <Label>{label}</Label>
+          </Item>
+        ))}
+        {NODE_ITEMS.map(({ label, icon }) => (
+          <Item key={label}>
+            <PinIcon src={icon} alt="" />
+            <Label>{label}</Label>
+          </Item>
+        ))}
+      </Grid>
+    </Panel>
+  );
+}

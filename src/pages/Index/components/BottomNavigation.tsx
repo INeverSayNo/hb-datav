@@ -21,7 +21,7 @@ const NavButton = styled.button<{ $active?: boolean; $side?: "left" | "right" }>
   position: relative;
   width: ${({ $active }) => ($active ? 515 : 354)}px;
   height: ${({ $active }) => ($active ? 184 : 166)}px;
-  margin: 0 ${({ $active }) => ($active ? -38 : -25)}px;
+  margin: 0 ${({ $active }) => ($active ? -38 : 12)}px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -58,7 +58,9 @@ const Label = styled.span<{ $active?: boolean }>`
   justify-content: center;
   padding-top: ${({ $active }) => ($active ? 4 : 16)}px;
   font-family: 'YouSheBiaoTiHei', "Microsoft YaHei", sans-serif;
-  font-size: ${({ $active }) => ($active ? 58 : 42)}px;
+  font-size: ${({ $active }) => ($active ? 58 : 46)}px;
+      top: 50%;
+    transform: translateY(-75%);
   letter-spacing: 4px;
   text-shadow: 0 4px 4px rgba(0, 0, 0, 0.55), 0 0 15px rgba(89, 255, 226, 0.7);
 `;

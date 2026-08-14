@@ -18,10 +18,13 @@ import routeBlue from "@/assets/line-service-blue-bg.png";
 import routeGreen from "@/assets/line-service-cyan-blue-bg.png";
 import routeGold from "@/assets/line-service-orange-bg.png";
 import routeArrow from "@/assets/translate.png";
-import nodeServiceCardBg from "@/assets/platform-node-service-card-bg.png"
+import nodeServiceCardBg from "@/assets/platform-node-service-card-bg.png";
 
 import { nodeMetrics, routes, serviceMetrics, type RouteItem } from "../data";
 import SectionTitle from "./SectionTitle";
+import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
+import { useMemo } from "react";
+import { formatNumber } from "@/utils/num";
 
 const RightRail = styled.aside`
   position: absolute;
@@ -81,7 +84,7 @@ const ServiceIcon = styled.img`
 const MetricContent = styled.div`
   min-width: 0;
   color: #fff;
-  position: relative
+  position: relative;
 `;
 
 const ServiceValue = styled.div`
@@ -122,12 +125,12 @@ const NodeGrid = styled.div`
 
 const NodeItemBackground = styled.img`
   position: absolute;
-      position: absolute;
-    left: -46px;
-    width: 266px;
-    height: 146px;
-    top: -14px;
-`
+  position: absolute;
+  left: -46px;
+  width: 266px;
+  height: 146px;
+  top: -14px;
+`;
 
 const NodeItem = styled.div`
   display: flex;
@@ -182,12 +185,14 @@ const RouteRow = styled.button<{
   background: transparent;
   color: #f4faff;
   cursor: pointer;
-  transition: filter 160ms ease, transform 160ms ease;
+  transition:
+    filter 160ms ease,
+    transform 160ms ease;
   ${(props) => ({
-    left: props.$idx === 1 ? '250px' : '0px',
-    margin: props.$idx === 1 ?'22px 0' :'auto'
+    left: props.$idx === 1 ? "250px" : "0px",
+    margin: props.$idx === 1 ? "22px 0" : "auto",
   })}
-  
+
   &:hover,
   &:focus-visible {
     filter: brightness(1.25);
@@ -257,17 +262,38 @@ const routeBackgrounds: Record<RouteItem["tone"], string> = {
 };
 
 export default function RightPanels() {
+  const rightTopPanel = useScreenBaseDataStore((s) => s.rightTopPanel);
+  const rightMiddlePanel = useScreenBaseDataStore((s) => s.rightMiddlePanel);
+  const rightBottomPanel = useScreenBaseDataStore((s) => s.rightBottomPanel);
+
+  const topServiceMetrics = useMemo(
+      () =>
+        serviceMetrics.map((metric) => ({
+          ...metric,
+          value: formatNumber(rightTopPanel[metric.key]),
+        })),
+      [rightTopPanel],
+    );
+  const middleNodeMetrics = useMemo(
+      () =>
+        nodeMetrics.map((metric) => ({
+          ...metric,
+          value: formatNumber(rightMiddlePanel[metric.key]),
+        })),
+      [rightMiddlePanel],
+    );
   return (
     <RightRail aria-label="右侧数据面板">
       <ServicePanel>
         <SectionTitle align="right">多式联运服务</SectionTitle>
         <ServiceGrid>
-          {serviceMetrics.map((metric, index) => (
+          {topServiceMetrics.map((metric, index) => (
             <ServiceItem key={metric.label}>
               <ServiceIcon src={serviceIcons[index]} alt="" />
               <MetricContent>
                 <ServiceValue>
-                  {metric.value}<small>{metric.unit}</small>
+                  {metric.value}
+                  <small>{metric.unit}</small>
                 </ServiceValue>
                 <ServiceLabel>{metric.label}</ServiceLabel>
               </MetricContent>
@@ -279,12 +305,12 @@ export default function RightPanels() {
       <NodePanel>
         <SectionTitle align="right">平台节点服务数据</SectionTitle>
         <NodeGrid>
-          {nodeMetrics.map((metric, index) => (
+          {middleNodeMetrics.map((metric, index) => (
             <NodeItem key={metric.label}>
               <NodeImage src={nodeImages[index]} alt="" />
               <MetricContent>
-                <NodeItemBackground src={nodeServiceCardBg}/>
-                
+                <NodeItemBackground src={nodeServiceCardBg} />
+
                 <NodeValue>{metric.value}</NodeValue>
                 <NodeLabel>{metric.label}</NodeLabel>
               </MetricContent>
@@ -297,7 +323,11 @@ export default function RightPanels() {
         <SectionTitle align="right">平台精品线路服务概览</SectionTitle>
         <RouteList>
           {routes.map((route, idx) => (
-            <RouteRow type="button" key={`${route.province}-${route.text}`} $idx={idx}>
+            <RouteRow
+              type="button"
+              key={`${route.province}-${route.text}`}
+              $idx={idx}
+            >
               <RouteBackground src={routeBackgrounds[route.tone]} alt="" />
               <RouteContent>
                 <Province>{route.province}</Province>

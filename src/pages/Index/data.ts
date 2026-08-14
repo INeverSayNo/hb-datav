@@ -1,18 +1,20 @@
+import type { ScreenBaseData } from "@/store/useScreenBaseData";
+
 export interface OverviewMetric {
-  value: string;
   label: string;
   tone: "cyan" | "blue" | "gold";
+  key: keyof ScreenBaseData["leftTopPanel"];
 }
 
 export interface ServiceMetric {
-  value: string;
   unit: string;
   label: string;
+  key: keyof ScreenBaseData["rightTopPanel"];
 }
 
 export interface NodeMetric {
-  value: string;
   label: string;
+  key: keyof ScreenBaseData["rightMiddlePanel"];
 }
 
 export interface YearSummary {
@@ -28,33 +30,31 @@ export interface RouteItem {
 }
 
 export const overviewMetrics: OverviewMetric[] = [
-  { value: "56,589", label: "多式联运货运量", tone: "cyan" },
-  { value: "56,589", label: "多式联运箱量", tone: "blue" },
-  { value: "56,589", label: "多式联运重点线路", tone: "gold" },
+  { label: "多式联运货运量", tone: "cyan", key: "freightVolume" },
+  { label: "多式联运箱量", tone: "blue", key: "containerCount" },
+  { label: "多式联运重点线路", tone: "gold", key: "lineCount" },
 ];
 
-export const monthlyFreight = [96, 132, 174, 82, 59, 63, 138, 81, 65, 61, 124, 58];
-
 export const yearSummaries: YearSummary[] = ["2023", "2024", "2025"].map(
-  (year) => ({ year, volume: "2546", amount: "2546" })
+  (year) => ({ year, volume: "2546", amount: "2546" }),
 );
 
 export const serviceMetrics: ServiceMetric[] = [
-  { value: "56,589", unit: "家", label: "制造/商贸流通企业" },
-  { value: "*****", unit: "家", label: "物流供应链企业" },
-  { value: "*****", unit: "单", label: "运输需求数量" },
-  { value: "56,589", unit: "单", label: "运单数量" },
-  { value: "56,589", unit: "万元", label: "运费总额" },
-  { value: "56,589", unit: "条", label: "精品线路" },
+  { unit: "家", label: "制造/商贸流通企业", key: "distributionCount" },
+  { unit: "家", label: "物流供应链企业", key: "supplyCount" },
+  { unit: "单", label: "运输需求数量", key: "requestCount" },
+  { unit: "单", label: "运单数量", key: "waybillCount" },
+  { unit: "万元", label: "运费总额", key: "freightVolume" },
+  { unit: "条", label: "精品线路", key: "lineCount" },
 ];
 
 export const nodeMetrics: NodeMetric[] = [
-  { value: "56,589", label: "物流/产业园区" },
-  { value: "56,589", label: "铁路货运站点" },
-  { value: "56,589", label: "水运货运港口" },
-  { value: "56,589", label: "公路运力" },
-  { value: "56,589", label: "铁路专用线" },
-  { value: "56,589", label: "内河水运船舶" },
+  { key: "parkCount", label: "物流/产业园区" },
+  { key: "stationCount", label: "铁路货运站点" },
+  { key: "portCount", label: "水运货运港口" },
+  { key: "transportCapacity", label: "公路运力" },
+  { key: "privateLine", label: "铁路专用线" },
+  { key: "shipCount", label: "内河水运船舶" },
 ];
 
 export const routes: RouteItem[] = [

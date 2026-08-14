@@ -3,6 +3,9 @@ import styled from "styled-components";
 import plannerImage from "@/assets/ai-solution-bg.png";
 import searchIcon from "@/assets/search.png";
 import aiSolution from "@/assets/ai.png"
+import Modal from "@/components/modal"
+import { useState } from "react";
+import { AI_SOLUTION_URL } from "@/axios-config/request";
 
 const Center = styled.main`
   position: absolute;
@@ -118,8 +121,10 @@ const PlannerAIText = styled.span`
 `
 
 
-
 export default function CenterControls() {
+
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+
   return (
     <Center>
       <Subtitle>服务长江经济带核心节点</Subtitle>
@@ -131,12 +136,17 @@ export default function CenterControls() {
           />
           <SearchIcon src={searchIcon} alt="" />
         </SearchBox>
-        <PlannerButton type="button" aria-label="AI物流规划师">
+        <PlannerButton type="button" aria-label="AI物流规划师" onClick={()=>setAiModalOpen(true)}>
           <PlannerBackgroundImg src={plannerImage} alt="AI物流规划师" />
           <PlannerAISolution src={aiSolution}/>
           <PlannerAIText>AI 物流规划师</PlannerAIText>
         </PlannerButton>
       </Controls>
+      {aiModalOpen && (
+  <Modal open onClose={() => setAiModalOpen(false)}>
+    <iframe src={AI_SOLUTION_URL} title="AI物流规划师" style={{ width: "100%", height: "100%", border: 0 }} />
+  </Modal>
+)}
     </Center>
   );
 }

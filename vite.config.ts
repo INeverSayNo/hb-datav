@@ -11,4 +11,7 @@ export default defineConfig({
       "@": resolve("src"),
     },
   },
+  server: {
+    port: 8001
+  }
 });

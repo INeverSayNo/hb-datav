@@ -6,14 +6,26 @@ import BottomNavigation from "./components/BottomNavigation";
 import CenterControls from "./components/CenterControls";
 import DashboardHeader from "./components/DashboardHeader";
 import LeftPanels from "./components/LeftPanels";
+import MapLegend from "./components/MapLegend";
+import MatrixRain from "./components/MatrixRain";
 import RightPanels from "./components/RightPanels";
 import EChartsHubeiMap from "./map";
 import ThreeHubeiMap from "./map/three";
+import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
+import { useEffect } from "react";
+import { GetScreenBaseData } from "@/api/modules/baseDataApi";
 
+// 默认使用 three.js 三维地图，可通过 ?map=echarts 回退到 ECharts 版本
 const HubeiMap =
   new URLSearchParams(window.location.search).get("map") === "echarts"
     ? EChartsHubeiMap
     : ThreeHubeiMap;
+
+// 地图后方数字雨动画开关：
+// - 代码控制：改为 false 即常驻隐藏
+// - 运行时控制：URL 加 ?rain=off 隐藏
+const SHOW_MATRIX_RAIN =
+  new URLSearchParams(window.location.search).get("rain") !== "off";
 
 const Dashboard = styled.div`
   position: relative;
@@ -54,22 +66,39 @@ const CenterGlow = styled.div`
 
 const MapStage = styled.div`
   position: absolute;
-  left: 1580px;
-  top: 580px;
+  left: 1600px;
+  top: 460px;
   z-index: 2;
-  width: 2440px;
-  height: 1370px;
+  width: 2340px;
+  height: 1470px;
 `;
 
 export default function IndexDashboard() {
+  const updateStore = useScreenBaseDataStore((s) => s.updateStore);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchData = async () => {
+      const [err, data] = await GetScreenBaseData();
+      if (!err && data && Object.keys(data || {}).length && !cancelled) {
+        updateStore(data);
+      }
+    };
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
+  }, [updateStore]);
+
   return (
     <AutoFit dw={5600} dh={2320} aria-label="武汉多式联运服务中心数据大屏">
       <Dashboard>
         <Background src={dashboardBackground} alt="" />
         <CenterGlow />
+        <MatrixRain visible={SHOW_MATRIX_RAIN} />
         <MapStage>
           <HubeiMap />
         </MapStage>
+        <MapLegend />
         <DashboardHeader />
         <LeftPanels />
         <CenterControls />

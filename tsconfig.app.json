@@ -9,9 +9,6 @@
             "DOM.Iterable"
         ],
         "module": "ESNext",
-        "types": [
-            "vite/client"
-        ],
         "skipLibCheck": true,
         /* Bundler mode */
         "moduleResolution": "bundler",
@@ -28,13 +25,19 @@
         "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true,
         "baseUrl": "./",
+        "types": ["vite/client", "bmapgl"],
+        "typeRoots": [
+            "./node_modules/@types",
+        ],
         "paths": {
             "@/*": [
                 "src/*"
             ],
         },
+       
     },
     "include": [
-        "src"
+        "src",
+         "node_modules/@dczy/tie-tools/other-types/*/*.d.ts"
     ]
 }

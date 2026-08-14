@@ -14,20 +14,16 @@ import blueRing from "@/assets/horn-blue.png";
 import goldRing from "@/assets/horn-orage.png";
 import freightIcon from "@/assets/intermodal-statistics-volume.png";
 import tooltipBg from "@/assets/intermodal-statistics-echart-num-bg.png";
-import riseArrow from "@/assets/intermodal-statistics-rise-arrow.png"
-import chartHeaderTitleIcon from "@/assets/intermodal-statistics-title-arrow.png"
-import watewayIntermodalTransportChecked from "@/assets/wateway-intermodal-transport-checked.png"
-import watewayIntermodalTransportUnCheck from "@/assets/wateway-intermodal-transport-uncheck.png"
+import riseArrow from "@/assets/intermodal-statistics-rise-arrow.png";
+import chartHeaderTitleIcon from "@/assets/intermodal-statistics-title-arrow.png";
+import watewayIntermodalTransportChecked from "@/assets/wateway-intermodal-transport-checked.png";
+import watewayIntermodalTransportUnCheck from "@/assets/wateway-intermodal-transport-uncheck.png";
 
-
-import {
-  monthlyFreight,
-  overviewMetrics,
-  yearSummaries,
-  type OverviewMetric,
-} from "../data";
+import { overviewMetrics, type OverviewMetric } from "../data";
 import SectionTitle from "./SectionTitle";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
+import { formatNumber } from "@/utils/num";
 
 const LeftRail = styled.aside`
   position: absolute;
@@ -137,7 +133,11 @@ const TrendBadge = styled.div`
   margin-right: 42px;
   border: 5px solid rgba(39, 247, 237, 0.5);
   clip-path: polygon(50% 0, 93% 24%, 93% 76%, 50% 100%, 7% 76%, 7% 24%);
-  background: radial-gradient(circle, rgba(0, 244, 226, 0.35), rgba(4, 55, 62, 0.08));
+  background: radial-gradient(
+    circle,
+    rgba(0, 244, 226, 0.35),
+    rgba(4, 55, 62, 0.08)
+  );
   box-shadow: inset 0 0 25px rgba(0, 255, 240, 0.3);
 
   &::after {
@@ -177,12 +177,10 @@ const Unit = styled.span`
   font-size: 30px;
 `;
 
-
 const RisingWrap = styled.div`
   display: flex;
   align-items: center;
-
-`
+`;
 
 const Rising = styled.img`
   // display: inline-block;
@@ -209,15 +207,14 @@ const ChartHeader = styled.div`
   letter-spacing: 2px;
 `;
 
-
 const ChartHeaderTitleWrap = styled.div`
   display: flex;
   align-items: center;
-`
+`;
 const ChartHeaderTitleIcon = styled.img`
   width: 22px;
   height: 22px;
-`
+`;
 const ChartHeaderTitle = styled.div`
   display: flex;
   align-items: center;
@@ -259,7 +256,7 @@ const Tabs = styled.div`
 `;
 
 const Tab = styled.button<{ $active?: boolean }>`
-  position:relative;
+  position: relative;
   width: 232px;
   height: 60px;
   border: none;
@@ -268,25 +265,28 @@ const Tab = styled.button<{ $active?: boolean }>`
   font-size: 36px;
   letter-spacing: 3px;
   box-shadow: ${({ $active }) =>
-    $active ? "inset 0 0 18px rgba(0,255,157,.24), 0 0 10px rgba(0,255,157,.18)" : "none"};
+    $active
+      ? "inset 0 0 18px rgba(0,255,157,.24), 0 0 10px rgba(0,255,157,.18)"
+      : "none"};
   cursor: pointer;
   font-size: 36px;
 `;
 
 const TabItemText = styled.span`
-color: #FCFDFF;
-text-shadow: 0 0 30px #ffffff, 0 0 40px #ffffff;
-`
+  color: #fcfdff;
+  text-shadow:
+    0 0 30px #ffffff,
+    0 0 40px #ffffff;
+`;
 
 const OverviewTabImg = styled.img`
-      position: absolute;
-    left: 0;
-    right: 0;
-    top:0;
-    height: 100%;
-    width: 100%;
-`
-
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+`;
 
 const YearGrid = styled.div`
   position: absolute;
@@ -339,7 +339,11 @@ const ringByTone: Record<OverviewMetric["tone"], string> = {
   gold: goldRing,
 };
 
-function FreightChart() {
+function FreightChart({
+  items,
+}: {
+  items: Array<{ month: string; teu: number }>;
+}) {
   return (
     <Chart<FreightChartOption>
       use={[BarChart, GridComponent, TooltipComponent]}
@@ -355,34 +359,38 @@ function FreightChart() {
         },
         xAxis: {
           type: "category",
-          data: Array.from({ length: 12 }, (_, index) => `${index + 1}月`),
+          data: items.map((item) => item.month + "月"),
           axisTick: { show: false },
-          axisLine: { lineStyle: { color: "rgba(82, 146, 164, .28)", width: 2 } },
+          axisLine: {
+            lineStyle: { color: "rgba(82, 146, 164, .28)", width: 2 },
+          },
           axisLabel: { color: "#5e7c86", fontSize: 25, margin: 22 },
         },
         yAxis: {
           type: "value",
           min: 0,
-          max: 200,
+          max: 300000,
           interval: 50,
           axisTick: { show: false },
           axisLine: { show: false },
           axisLabel: { color: "#5e7c86", fontSize: 25, margin: 20 },
-          splitLine: { lineStyle: { color: "rgba(42, 111, 125, .18)", width: 2 } },
+          splitLine: {
+            lineStyle: { color: "rgba(42, 111, 125, .18)", width: 2 },
+          },
         },
         series: [
           {
             type: "bar",
             barWidth: 18,
-            data: monthlyFreight.map((value, index) =>
-              index === 6
+            data: items.map((value) =>
+              value.month === `${new Date().getMonth() - 1}`
                 ? {
-                    value,
+                    value: value.teu,
                     label: {
                       show: true,
                       position: "top",
                       distance: 22,
-                      formatter: "138",
+                      formatter: `${value.teu}`,
                       color: "#eaffff",
                       fontSize: 31,
                       fontWeight: 700,
@@ -390,7 +398,7 @@ function FreightChart() {
                       padding: [18, 30, 24, 30],
                     },
                   }
-                : value
+                : value.teu,
             ),
             itemStyle: {
               borderRadius: [10, 10, 0, 0],
@@ -417,21 +425,46 @@ function FreightChart() {
 }
 
 export default function LeftPanels() {
-
   const [activeTab, setActiveTab] = useState(0);
 
-  const tabs = [
-    { label: "水铁联运" },
-    { label: "水水中转" },
-  ];
+  const tabs = [{ label: "水铁联运" }, { label: "水水中转" }];
 
+  const leftTopPanel = useScreenBaseDataStore((s) => s.leftTopPanel);
+  const leftMiddlePanel = useScreenBaseDataStore((s) => s.leftMiddlePanel);
+  const leftBottomPanel = useScreenBaseDataStore((s) => s.leftBottomPanel);
+
+  const freightData = useMemo(
+    () =>
+      leftMiddlePanel.items.map((item) => ({
+        month: item.month,
+        teu: item.teu,
+      })),
+    [leftMiddlePanel.items],
+  );
+
+  const metrics = useMemo(
+    () =>
+      overviewMetrics.map((metric) => ({
+        ...metric,
+        value: formatNumber(leftTopPanel[metric.key]),
+      })),
+    [leftTopPanel],
+  );
+
+  const yearSummaries = useMemo(()=> {
+    const [waterwayRawaily, twoWaterway] = leftBottomPanel
+    if(activeTab === 0) {
+      return waterwayRawaily.items
+    }
+    return twoWaterway.items
+  }, [leftBottomPanel, activeTab])
 
   return (
     <LeftRail aria-label="左侧数据面板">
       <OverviewPanel>
         <SectionTitle>全省多式联运整体数据概览</SectionTitle>
         <OverviewList>
-          {overviewMetrics.map((metric) => (
+          {metrics.map((metric) => (
             <OverviewItem key={metric.label}>
               <Ring src={ringByTone[metric.tone]} alt="" />
               <OverviewText>
@@ -450,7 +483,7 @@ export default function LeftPanels() {
             <FreightBadge src={freightIcon} alt="" />
             <StatContent>
               <StatLabel>当期水铁货运量</StatLabel>
-              <StatValue>2546</StatValue>
+              <StatValue>{formatNumber(leftMiddlePanel.summary.sum)}</StatValue>
               <Unit>万TEU</Unit>
             </StatContent>
           </StatCard>
@@ -459,50 +492,56 @@ export default function LeftPanels() {
             <StatContent>
               <StatLabel>当期同比</StatLabel>
               <RisingWrap>
-                <Rising src={riseArrow}/>
-              <StatValue>23.8%</StatValue>
+                <Rising src={riseArrow} />
+                <StatValue>{leftMiddlePanel.summary.yoyRate * 100}%</StatValue>
               </RisingWrap>
             </StatContent>
           </StatCard>
         </SummaryStats>
         <ChartHeader>
           <ChartHeaderTitleWrap>
-            <ChartHeaderTitleIcon src={chartHeaderTitleIcon}/>
+            <ChartHeaderTitleIcon src={chartHeaderTitleIcon} />
             <ChartHeaderTitle>数据统计（单位：万TEU）</ChartHeaderTitle>
           </ChartHeaderTitleWrap>
           <Legend>货运量</Legend>
         </ChartHeader>
         <ChartBox>
-          <FreightChart />
+          <FreightChart items={freightData} />
         </ChartBox>
       </FreightPanel>
 
       <SummaryPanel>
         <SectionTitle>武汉多式联运数据整体概况</SectionTitle>
         <Tabs>
-  {tabs.map((tab, index) => (
-    <Tab
-      key={tab.label}
-      type="button"
-      $active={activeTab === index}
-      onClick={() => setActiveTab(index)}
-    >
-      <OverviewTabImg
-        src={activeTab === index ? watewayIntermodalTransportChecked : watewayIntermodalTransportUnCheck}
-      />
-      <TabItemText>{tab.label}</TabItemText>
-    </Tab>
-  ))}
-</Tabs>
+          {tabs.map((tab, index) => (
+            <Tab
+              key={tab.label}
+              type="button"
+              $active={activeTab === index}
+              onClick={() => setActiveTab(index)}
+            >
+              <OverviewTabImg
+                src={
+                  activeTab === index
+                    ? watewayIntermodalTransportChecked
+                    : watewayIntermodalTransportUnCheck
+                }
+              />
+              <TabItemText>{tab.label}</TabItemText>
+            </Tab>
+          ))}
+        </Tabs>
         <YearGrid>
           {yearSummaries.map((summary) => (
             <YearCard key={summary.year}>
               <Year>{summary.year}</Year>
               <YearValue>
-                {summary.volume}<small>万TEU</small>
+                {summary.teu}
+                <small>万TEU</small>
               </YearValue>
               <YearValue>
-                {summary.amount}<small>万元</small>
+                {summary.price}
+                <small>万元</small>
               </YearValue>
             </YearCard>
           ))}

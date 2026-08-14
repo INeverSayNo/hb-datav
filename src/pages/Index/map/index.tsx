@@ -14,7 +14,7 @@ const MAP_LAYOUT_SIZE = "132%";
 const MAP_ASPECT_SCALE = 0.89;
 const MAP_CENTER_X = "50%";
 const MAP_CENTER_Y = 49;
-const MAP_BACKGROUND_COLOR = "#289ec0";
+const MAP_BACKGROUND_COLOR = "#22ddf957";
 const MAP_GLOW_COLOR = "#20dbdb";
 
 echarts.use([GeoComponent]);
@@ -95,8 +95,8 @@ export default function HubeiMap() {
         ...sharedOption,
         geo: [
           createStackLayer(0),
-          createStackLayer(1),
-          createStackLayer(2),
+          // createStackLayer(1),
+          // createStackLayer(2),
         ],
       },
       {

@@ -4,12 +4,12 @@ import {
   type interceptorsUse,
 } from "@dczy/tie-tools";
 
-import { getRuntimeConfig } from "@/axios-config/request";
 import {
   handleFulfilled,
   handleRejected,
   handleRequestFulfilled,
 } from "./utils";
+import { CRYPT_TYPE, GATEWAY_URL, runtimeConfig } from "@/axios-config/request";
 
 export type { Rsp, Rsp8 } from "./types";
 export { ApiError } from "./types";
@@ -21,24 +21,26 @@ const defaultInterceptors: interceptorsUse = {
 };
 
 export class BaseApi extends DcToolsRequest {
-  constructor(config: defineConfig = {}, use: interceptorsUse = defaultInterceptors) {
-    const runtimeConfig = getRuntimeConfig();
-    const requestConfig = runtimeConfig.request;
+  constructor(
+    config: defineConfig = {},
+    use: interceptorsUse = defaultInterceptors,
+  ) {
+    const requestConfig = runtimeConfig?.request;
     const hasCryptoOverride = Object.prototype.hasOwnProperty.call(
       config,
-      "crypto"
+      "crypto",
     );
 
     const baseConfig: defineConfig = {
-      baseURL: config.baseURL || runtimeConfig.GATEWAY_URL,
-      timeout: requestConfig.timeout,
-      isJwt: requestConfig.isJwt,
-      tokenStorage: requestConfig.tokenStorage,
-      tokenKey: requestConfig.tokenKey,
-      tokenPrefix: requestConfig.tokenPrefix,
-      cryptoType: runtimeConfig.CRYPT_TYPE,
+      baseURL: config.baseURL || GATEWAY_URL,
+      timeout: requestConfig?.timeout,
+      isJwt: requestConfig?.isJwt,
+      tokenStorage: requestConfig?.tokenStorage,
+      tokenKey: requestConfig?.tokenKey,
+      tokenPrefix: requestConfig?.tokenPrefix,
+      cryptoType: CRYPT_TYPE,
       ...config,
-      crypto: hasCryptoOverride ? config.crypto : requestConfig.crypto,
+      crypto: hasCryptoOverride ? config.crypto : requestConfig?.crypto,
     };
 
     super(baseConfig, use);

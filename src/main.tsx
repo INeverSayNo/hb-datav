@@ -4,6 +4,7 @@ import { HashRouter } from "react-router";
 
 import { loadRuntimeConfig } from "@/axios-config/request";
 import "./index.css";
+import { BmapController } from "./hooks/useBMap.ts";
 
 const rootElement = document.getElementById("root");
 
@@ -31,7 +32,8 @@ function ConfigErrorScreen({ error }: { error: unknown }) {
         background: "#061821",
         fontFamily:
           '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
-      }}>
+      }}
+    >
       <section
         style={{
           width: "min(680px, 100%)",
@@ -40,10 +42,9 @@ function ConfigErrorScreen({ error }: { error: unknown }) {
           borderRadius: 12,
           background: "rgba(7, 36, 49, 0.92)",
           boxShadow: "0 0 28px rgba(33, 189, 239, 0.16)",
-        }}>
-        <h1 style={{ margin: "0 0 16px", fontSize: 24 }}>
-          运行时配置加载失败
-        </h1>
+        }}
+      >
+        <h1 style={{ margin: "0 0 16px", fontSize: 24 }}>运行时配置加载失败</h1>
         <p style={{ margin: 0, lineHeight: 1.75, color: "#aac7d2" }}>
           {message}
         </p>
@@ -52,7 +53,8 @@ function ConfigErrorScreen({ error }: { error: unknown }) {
             margin: "18px 0 0",
             lineHeight: 1.75,
             color: "#7899a6",
-          }}>
+          }}
+        >
           请检查部署目录中的 config.json，然后刷新页面重试。
         </p>
       </section>
@@ -63,6 +65,14 @@ function ConfigErrorScreen({ error }: { error: unknown }) {
 async function bootstrap() {
   try {
     await loadRuntimeConfig();
+
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get("token");
+    if (urlToken) {
+      localStorage.setItem("JsToken", urlToken);
+    }
+
+    await BmapController.insertBMapEle();
     const { default: App } = await import("./App.tsx");
 
     root.render(
@@ -70,7 +80,7 @@ async function bootstrap() {
         <HashRouter>
           <App />
         </HashRouter>
-      </StrictMode>
+      </StrictMode>,
     );
   } catch (error) {
     console.error("Failed to bootstrap application:", error);
