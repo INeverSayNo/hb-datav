@@ -14,6 +14,8 @@ const MAP_LAYOUT_SIZE = "132%";
 const MAP_ASPECT_SCALE = 0.89;
 const MAP_CENTER_X = "50%";
 const MAP_CENTER_Y = 49;
+const MAP_BACKGROUND_COLOR = "#289ec0";
+const MAP_GLOW_COLOR = "#20dbdb";
 
 echarts.use([GeoComponent]);
 echarts.registerMap(
@@ -49,9 +51,9 @@ const DemLayer = styled.img`
 `;
 
 const stackColors = [
-  "rgba(0, 240, 255, 0.06)",
-  "rgba(0, 240, 255, 0.09)",
-  "rgba(32, 219, 219, 0.13)",
+  "rgba(40, 158, 192, 0.08)",
+  "rgba(40, 158, 192, 0.12)",
+  "rgba(40, 158, 192, 0.16)",
 ];
 
 function createStackLayer(index: number): echarts.EChartsCoreOption {
@@ -66,10 +68,10 @@ function createStackLayer(index: number): echarts.EChartsCoreOption {
     label: { show: false },
     itemStyle: {
       areaColor: stackColors[index],
-      borderColor: `rgba(0, 255, 228, ${0.12 + index * 0.06})`,
+      borderColor: `rgba(32, 219, 219, ${0.12 + index * 0.06})`,
       borderWidth: 2.2,
       shadowBlur: 18 + index * 7,
-      shadowColor: "rgba(0, 255, 228, 0.28)",
+      shadowColor: "rgba(32, 219, 219, 0.28)",
       shadowOffsetY: 16,
     },
     emphasis: { disabled: true },
@@ -81,11 +83,6 @@ export default function HubeiMap() {
   const [stackOption, mainOption] = useMemo<
     [echarts.EChartsCoreOption, echarts.EChartsCoreOption]
   >(() => {
-    const mainGradient = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-      { offset: 0, color: "rgba(0, 240, 255, 0.17)" },
-      { offset: 1, color: "rgba(32, 219, 219, 0.22)" },
-    ]);
-
     const sharedOption = {
       animation: true,
       animationDuration: 700,
@@ -125,8 +122,9 @@ export default function HubeiMap() {
               textBorderWidth: 4,
             },
             itemStyle: {
-              areaColor: mainGradient,
-              borderColor: "rgba(77, 232, 245, 0.58)",
+              areaColor: MAP_BACKGROUND_COLOR,
+              opacity: 0.72,
+              borderColor: "rgba(32, 219, 219, 0.58)",
               borderWidth: 1.8,
             },
             emphasis: {
@@ -135,8 +133,9 @@ export default function HubeiMap() {
                 color: "#ffffff",
               },
               itemStyle: {
-                areaColor: "rgba(32, 219, 219, 0.31)",
-                borderColor: "rgba(126, 255, 247, 0.9)",
+                areaColor: MAP_BACKGROUND_COLOR,
+                opacity: 0.86,
+                borderColor: "rgba(32, 219, 219, 0.9)",
                 borderWidth: 2.4,
               },
             },
@@ -153,10 +152,10 @@ export default function HubeiMap() {
             label: { show: false },
             itemStyle: {
               areaColor: "rgba(0, 0, 0, 0)",
-              borderColor: "rgba(0, 255, 228, 0.32)",
+              borderColor: "rgba(32, 219, 219, 0.32)",
               borderWidth: 11,
               shadowBlur: 34,
-              shadowColor: "rgba(0, 255, 228, 0.95)",
+              shadowColor: "rgba(32, 219, 219, 0.95)",
             },
             emphasis: { disabled: true },
             select: { disabled: true },
@@ -172,10 +171,10 @@ export default function HubeiMap() {
             label: { show: false },
             itemStyle: {
               areaColor: "rgba(0, 0, 0, 0)",
-              borderColor: "#00FFE4",
+              borderColor: MAP_GLOW_COLOR,
               borderWidth: 3.2,
               shadowBlur: 16,
-              shadowColor: "#00FFE4",
+              shadowColor: MAP_GLOW_COLOR,
             },
             emphasis: { disabled: true },
             select: { disabled: true },
