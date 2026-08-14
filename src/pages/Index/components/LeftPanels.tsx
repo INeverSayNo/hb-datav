@@ -452,6 +452,7 @@ export default function LeftPanels() {
   );
 
   const yearSummaries = useMemo(()=> {
+    if(!leftBottomPanel.length) return []
     const [waterwayRawaily, twoWaterway] = leftBottomPanel
     if(activeTab === 0) {
       return waterwayRawaily.items

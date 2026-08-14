@@ -200,8 +200,7 @@ const RouteTrack = styled.div<{ $groupCount: number }>`
   display: flex;
   width: max-content;
   will-change: transform;
-  animation-name: ${({ $groupCount }) =>
-    $groupCount > 1 ? routeLoop : "none"};
+  animation-name: ${routeLoop};
   animation-duration: ${({ $groupCount }) => $groupCount * 8}s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
@@ -320,7 +319,11 @@ const ROUTES_PER_GROUP = 3;
 export default function RightPanels() {
   const rightTopPanel = useScreenBaseDataStore((s) => s.rightTopPanel);
   const rightMiddlePanel = useScreenBaseDataStore((s) => s.rightMiddlePanel);
-  const rightBottomPanel = useScreenBaseDataStore((s) => s.rightBottomPanel);
+  const rightBottomPanel = [
+    { text1: "湖北", text2: "动画验证线路一" },
+    { text1: "湖北", text2: "动画验证线路二" },
+    { text1: "湖北", text2: "动画验证线路三" },
+  ];
 
   const topServiceMetrics = useMemo(
       () =>
@@ -350,8 +353,7 @@ export default function RightPanels() {
       ),
     [rightBottomPanel],
   );
-  const loopingRouteGroups =
-    routeGroups.length > 1 ? [...routeGroups, ...routeGroups] : routeGroups;
+  const loopingRouteGroups = [...routeGroups, ...routeGroups];
 
   return (
     <RightRail aria-label="右侧数据面板">
