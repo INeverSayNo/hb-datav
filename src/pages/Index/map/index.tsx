@@ -37,14 +37,15 @@ const DemLayer = styled.img`
   position: absolute;
   left: 13.1%;
   top: 7.2%;
-  z-index: 1;
+  z-index: 2;
   width: 73.8%;
   height: auto;
-  opacity: 0.18;
+  opacity: 0.28;
   object-fit: contain;
   pointer-events: none;
   mix-blend-mode: screen;
-  filter: sepia(1) saturate(4) hue-rotate(130deg) brightness(0.72);
+  filter: sepia(1) saturate(4) hue-rotate(130deg) brightness(0.76)
+    contrast(1.18);
 `;
 
 const stackColors = [
@@ -77,107 +78,125 @@ function createStackLayer(index: number): echarts.EChartsCoreOption {
 }
 
 export default function HubeiMap() {
-  const option = useMemo<echarts.EChartsCoreOption>(() => {
+  const [stackOption, mainOption] = useMemo<
+    [echarts.EChartsCoreOption, echarts.EChartsCoreOption]
+  >(() => {
     const mainGradient = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
       { offset: 0, color: "rgba(0, 240, 255, 0.17)" },
       { offset: 1, color: "rgba(32, 219, 219, 0.22)" },
     ]);
 
-    return {
+    const sharedOption = {
       animation: true,
       animationDuration: 700,
       animationEasing: "cubicOut",
       backgroundColor: "transparent",
-      geo: [
-        createStackLayer(0),
-        createStackLayer(1),
-        createStackLayer(2),
-        {
-          map: HUBEI_MAP_NAME,
-          roam: false,
-          silent: false,
-          layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
-          layoutSize: MAP_LAYOUT_SIZE,
-          aspectScale: MAP_ASPECT_SCALE,
-          z: 5,
-          selectedMode: false,
-          label: {
-            show: true,
-            color: "rgba(226, 252, 255, 0.82)",
-            fontFamily:
-              '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
-            fontSize: 25,
-            fontWeight: 500,
-            textBorderColor: "rgba(0, 20, 30, 0.9)",
-            textBorderWidth: 4,
-          },
-          itemStyle: {
-            areaColor: mainGradient,
-            borderColor: "rgba(77, 232, 245, 0.58)",
-            borderWidth: 1.8,
-          },
-          emphasis: {
+    } as const;
+
+    return [
+      {
+        ...sharedOption,
+        geo: [
+          createStackLayer(0),
+          createStackLayer(1),
+          createStackLayer(2),
+        ],
+      },
+      {
+        ...sharedOption,
+        geo: [
+          {
+            map: HUBEI_MAP_NAME,
+            roam: false,
+            silent: false,
+            layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
+            layoutSize: MAP_LAYOUT_SIZE,
+            aspectScale: MAP_ASPECT_SCALE,
+            z: 5,
+            selectedMode: false,
             label: {
               show: true,
-              color: "#ffffff",
+              color: "rgba(226, 252, 255, 0.82)",
+              fontFamily:
+                '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+              fontSize: 25,
+              fontWeight: 500,
+              textBorderColor: "rgba(0, 20, 30, 0.9)",
+              textBorderWidth: 4,
             },
             itemStyle: {
-              areaColor: "rgba(32, 219, 219, 0.31)",
-              borderColor: "rgba(126, 255, 247, 0.9)",
-              borderWidth: 2.4,
+              areaColor: mainGradient,
+              borderColor: "rgba(77, 232, 245, 0.58)",
+              borderWidth: 1.8,
             },
+            emphasis: {
+              label: {
+                show: true,
+                color: "#ffffff",
+              },
+              itemStyle: {
+                areaColor: "rgba(32, 219, 219, 0.31)",
+                borderColor: "rgba(126, 255, 247, 0.9)",
+                borderWidth: 2.4,
+              },
+            },
+            select: { disabled: true },
           },
-          select: { disabled: true },
-        },
-        {
-          map: HUBEI_OUTLINE_NAME,
-          roam: false,
-          silent: true,
-          layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
-          layoutSize: MAP_LAYOUT_SIZE,
-          aspectScale: MAP_ASPECT_SCALE,
-          z: 8,
-          label: { show: false },
-          itemStyle: {
-            areaColor: "rgba(0, 0, 0, 0)",
-            borderColor: "rgba(0, 255, 228, 0.32)",
-            borderWidth: 11,
-            shadowBlur: 34,
-            shadowColor: "rgba(0, 255, 228, 0.95)",
+          {
+            map: HUBEI_OUTLINE_NAME,
+            roam: false,
+            silent: true,
+            layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
+            layoutSize: MAP_LAYOUT_SIZE,
+            aspectScale: MAP_ASPECT_SCALE,
+            z: 8,
+            label: { show: false },
+            itemStyle: {
+              areaColor: "rgba(0, 0, 0, 0)",
+              borderColor: "rgba(0, 255, 228, 0.32)",
+              borderWidth: 11,
+              shadowBlur: 34,
+              shadowColor: "rgba(0, 255, 228, 0.95)",
+            },
+            emphasis: { disabled: true },
+            select: { disabled: true },
           },
-          emphasis: { disabled: true },
-          select: { disabled: true },
-        },
-        {
-          map: HUBEI_OUTLINE_NAME,
-          roam: false,
-          silent: true,
-          layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
-          layoutSize: MAP_LAYOUT_SIZE,
-          aspectScale: MAP_ASPECT_SCALE,
-          z: 9,
-          label: { show: false },
-          itemStyle: {
-            areaColor: "rgba(0, 0, 0, 0)",
-            borderColor: "#00FFE4",
-            borderWidth: 3.2,
-            shadowBlur: 16,
-            shadowColor: "#00FFE4",
+          {
+            map: HUBEI_OUTLINE_NAME,
+            roam: false,
+            silent: true,
+            layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
+            layoutSize: MAP_LAYOUT_SIZE,
+            aspectScale: MAP_ASPECT_SCALE,
+            z: 9,
+            label: { show: false },
+            itemStyle: {
+              areaColor: "rgba(0, 0, 0, 0)",
+              borderColor: "#00FFE4",
+              borderWidth: 3.2,
+              shadowBlur: 16,
+              shadowColor: "#00FFE4",
+            },
+            emphasis: { disabled: true },
+            select: { disabled: true },
           },
-          emphasis: { disabled: true },
-          select: { disabled: true },
-        },
-      ],
-    };
+        ],
+      },
+    ];
   }, []);
 
   return (
     <MapRoot role="img" aria-label="湖北省地市分布地图">
+      <Chart
+        option={stackOption}
+        use={[GeoComponent]}
+        style={{ position: "absolute", inset: 0, zIndex: 1 }}
+      />
       <DemLayer src={hubeiDem} alt="" aria-hidden="true" />
       <Chart
-        option={option}
+        option={mainOption}
         use={[GeoComponent]}
-        style={{ position: "absolute", inset: 0, zIndex: 2 }}
+        style={{ position: "absolute", inset: 0, zIndex: 3 }}
       />
     </MapRoot>
   );
