@@ -19,7 +19,11 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
-    fixToUnknown: false,
-    ignoreRestArgs: false,
+    rules: {
+      "@typescript-eslint/no-explicit-any": [
+        "error",
+        { fixToUnknown: false, ignoreRestArgs: false },
+      ],
+    },
   },
 ]);

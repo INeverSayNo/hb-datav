@@ -7,6 +7,7 @@ import CenterControls from "./components/CenterControls";
 import DashboardHeader from "./components/DashboardHeader";
 import LeftPanels from "./components/LeftPanels";
 import RightPanels from "./components/RightPanels";
+import HubeiMap from "./map";
 
 const Dashboard = styled.div`
   position: relative;
@@ -45,12 +46,24 @@ const CenterGlow = styled.div`
   );
 `;
 
+const MapStage = styled.div`
+  position: absolute;
+  left: 1580px;
+  top: 580px;
+  z-index: 2;
+  width: 2440px;
+  height: 1370px;
+`;
+
 export default function IndexDashboard() {
   return (
     <AutoFit dw={5600} dh={2320} aria-label="武汉多式联运服务中心数据大屏">
       <Dashboard>
         <Background src={dashboardBackground} alt="" />
         <CenterGlow />
+        <MapStage>
+          <HubeiMap />
+        </MapStage>
         <DashboardHeader />
         <LeftPanels />
         <CenterControls />

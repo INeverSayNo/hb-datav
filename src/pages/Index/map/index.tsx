@@ -1,53 +1,184 @@
-import { Suspense } from "react";
+import { useMemo } from "react";
+import * as echarts from "echarts/core";
+import { GeoComponent } from "echarts/components";
 import styled from "styled-components";
-import { OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import Lights from "./lights";
-import Mirror from "./mirror";
-import Base from "./base";
-import Bottom from "./bottom";
-import BeamLight from "./beamLight";
-import type { CityGeoJSON } from "@/types/map";
 
-import scMapData from "@/assets/hb.json";
-import scOutlineData from "@/assets/hb_outline.json";
+import Chart from "@/components/chart";
+import hubeiMapData from "@/assets/hb.json";
+import hubeiOutlineData from "@/assets/hb_outline.json";
+import hubeiDem from "@/assets/hb_dem.png";
 
-const mapData = scMapData as CityGeoJSON,
-  outlineData = scOutlineData as CityGeoJSON;
+const HUBEI_MAP_NAME = "hubei-city-map";
+const HUBEI_OUTLINE_NAME = "hubei-province-outline";
+const MAP_LAYOUT_SIZE = "132%";
+const MAP_ASPECT_SCALE = 0.89;
+const MAP_CENTER_X = "50%";
+const MAP_CENTER_Y = 49;
 
-const CanvasWrapper = styled.div`
-  position: absolute;
-  inset: 0;
+echarts.use([GeoComponent]);
+echarts.registerMap(
+  HUBEI_MAP_NAME,
+  hubeiMapData as unknown as Parameters<typeof echarts.registerMap>[1]
+);
+echarts.registerMap(
+  HUBEI_OUTLINE_NAME,
+  hubeiOutlineData as unknown as Parameters<typeof echarts.registerMap>[1]
+);
+
+const MapRoot = styled.section`
+  position: relative;
   width: 100%;
   height: 100%;
+  overflow: visible;
+  isolation: isolate;
 `;
 
-export default function Map() {
+const DemLayer = styled.img`
+  position: absolute;
+  left: 13.1%;
+  top: 7.2%;
+  z-index: 1;
+  width: 73.8%;
+  height: auto;
+  opacity: 0.18;
+  object-fit: contain;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: sepia(1) saturate(4) hue-rotate(130deg) brightness(0.72);
+`;
+
+const stackColors = [
+  "rgba(0, 240, 255, 0.06)",
+  "rgba(0, 240, 255, 0.09)",
+  "rgba(32, 219, 219, 0.13)",
+];
+
+function createStackLayer(index: number): echarts.EChartsCoreOption {
+  return {
+    map: HUBEI_OUTLINE_NAME,
+    roam: false,
+    silent: true,
+    layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y + (index + 1) * 1.2}%`],
+    layoutSize: MAP_LAYOUT_SIZE,
+    aspectScale: MAP_ASPECT_SCALE,
+    z: index,
+    label: { show: false },
+    itemStyle: {
+      areaColor: stackColors[index],
+      borderColor: `rgba(0, 255, 228, ${0.12 + index * 0.06})`,
+      borderWidth: 2.2,
+      shadowBlur: 18 + index * 7,
+      shadowColor: "rgba(0, 255, 228, 0.28)",
+      shadowOffsetY: 16,
+    },
+    emphasis: { disabled: true },
+    select: { disabled: true },
+  };
+}
+
+export default function HubeiMap() {
+  const option = useMemo<echarts.EChartsCoreOption>(() => {
+    const mainGradient = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: "rgba(0, 240, 255, 0.17)" },
+      { offset: 1, color: "rgba(32, 219, 219, 0.22)" },
+    ]);
+
+    return {
+      animation: true,
+      animationDuration: 700,
+      animationEasing: "cubicOut",
+      backgroundColor: "transparent",
+      geo: [
+        createStackLayer(0),
+        createStackLayer(1),
+        createStackLayer(2),
+        {
+          map: HUBEI_MAP_NAME,
+          roam: false,
+          silent: false,
+          layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
+          layoutSize: MAP_LAYOUT_SIZE,
+          aspectScale: MAP_ASPECT_SCALE,
+          z: 5,
+          selectedMode: false,
+          label: {
+            show: true,
+            color: "rgba(226, 252, 255, 0.82)",
+            fontFamily:
+              '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+            fontSize: 25,
+            fontWeight: 500,
+            textBorderColor: "rgba(0, 20, 30, 0.9)",
+            textBorderWidth: 4,
+          },
+          itemStyle: {
+            areaColor: mainGradient,
+            borderColor: "rgba(77, 232, 245, 0.58)",
+            borderWidth: 1.8,
+          },
+          emphasis: {
+            label: {
+              show: true,
+              color: "#ffffff",
+            },
+            itemStyle: {
+              areaColor: "rgba(32, 219, 219, 0.31)",
+              borderColor: "rgba(126, 255, 247, 0.9)",
+              borderWidth: 2.4,
+            },
+          },
+          select: { disabled: true },
+        },
+        {
+          map: HUBEI_OUTLINE_NAME,
+          roam: false,
+          silent: true,
+          layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
+          layoutSize: MAP_LAYOUT_SIZE,
+          aspectScale: MAP_ASPECT_SCALE,
+          z: 8,
+          label: { show: false },
+          itemStyle: {
+            areaColor: "rgba(0, 0, 0, 0)",
+            borderColor: "rgba(0, 255, 228, 0.32)",
+            borderWidth: 11,
+            shadowBlur: 34,
+            shadowColor: "rgba(0, 255, 228, 0.95)",
+          },
+          emphasis: { disabled: true },
+          select: { disabled: true },
+        },
+        {
+          map: HUBEI_OUTLINE_NAME,
+          roam: false,
+          silent: true,
+          layoutCenter: [MAP_CENTER_X, `${MAP_CENTER_Y}%`],
+          layoutSize: MAP_LAYOUT_SIZE,
+          aspectScale: MAP_ASPECT_SCALE,
+          z: 9,
+          label: { show: false },
+          itemStyle: {
+            areaColor: "rgba(0, 0, 0, 0)",
+            borderColor: "#00FFE4",
+            borderWidth: 3.2,
+            shadowBlur: 16,
+            shadowColor: "#00FFE4",
+          },
+          emphasis: { disabled: true },
+          select: { disabled: true },
+        },
+      ],
+    };
+  }, []);
+
   return (
-    <CanvasWrapper>
-      <Canvas
-        camera={{
-          fov: 70,
-          position: [3, 20, 10],
-        }}
-        dpr={[1, 2]}>
-        <fog attach="fog" args={["#000000", 10, 30]} />
-        <color attach="background" args={["#000000"]} />
-        <Lights />
-        <Suspense fallback={null}>
-          <Base data={mapData} outlineData={outlineData} />
-        </Suspense>
-        <Bottom />
-        <Mirror />
-        <BeamLight />
-        <OrbitControls
-          enableDamping
-          zoomSpeed={0.3}
-          minDistance={8}
-          maxDistance={20}
-          maxPolarAngle={1.5}
-        />
-      </Canvas>
-    </CanvasWrapper>
+    <MapRoot role="img" aria-label="湖北省地市分布地图">
+      <DemLayer src={hubeiDem} alt="" aria-hidden="true" />
+      <Chart
+        option={option}
+        use={[GeoComponent]}
+        style={{ position: "absolute", inset: 0, zIndex: 2 }}
+      />
+    </MapRoot>
   );
 }
