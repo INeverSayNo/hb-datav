@@ -1,4 +1,4 @@
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 
 import serviceIcon1 from "@/assets/intermodal-manufacturing-enterprise.png";
 import serviceIcon2 from "@/assets/intermodal-logistic-enterprise.png";
@@ -20,7 +20,7 @@ import routeGold from "@/assets/line-service-orange-bg.png";
 import routeArrow from "@/assets/translate.png";
 import nodeServiceCardBg from "@/assets/platform-node-service-card-bg.png";
 
-import { nodeMetrics, routes, serviceMetrics, type RouteItem } from "../data";
+import { nodeMetrics, serviceMetrics } from "../data";
 import SectionTitle from "./SectionTitle";
 import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
 import { useMemo } from "react";
@@ -163,10 +163,69 @@ const NodeLabel = styled.div`
   margin-top: 18px;
 `;
 
+const routeLoop = keyframes`
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+`;
+
+const RouteViewport = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 130px;
+  height: 360px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
+`;
+
+const RouteTrack = styled.div<{ $groupCount: number }>`
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation-name: ${({ $groupCount }) =>
+    $groupCount > 1 ? routeLoop : "none"};
+  animation-duration: ${({ $groupCount }) => $groupCount * 8}s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+
+  ${RouteViewport}:hover & {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`;
+
+const RouteGroup = styled.div`
+  position: relative;
+  flex: 0 0 1420px;
+  width: 1420px;
+  height: 360px;
+`;
+
 const RouteList = styled.div`
   position: absolute;
   right: 64px;
-  top: 130px;
+  top: 0;
   width: 1180px;
   display: flex;
   flex-direction: column;
@@ -255,11 +314,8 @@ const nodeImages = [
   nodeImage6,
 ];
 
-const routeBackgrounds: Record<RouteItem["tone"], string> = {
-  blue: routeBlue,
-  green: routeGreen,
-  gold: routeGold,
-};
+const routeBackgrounds = [routeBlue, routeGreen, routeGold];
+const ROUTES_PER_GROUP = 3;
 
 export default function RightPanels() {
   const rightTopPanel = useScreenBaseDataStore((s) => s.rightTopPanel);
@@ -282,6 +338,21 @@ export default function RightPanels() {
         })),
       [rightMiddlePanel],
     );
+  const routeGroups = useMemo(
+    () =>
+      Array.from(
+        { length: Math.ceil(rightBottomPanel.length / ROUTES_PER_GROUP) },
+        (_, index) =>
+          rightBottomPanel.slice(
+            index * ROUTES_PER_GROUP,
+            (index + 1) * ROUTES_PER_GROUP,
+          ),
+      ),
+    [rightBottomPanel],
+  );
+  const loopingRouteGroups =
+    routeGroups.length > 1 ? [...routeGroups, ...routeGroups] : routeGroups;
+
   return (
     <RightRail aria-label="右侧数据面板">
       <ServicePanel>
@@ -321,22 +392,35 @@ export default function RightPanels() {
 
       <RoutePanel>
         <SectionTitle align="right">平台精品线路服务概览</SectionTitle>
-        <RouteList>
-          {routes.map((route, idx) => (
-            <RouteRow
-              type="button"
-              key={`${route.province}-${route.text}`}
-              $idx={idx}
-            >
-              <RouteBackground src={routeBackgrounds[route.tone]} alt="" />
-              <RouteContent>
-                <Province>{route.province}</Province>
-                <RouteArrow src={routeArrow} alt="" />
-                {route.text}
-              </RouteContent>
-            </RouteRow>
-          ))}
-        </RouteList>
+        {routeGroups.length > 0 && (
+          <RouteViewport>
+            <RouteTrack $groupCount={routeGroups.length}>
+              {loopingRouteGroups.map((group, groupIndex) => (
+                <RouteGroup key={groupIndex}>
+                  <RouteList>
+                    {group.map((route, routeIndex) => (
+                      <RouteRow
+                        type="button"
+                        key={`${route.text1}-${route.text2}-${routeIndex}`}
+                        $idx={routeIndex}
+                      >
+                        <RouteBackground
+                          src={routeBackgrounds[routeIndex]}
+                          alt=""
+                        />
+                        <RouteContent>
+                          <Province>{route.text1}</Province>
+                          <RouteArrow src={routeArrow} alt="" />
+                          {route.text2}
+                        </RouteContent>
+                      </RouteRow>
+                    ))}
+                  </RouteList>
+                </RouteGroup>
+              ))}
+            </RouteTrack>
+          </RouteViewport>
+        )}
       </RoutePanel>
     </RightRail>
   );
