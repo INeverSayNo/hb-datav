@@ -148,7 +148,10 @@ type ProjectedMapRegion = MapRegionSource & {
   bbox: Box2;
   shapes: Shape[];
   boundarySegments: [number, number, number][];
-  labelPosition: [number, number, number];
+  labels: Array<{
+    position: [number, number, number];
+    text: string;
+  }>;
   transform?: {
     position: [number, number, 0];
     scale: number;
@@ -364,7 +367,14 @@ const provinceSources = ALL_RECOMMEND_PROVINCE_IDS.map(
   (id) => provinceSourceById[id],
 );
 const externalMapDataByPath = import.meta.glob<AdministrativeGeoJSON>(
-  "/src/assets/recommendLine/out-*.json",
+  [
+    "/src/assets/recommendLine/out-*.json",
+    "!/src/assets/recommendLine/out-de.json",
+    "!/src/assets/recommendLine/out-es.json",
+    "!/src/assets/recommendLine/out-fr.json",
+    "!/src/assets/recommendLine/out-it.json",
+    "!/src/assets/recommendLine/out-pl.json",
+  ],
   { eager: true, import: "default" },
 );
 const externalMapSourceById = Object.fromEntries(
@@ -479,15 +489,21 @@ function getProjection() {
 function buildMapRegion(source: MapRegionSource): ProjectedMapRegion {
   const projection = getProjection();
   const bbox = new Box2();
-  const project = (coordinate: Coordinate) => {
-    const [x, y] = projection(coordinate)!;
-    const point = new Vector2(x, -y);
-    bbox.expandByPoint(point);
-    return point;
-  };
+  const labelDataByName = new Map<
+    string,
+    { bounds: Box2; preferredPosition?: Vector2 }
+  >();
 
   const shapes: Shape[] = [];
   source.data.features.forEach((feature) => {
+    const featureBounds = new Box2();
+    const project = (coordinate: Coordinate) => {
+      const [x, y] = projection(coordinate)!;
+      const point = new Vector2(x, -y);
+      bbox.expandByPoint(point);
+      featureBounds.expandByPoint(point);
+      return point;
+    };
     getPolygons(feature.geometry).forEach((polygon) => {
       const rings = polygon.map((ring) => ring.map(project));
       const outer = rings[0];
@@ -502,6 +518,19 @@ function buildMapRegion(source: MapRegionSource): ProjectedMapRegion {
       });
       shapes.push(shape);
     });
+
+    const featureName = feature.properties.name || source.id;
+    const labelData = labelDataByName.get(featureName) ?? {
+      bounds: new Box2(),
+    };
+    labelData.bounds.union(featureBounds);
+    const labelCoordinate =
+      feature.properties.centroid ?? feature.properties.center;
+    if (!labelData.preferredPosition && labelCoordinate) {
+      const [x, y] = projection(labelCoordinate)!;
+      labelData.preferredPosition = new Vector2(x, -y);
+    }
+    labelDataByName.set(featureName, labelData);
   });
 
   const boundarySegments: [number, number, number][] = [];
@@ -521,23 +550,37 @@ function buildMapRegion(source: MapRegionSource): ProjectedMapRegion {
       });
   });
 
-  const properties = source.data.features[0]?.properties;
-  const labelCoordinate = properties?.centroid ?? properties?.center;
-  const labelPoint = source.kind === "china"
-    ? bbox.getCenter(new Vector2())
-    : labelCoordinate
-    ? (() => {
-        const [x, y] = projection(labelCoordinate)!;
-        return new Vector2(x, -y);
-      })()
-    : bbox.getCenter(new Vector2());
+  const labels = source.label
+    ? [
+        {
+          position: [
+            bbox.getCenter(new Vector2()).x,
+            bbox.getCenter(new Vector2()).y,
+            MAP_DEPTH + 0.12,
+          ] as [number, number, number],
+          text: source.label,
+        },
+      ]
+    : Array.from(labelDataByName, ([text, labelData]) => {
+        const labelPoint =
+          labelData.preferredPosition ??
+          labelData.bounds.getCenter(new Vector2());
+        return {
+          position: [
+            labelPoint.x,
+            labelPoint.y,
+            MAP_DEPTH + 0.12,
+          ] as [number, number, number],
+          text,
+        };
+      });
 
   return {
     ...source,
     bbox,
     shapes,
     boundarySegments,
-    labelPosition: [labelPoint.x, labelPoint.y, MAP_DEPTH + 0.12],
+    labels,
   };
 }
 
@@ -917,8 +960,6 @@ function MapRegionMesh({
     }
   });
 
-  const label =
-    region.label ?? region.data.features[0]?.properties.name ?? region.id;
   const usesChinaTheme =
     region.kind === "china" || region.kind === "sansha";
 
@@ -952,16 +993,18 @@ function MapRegionMesh({
         />
       </ShapeBox>
 
-      {showLabel && (
-        <Html
-          center
-          position={region.labelPosition}
-          distanceFactor={labelDistanceFactor}
-          zIndexRange={[20, 0]}
-        >
-          <MapLabel>{label}</MapLabel>
-        </Html>
-      )}
+      {showLabel &&
+        region.labels.map(({ position, text }) => (
+          <Html
+            center
+            key={text}
+            position={position}
+            distanceFactor={labelDistanceFactor}
+            zIndexRange={[20, 0]}
+          >
+            <MapLabel>{text}</MapLabel>
+          </Html>
+        ))}
     </group>
   );
 }

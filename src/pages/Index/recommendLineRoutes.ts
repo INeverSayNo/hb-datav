@@ -133,16 +133,7 @@ export const mapRelation = [
   },
   {
     label: "楚天翼连",
-    map: [
-      "china",
-      "out-it",
-      "out-jp",
-      "out-kz",
-      "out-pl",
-      "out-de",
-      "out-fr",
-      "out-es",
-    ],
+    map: ["china", "out-europe", "out-jp", "out-kz"],
     // MapStage 为 2340×1570。positionPx 表示地图中心，原点在左上角。
     // 中国主体右移，为左侧的哈萨克斯坦和欧洲国家预留空间。
     mainPlacement: { positionPx: [1720, 860], sizePx: [900, 1000] },
@@ -152,16 +143,8 @@ export const mapRelation = [
       "out-jp": { positionPx: [2190, 980], sizePx: [220, 360] },
       // KZ：中国左侧，与中国上部大致持平。
       "out-kz": { positionPx: [1130, 710], sizePx: [340, 220] },
-      // PL：位于 KZ 左侧，两个最大占位框间隔约 50px。
-      "out-pl": { positionPx: [790, 710], sizePx: [240, 200] },
-      // DE：位于 PL 左侧并与其平行。
-      "out-de": { positionPx: [490, 710], sizePx: [260, 210] },
-      // FR：位于 DE 左侧，纵向位置略低。
-      "out-fr": { positionPx: [200, 810], sizePx: [240, 230] },
-      // IT：位于 DE 下方。
-      "out-it": { positionPx: [490, 1110], sizePx: [250, 300] },
-      // ES：位于 FR 左下方。
-      "out-es": { positionPx: [190, 1180], sizePx: [260, 210] },
+      // 欧洲五国共用同一投影和变换，保持真实接壤关系；右缘距 KZ 约 50px。
+      "out-europe": { positionPx: [500, 950], sizePx: [820, 600] },
     },
   },
   {
