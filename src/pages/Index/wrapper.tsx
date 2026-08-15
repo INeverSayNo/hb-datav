@@ -9,6 +9,7 @@ import CenterControls from "./components/CenterControls";
 import DashboardHeader from "./components/DashboardHeader";
 import LeftPanels from "./components/LeftPanels";
 import MapLegend from "./components/MapLegend";
+import RouteButtons from "./components/RouteButton";
 import MatrixRain from "./components/MatrixRain";
 import RightPanels from "./components/RightPanels";
 import EChartsHubeiMap from "./map";
@@ -77,10 +78,65 @@ const CenterGlow = styled.div`
 const MapStage = styled.div`
   position: absolute;
   left: 1600px;
-  top: 460px;
+  top: 360px;
   z-index: 2;
   width: 2340px;
-  height: 1470px;
+  height: 1570px;
+`;
+
+const MapLoadingOverlay = styled.div<{ $visible: boolean }>`
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: rgba(4, 20, 30, 0.5);
+  backdrop-filter: blur(3px);
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  pointer-events: ${({ $visible }) => ($visible ? "auto" : "none")};
+  transition: opacity 240ms ease;
+`;
+
+const ScreenLoadingOverlay = styled.div<{ $visible: boolean }>`
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: rgba(4, 20, 30, 0.62);
+  backdrop-filter: blur(4px);
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  pointer-events: ${({ $visible }) => ($visible ? "auto" : "none")};
+  transition: opacity 240ms ease;
+`;
+
+const LoadingSpinner = styled.div`
+  width: 96px;
+  height: 96px;
+  border: 6px solid rgba(32, 219, 219, 0.18);
+  border-top-color: #20dbdb;
+  border-radius: 50%;
+  animation: map-spin 0.9s linear infinite;
+  box-shadow: 0 0 28px rgba(32, 219, 219, 0.35);
+
+  @keyframes map-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const LoadingText = styled.div`
+  color: rgba(232, 250, 255, 0.92);
+  font-size: 36px;
+  letter-spacing: 6px;
+  text-shadow: 0 0 14px rgba(32, 219, 219, 0.65);
 `;
 
 type MapLayerPhase = "current" | "incoming" | "entering" | "exiting";
@@ -126,20 +182,23 @@ function DashboardMap({
 
 export default function IndexDashboard() {
   const updateStore = useScreenBaseDataStore((s) => s.updateStore);
-  const [currentView, setCurrentView] =
-    useState<DashboardMapView>("province");
-  const [incomingView, setIncomingView] =
-    useState<DashboardMapView | null>(null);
+  const screenLoading = useScreenBaseDataStore((s) => s.loading);
+  const [currentView, setCurrentView] = useState<DashboardMapView>("province");
+  const [incomingView, setIncomingView] = useState<DashboardMapView | null>(
+    null,
+  );
   const [isAnimating, setIsAnimating] = useState(false);
   const transitionTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    updateStore({ loading: true });
     const fetchData = async () => {
       const [err, data] = await GetScreenBaseData();
       if (!err && data && Object.keys(data || {}).length && !cancelled) {
         updateStore(data);
       }
+      updateStore({ loading: false });
     };
     fetchData();
     return () => {
@@ -204,14 +263,17 @@ export default function IndexDashboard() {
               $phase={isAnimating ? "entering" : "incoming"}
               aria-hidden={!isAnimating}
             >
-              <DashboardMap
-                view={incomingView}
-                onReady={handleIncomingReady}
-              />
+              <DashboardMap view={incomingView} onReady={handleIncomingReady} />
             </MapLayer>
           )}
+
+          <MapLoadingOverlay $visible={incomingView !== null}>
+            <LoadingSpinner />
+            <LoadingText>地图加载中…</LoadingText>
+          </MapLoadingOverlay>
         </MapStage>
-        <MapLegend />
+        {currentView === "province" && <MapLegend />}
+        {currentView === "recommendLine" && <RouteButtons />}
         <DashboardHeader />
         <LeftPanels />
         <CenterControls />
@@ -221,6 +283,11 @@ export default function IndexDashboard() {
           disabled={incomingView !== null}
           onViewChange={handleViewChange}
         />
+
+        <ScreenLoadingOverlay $visible={screenLoading}>
+          <LoadingSpinner />
+          <LoadingText>数据加载中…</LoadingText>
+        </ScreenLoadingOverlay>
       </Dashboard>
     </AutoFit>
   );

@@ -31,6 +31,7 @@ export interface ScreenBaseData {
     privateLine: number;
     shipCount: number;
   };
+  loading: boolean
   rightBottomPanel: { text1: string; text2: string }[];
 }
 

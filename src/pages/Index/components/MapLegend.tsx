@@ -68,8 +68,8 @@ const Label = styled.span`
 
 const NETWORK_ITEMS = [
   { label: "公路网", color: "#ffce4d" },
-  { label: "铁路网", color: "#fafcfd" },
-  { label: "水运网", color: "#5ee7fb" },
+  { label: "铁路网", color: "#d81e06" },
+  { label: "水运网", color: "#1e90ff" },
   { label: "航空", color: "#e11ef2" },
 ];
 

@@ -22,6 +22,9 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 
 import hubeiHighwayData from "@/assets/hb-highway.json";
+import hubeiRailwayData from "@/assets/hb-railway.json";
+import hubeiWaterwayData from "@/assets/hb-waterway.json";
+
 import hubeiMapData from "@/assets/hb.json";
 import hubeiOutlineData from "@/assets/hb_outline.json";
 import hubeiDem from "@/assets/hb_dem.png";
@@ -103,6 +106,17 @@ const poiList = [
 
 /** 高速公路线宽（屏幕像素） */
 const HIGHWAY_WIDTH = 4;
+/** 铁路线宽（屏幕像素） */
+const RAILWAY_WIDTH = 12;
+/** 铁路红白交替的线段数量（每 8 个线段交替一次颜色） */
+const RAILWAY_SEGMENT_LENGTH = 2;
+/** 铁路红/白两色 */
+const RAILWAY_RED = "#d81e06";
+const RAILWAY_WHITE = "#ffffff";
+/** 水运线宽（屏幕像素） */
+const WATERWAY_WIDTH = 12;
+/** 水运颜色 */
+const WATERWAY_COLOR = "#1e90ff";
 
 const PoiMarker = styled.div`
   display: flex;
@@ -141,6 +155,30 @@ type HighwayMultiLineString = {
   type: "MultiLineString";
   coordinates: [number, number][][];
 };
+
+/** 将一组线段顶点（6 个数 = 2 点 × 3 分量）构建为带像素线宽的 Line2 线对象 */
+function createLine(
+  positions: number[],
+  color: string,
+  width: number,
+  renderOrder: number,
+) {
+  const geometry = new LineSegmentsGeometry();
+  geometry.setPositions(positions);
+  const material = new LineMaterial({
+    color,
+    linewidth: width,
+    worldUnits: false,
+    toneMapped: false,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+  });
+  const line = new LineSegments2(geometry, material);
+  line.renderOrder = renderOrder;
+  line.raycast = () => {};
+  return line;
+}
 
 function MapMesh() {
   const demTexture = useTexture(hubeiDem);
@@ -243,6 +281,86 @@ function MapMesh() {
     highwayLine.renderOrder = 14;
     highwayLine.raycast = () => {};
 
+    // 铁路线：红/白每 RAILWAY_SEGMENT_LENGTH（8）个线段交替渲染，色块等长
+    const railwayData = hubeiRailwayData as unknown as HighwayMultiLineString;
+    const railwayRedPositions: number[] = [];
+    const railwayWhitePositions: number[] = [];
+    const railwayZ = MAP_DEPTH + 0.085;
+
+    const railwaySegments: number[] = [];
+    railwayData.coordinates.forEach((coordinates) => {
+      if (coordinates.length < 2) return;
+      let previous = project(coordinates[0]);
+      for (let index = 1; index < coordinates.length; index += 1) {
+        const current = project(coordinates[index]);
+        railwaySegments.push(
+          previous.x,
+          previous.y,
+          railwayZ,
+          current.x,
+          current.y,
+          railwayZ,
+        );
+        previous = current;
+      }
+    });
+
+    for (let index = 0; index < railwaySegments.length; index += 6) {
+      const isRed =
+        (index / 6) % (RAILWAY_SEGMENT_LENGTH * 2) < RAILWAY_SEGMENT_LENGTH;
+      const target = isRed ? railwayRedPositions : railwayWhitePositions;
+      target.push(
+        railwaySegments[index],
+        railwaySegments[index + 1],
+        railwaySegments[index + 2],
+        railwaySegments[index + 3],
+        railwaySegments[index + 4],
+        railwaySegments[index + 5],
+      );
+    }
+
+    const railwayRedLine = createLine(
+      railwayRedPositions,
+      RAILWAY_RED,
+      RAILWAY_WIDTH,
+      15,
+    );
+    const railwayWhiteLine = createLine(
+      railwayWhitePositions,
+      RAILWAY_WHITE,
+      RAILWAY_WIDTH,
+      16,
+    );
+
+    // 水运线：单一蓝色线条
+    const waterwayData = hubeiWaterwayData as unknown as HighwayMultiLineString;
+    const waterwayPositions: number[] = [];
+    const waterwayZ = MAP_DEPTH + 0.09;
+
+    waterwayData.coordinates.forEach((coordinates) => {
+      if (coordinates.length < 2) return;
+      let previous = project(coordinates[0]);
+      for (let index = 1; index < coordinates.length; index += 1) {
+        const current = project(coordinates[index]);
+        waterwayPositions.push(
+          previous.x,
+          previous.y,
+          waterwayZ,
+          current.x,
+          current.y,
+          waterwayZ,
+        );
+        previous = current;
+      }
+    });
+
+    const waterwayLine = createLine(
+      waterwayPositions,
+      WATERWAY_COLOR,
+      WATERWAY_WIDTH,
+      17,
+    );
+
     const extruded = new ExtrudeGeometry(shapes, {
       depth: MAP_DEPTH,
       bevelEnabled: false,
@@ -295,6 +413,9 @@ function MapMesh() {
       provinceEdgeGeometry,
       outlineRings,
       highwayLine,
+      railwayRedLine,
+      railwayWhiteLine,
+      waterwayLine,
       pois,
     };
   }, []);
@@ -309,6 +430,12 @@ function MapMesh() {
     () => () => {
       projected.highwayLine.geometry.dispose();
       projected.highwayLine.material.dispose();
+      projected.railwayRedLine.geometry.dispose();
+      projected.railwayRedLine.material.dispose();
+      projected.railwayWhiteLine.geometry.dispose();
+      projected.railwayWhiteLine.material.dispose();
+      projected.waterwayLine.geometry.dispose();
+      projected.waterwayLine.material.dispose();
     },
     [projected],
   );
@@ -357,6 +484,9 @@ function MapMesh() {
       </lineSegments>
 
       <primitive object={projected.highwayLine} />
+      <primitive object={projected.railwayRedLine} />
+      <primitive object={projected.railwayWhiteLine} />
+      <primitive object={projected.waterwayLine} />
 
       <OutlineGlow rings={projected.outlineRings} />
 
@@ -403,7 +533,7 @@ export default function ThreeHubeiMap({ onReady }: ThreeHubeiMapProps) {
         dpr={[1, 1.5]}
         resize={{ offsetSize: true }}
         gl={{ alpha: true, antialias: true }}
-        camera={{ fov: 28.5, near: 0.1, far: 300, position: [0, 22.5, 18.5] }}
+        camera={{ fov: 30.5, near: 0.1, far: 300, position: [0, 22.5, 18.5] }}
       >
         <Suspense fallback={null}>
           {/* 地图数据位于 XY 平面，整体翻转到 XZ 地面上（+Y 朝上），便于 OrbitControls 交互 */}
