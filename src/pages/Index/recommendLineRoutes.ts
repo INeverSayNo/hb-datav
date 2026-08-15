@@ -109,7 +109,7 @@ export const mapRelation = [
     ],
     out: ["out-br"],
     outPlacements: {
-      "out-br": { positionPx: [520, 1270], sizePx: [480, 380] },
+      "out-br": { positionPx: [320, 1270], sizePx: [480, 380] },
     },
   },
   {
@@ -162,7 +162,123 @@ export const mapRelation = [
   },
 ];
 
-export const poiData = [
+export type RecommendPoiType = "waterway" | "highway" | "railway" | "airway";
+
+export type RecommendPoiPoint = {
+  name: string;
+  /** 经纬度 [lng, lat] */
+  value: [number, number];
+};
+
+export type RecommendPoiSegment = {
+  routes: RecommendPoiPoint[];
+  type: RecommendPoiType;
+};
+
+export type RecommendPoiEntry = {
+  key: string;
+  poiInfo: RecommendPoiSegment[];
+};
+
+export const poiData: RecommendPoiEntry[] = [
+  {
+    key: "楚天翼连",
+    poiInfo: [
+      {
+        routes: [
+          {
+            name: "花湖机场",
+            value: [115.06, 30.36],
+          },
+          {
+            name: "成田国际机场",
+            value: [140.39, 35.77],
+          },
+        ],
+        type: "airway",
+      },
+
+      {
+        routes: [
+          {
+            name: "花湖机场",
+            value: [115.06, 30.36],
+          },
+          {
+            name: "图尔克斯坦机场",
+            value: [68.27, 43.3],
+          },
+        ],
+        type: "airway",
+      },
+
+      {
+        routes: [
+          {
+            name: "花湖机场",
+            value: [115.06, 30.36],
+          },
+          {
+            name: "米兰国际机场",
+            value: [8.7281, 45.6306],
+          },
+        ],
+        type: "airway",
+      },
+      {
+        routes: [
+          {
+            name: "花湖机场",
+            value: [115.06, 30.36],
+          },
+          {
+            name: "德国仓",
+            value: [13.405, 52.52],
+          },
+        ],
+        type: "airway",
+      },
+      {
+        routes: [
+          {
+            name: "花湖机场",
+            value: [115.06, 30.36],
+          },
+          {
+            name: "波兰仓",
+            value: [21.0122, 52.2297],
+          },
+        ],
+        type: "airway",
+      },
+      {
+        routes: [
+          {
+            name: "花湖机场",
+            value: [115.06, 30.36],
+          },
+          {
+            name: "西班牙仓",
+            value: [-4.0249, 39.8577],
+          },
+        ],
+        type: "airway",
+      },
+      {
+        routes: [
+          {
+            name: "花湖机场",
+            value: [115.06, 30.36],
+          },
+          {
+            name: "法国仓",
+            value: [2.2, 46.2],
+          },
+        ],
+        type: "airway",
+      },
+    ],
+  },
   {
     key: "北粮南运",
     poiInfo: [
@@ -284,7 +400,31 @@ export const poiData = [
         routes: [
           {
             name: "巴西",
-            value: [91, 21.1],
+            value: [-54.07, -8.2],
+          },
+          {
+            name: "",
+            value: [106.11, 19.67],
+          },
+          {
+            name: "",
+            value: [111.35, 20.35],
+          },
+          {
+            name: "",
+            value: [115.5, 21.0],
+          },
+          {
+            name: "",
+            value: [119.28, 24.07],
+          },
+          {
+            name: "",
+            value: [123.4, 29.4],
+          },
+          {
+            name: "",
+            value: [123.48, 30.85],
           },
           {
             name: "太仓",
@@ -393,6 +533,115 @@ export const poiData = [
       },
     ],
   },
+  {
+    key: "棉纺丝路",
+    poiInfo: [
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "荆州",
+            value: [112.2397, 30.3352],
+          },
+        ],
+        type: "highway",
+      },
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "安阳",
+            value: [114.3924, 36.0977],
+          },
+        ],
+        type: "highway",
+      },
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "南通",
+            value: [120.8646, 32.0162],
+          },
+        ],
+        type: "highway",
+      },
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "青岛",
+            value: [120.3826, 36.0671],
+          },
+        ],
+        type: "highway",
+      },
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "绍兴",
+            value: [120.92, 29.82],
+          },
+        ],
+        type: "highway",
+      },
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "杭州",
+            value: [119.82, 31],
+          },
+        ],
+        type: "highway",
+      },
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "芜湖",
+            value: [117.68, 32.12],
+          },
+        ],
+        type: "highway",
+      },
+      {
+        routes: [
+          {
+            name: "新疆",
+            value: [86.1459, 41.764],
+          },
+          {
+            name: "佛山",
+            value: [113.1227, 23.0288],
+          },
+        ],
+        type: "highway",
+      },
+    ],
+  },
 ];
 
 export type RecommendRoute = {
@@ -402,9 +651,7 @@ export type RecommendRoute = {
   mapIds: readonly RecommendMapId[];
   mapKey: string;
   outPlacements?: Partial<Record<OutRecommendMapId, OutMapPlacement>>;
-  visualAdjustments?: Partial<
-    Record<RecommendMapId, MapVisualAdjustment>
-  >;
+  visualAdjustments?: Partial<Record<RecommendMapId, MapVisualAdjustment>>;
 };
 
 type PayloadRoute = {
@@ -413,9 +660,7 @@ type PayloadRoute = {
   mainPlacement?: MainMapPlacement;
   map: string[];
   outPlacements?: Partial<Record<OutRecommendMapId, OutMapPlacement>>;
-  visualAdjustments?: Partial<
-    Record<RecommendMapId, MapVisualAdjustment>
-  >;
+  visualAdjustments?: Partial<Record<RecommendMapId, MapVisualAdjustment>>;
 };
 
 const ROUTE_BUTTON_ORDER = [

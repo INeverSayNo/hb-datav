@@ -3,27 +3,35 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { Html, Line, OrbitControls } from "@react-three/drei";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { geoMercator } from "d3-geo";
 import styled from "styled-components";
 import {
-  Box2,
   AdditiveBlending,
+  Box2,
+  CatmullRomCurve3,
+  LineCurve3,
   Path,
   Shape,
   ShapeUtils,
   SRGBColorSpace,
   TextureLoader,
+  type Group,
   type PerspectiveCamera,
   type Texture,
   Vector2,
+  Vector3,
   type ShaderMaterial as ThreeShaderMaterial,
 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { Line2 } from "three/examples/jsm/lines/Line2.js";
+import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
 import ShaanxiData from "@/assets/recommendLine/Shaanxi.json";
 import anhuiData from "@/assets/recommendLine/anhui.json";
@@ -92,11 +100,13 @@ import yunnanTexture from "@/assets/recommendLine/yunnan.png";
 import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
 
 import {
-    ALL_RECOMMEND_PROVINCE_IDS,
-  type OutRecommendMapId,
+  ALL_RECOMMEND_PROVINCE_IDS,
+  poiData,
   type OutMapPlacement,
-  type RecommendMapId,
+  type OutRecommendMapId,
   type ProvinceId,
+  type RecommendMapId,
+  type RecommendPoiSegment,
   type RecommendRoute,
 } from "../recommendLineRoutes";
 import ShapeBox from "./shape";
@@ -206,6 +216,39 @@ export const RECOMMEND_CHINA_THEME = {
   sideTop: "#21bce0",
   top: "#168f9f",
 } as const;
+
+/** 路线类型 → 虚线颜色（waterway 绿 / highway 蓝 / railway 红） */
+const ROUTE_TYPE_COLORS: Record<RecommendPoiSegment["type"], string> = {
+  waterway: "#2ecc71",
+  highway: "#2f8cff",
+  railway: "#ff4d4f",
+  airway: "258bd6"
+};
+
+/** 普通节点外环（蓝） */
+const POI_RING_NORMAL = "#2f8cff";
+/** 武汉节点外环（红） */
+const POI_RING_WUHAN = "#ff4d4f";
+/** 节点白色内环 */
+const POI_INNER_WHITE = "#ffffff";
+/** 路线虚线所在高度 */
+const POI_LINE_Z = MAP_DEPTH + 0.08;
+/** 节点图标所在高度 */
+const POI_NODE_Z = MAP_DEPTH + 0.14;
+
+/** 主虚线宽度（屏幕像素） */
+const POI_LINE_WIDTH = 4;
+/** 半透明衬底宽度（屏幕像素），衬托主虚线更醒目 */
+const POI_LINE_BACK_WIDTH = 12;
+/** 主虚线 dashSize / gapSize（世界单位，地图宽约 27 单位） */
+const POI_DASH_SIZE = 0.3;
+const POI_GAP_SIZE = 0.16;
+/** 虚线每秒流动的距离（世界单位） */
+const POI_FLOW_SPEED = 0.22;
+/** 每条路线飞线光点数量 */
+const FLY_DOT_COUNT = 2;
+/** 飞线光点每秒沿曲线行进的弧长比例 */
+const FLY_SPEED = 0.14;
 
 const provinceSourceById: Record<ProvinceId, MapRegionSource> = {
   anhui: {
@@ -438,6 +481,60 @@ const MapCanvasLayer = styled.div<{
   }
 `;
 
+/** 节点 + 标签的定位容器（中心对齐到 position）。 */
+const PoiMarkerWrap = styled.div`
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+`;
+
+/** 节点图标：外环 3px（蓝/红）+ 白色内环 6px（约为外环 2 倍）。 */
+const PoiNode = styled.div<{ $isWuhan?: boolean }>`
+  position: absolute;
+  left: -13px;
+  top: -13px;
+  width: 26px;
+  height: 26px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid
+      ${({ $isWuhan }) => ($isWuhan ? POI_RING_WUHAN : POI_RING_NORMAL)};
+    box-shadow: 0 0 10px
+      ${({ $isWuhan }) =>
+        $isWuhan ? "rgba(255, 77, 79, 0.7)" : "rgba(47, 140, 255, 0.7)"};
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    border: 6px solid ${POI_INNER_WHITE};
+  }
+`;
+
+/** 节点名称：白底黑字。 */
+const PoiLabel = styled.span`
+  position: absolute;
+  left: 50%;
+  top: 17px;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #000000;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 10px 12px;
+  border-radius: 10px;
+`;
+
 function getPolygons(geometry: AdministrativeGeometry): PolygonCoordinates[] {
   return geometry.type === "Polygon"
     ? [geometry.coordinates]
@@ -566,11 +663,11 @@ function buildMapRegion(source: MapRegionSource): ProjectedMapRegion {
           labelData.preferredPosition ??
           labelData.bounds.getCenter(new Vector2());
         return {
-          position: [
-            labelPoint.x,
-            labelPoint.y,
-            MAP_DEPTH + 0.12,
-          ] as [number, number, number],
+          position: [labelPoint.x, labelPoint.y, MAP_DEPTH + 0.12] as [
+            number,
+            number,
+            number,
+          ],
           text,
         };
       });
@@ -660,7 +757,9 @@ function fitPlacementRect(
 }
 
 function avoidOutCollisions(rect: PixelRect, occupied: PixelRect[]) {
-  if (!occupied.some((other) => rectanglesOverlap(rect, other, MAP_COLLISION_GAP))) {
+  if (
+    !occupied.some((other) => rectanglesOverlap(rect, other, MAP_COLLISION_GAP))
+  ) {
     return rect;
   }
 
@@ -738,8 +837,7 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
     ? new Set<MapRegionId>(route.mainMapIds)
     : undefined;
   const mainRegions = regions.filter(
-    (region) =>
-      region.kind !== "out" || mainMapIdSet?.has(region.id) === true,
+    (region) => region.kind !== "out" || mainMapIdSet?.has(region.id) === true,
   );
   const outRegions = regions.filter((region) => !mainRegions.includes(region));
   const baseRegions = mainRegions.length > 0 ? mainRegions : regions;
@@ -796,14 +894,17 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
     mainRect.y + mainRect.height / 2,
   );
   const mainWorldCenter = new Vector2(
-    ((mainPixelCenter.x / MAP_STAGE_WIDTH) - 0.5) * targetWidth,
+    (mainPixelCenter.x / MAP_STAGE_WIDTH - 0.5) * targetWidth,
     (0.5 - mainPixelCenter.y / MAP_STAGE_HEIGHT) * targetHeight,
   );
   const center = bounds
     .getCenter(new Vector2())
     .sub(mainWorldCenter.clone().divideScalar(fitScale));
 
-  const transformById = new Map<MapRegionId, NonNullable<ProjectedMapRegion["transform"]>>();
+  const transformById = new Map<
+    MapRegionId,
+    NonNullable<ProjectedMapRegion["transform"]>
+  >();
   outRegions.forEach((region) => {
     const rect = outRectById.get(region.id)!;
     const outSize = region.bbox.getSize(new Vector2());
@@ -819,7 +920,7 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
       rect.y + rect.height / 2,
     );
     const desiredWorldCenter = new Vector2(
-      ((pixelCenter.x / MAP_STAGE_WIDTH) - 0.5) * targetWidth,
+      (pixelCenter.x / MAP_STAGE_WIDTH - 0.5) * targetWidth,
       (0.5 - pixelCenter.y / MAP_STAGE_HEIGHT) * targetHeight,
     );
     const rawCenter = region.bbox.getCenter(new Vector2());
@@ -891,6 +992,39 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   };
   routeLayoutCache.set(route.mapKey, layout);
   return layout;
+}
+
+/**
+ * 将经纬度烘焙到中心组（position=[-center.x, -center.y]）局部坐标。
+ * 优先选择包含该点的最小 bbox region 并应用其 transform，与 boundarySegments 的烘焙方式一致。
+ */
+function bakePoiPoint(
+  layout: ProjectedRouteLayout,
+  lng: number,
+  lat: number,
+): [number, number] {
+  const projection = getProjection();
+  const [x, y] = projection([lng, lat])!;
+  const point = new Vector2(x, -y);
+
+  let bestRegion: ProjectedMapRegion | undefined;
+  let bestArea = Infinity;
+  layout.regions.forEach((region) => {
+    if (!region.bbox.containsPoint(point)) return;
+    const size = region.bbox.getSize(new Vector2());
+    const area = size.x * size.y;
+    if (area < bestArea) {
+      bestArea = area;
+      bestRegion = region;
+    }
+  });
+
+  const transform = bestRegion?.transform;
+  if (!transform) return [point.x, point.y];
+  return [
+    point.x * transform.scale + transform.position[0],
+    point.y * transform.scale + transform.position[1],
+  ];
 }
 
 function loadMapRegionTexture(id: RecommendMapId) {
@@ -984,8 +1118,7 @@ function MapRegionMesh({
     }
   });
 
-  const usesChinaTheme =
-    region.kind === "china" || region.kind === "sansha";
+  const usesChinaTheme = region.kind === "china" || region.kind === "sansha";
 
   return (
     <group>
@@ -1011,7 +1144,9 @@ function MapRegionMesh({
           attach="material-1"
           ref={sideMaterialRef}
           transparent
-          uBottom={usesChinaTheme ? RECOMMEND_CHINA_THEME.sideBottom : undefined}
+          uBottom={
+            usesChinaTheme ? RECOMMEND_CHINA_THEME.sideBottom : undefined
+          }
           uScan={usesChinaTheme ? RECOMMEND_CHINA_THEME.sideScan : undefined}
           uTop={usesChinaTheme ? RECOMMEND_CHINA_THEME.sideTop : undefined}
         />
@@ -1033,12 +1168,214 @@ function MapRegionMesh({
   );
 }
 
+/**
+ * 单段路线：Catmull-Rom 平滑转角 + 加粗虚线（Line2/LineMaterial）+ 虚线流动 + 飞线光点。
+ */
+function RouteSegment({
+  color,
+  points,
+}: {
+  color: string;
+  points: [number, number][];
+}) {
+  const { size, viewport } = useThree();
+
+  const { curve, backLine, mainLine } = useMemo(() => {
+    if (points.length < 2) {
+      return { curve: null, backLine: null, mainLine: null };
+    }
+
+    const pts = points.map(([x, y]) => new Vector3(x, y, POI_LINE_Z));
+    const curve =
+      pts.length === 2
+        ? new LineCurve3(pts[0], pts[1])
+        : new CatmullRomCurve3(pts, false, "catmullrom", 0.5);
+    const sampled = curve.getPoints(Math.max(96, pts.length * 48));
+
+    const buildLine = (opts: {
+      dashed: boolean;
+      linewidth: number;
+      opacity: number;
+      renderOrder: number;
+    }) => {
+      const geometry = new LineGeometry();
+      geometry.setPositions(sampled.flatMap((p) => [p.x, p.y, p.z]));
+      const material = new LineMaterial({
+        color,
+        linewidth: opts.linewidth,
+        worldUnits: false,
+        toneMapped: false,
+        transparent: true,
+        opacity: opts.opacity,
+        depthWrite: false,
+        dashed: opts.dashed,
+        dashSize: POI_DASH_SIZE,
+        gapSize: POI_GAP_SIZE,
+      });
+      const line = new Line2(geometry, material);
+      line.renderOrder = opts.renderOrder;
+      line.raycast = () => {};
+      return line;
+    };
+
+    const backLine = buildLine({
+      dashed: false,
+      linewidth: POI_LINE_BACK_WIDTH,
+      opacity: 0.16,
+      renderOrder: 5,
+    });
+    const mainLine = buildLine({
+      dashed: true,
+      linewidth: POI_LINE_WIDTH,
+      opacity: 0.95,
+      renderOrder: 6,
+    });
+
+    return { curve, backLine, mainLine };
+  }, [color, points]);
+
+  // 像素线宽依赖渲染缓冲尺寸，与视口同步
+  useLayoutEffect(() => {
+    if (!backLine || !mainLine) return;
+    const width = size.width * viewport.dpr;
+    const height = size.height * viewport.dpr;
+    backLine.material.resolution.set(width, height);
+    mainLine.material.resolution.set(width, height);
+  }, [backLine, mainLine, size, viewport.dpr]);
+
+  useEffect(
+    () => () => {
+      backLine?.geometry.dispose();
+      backLine?.material.dispose();
+      mainLine?.geometry.dispose();
+      mainLine?.material.dispose();
+    },
+    [backLine, mainLine],
+  );
+
+  const flyDotRefs = useRef<(Group | null)[]>([]);
+
+  useFrame((state, delta) => {
+    if (!curve || !mainLine) return;
+    // 虚线沿路径流动
+    mainLine.material.dashOffset -= delta * POI_FLOW_SPEED;
+
+    // 飞线光点沿曲线前进
+    const t = (state.clock.elapsedTime * FLY_SPEED) % 1;
+    flyDotRefs.current.forEach((dot, index) => {
+      if (!dot) return;
+      const distance = (t + index / FLY_DOT_COUNT) % 1;
+      const p = curve.getPointAt(distance);
+      dot.position.set(p.x, p.y, POI_LINE_Z + 0.07);
+    });
+  });
+
+  if (!curve || !backLine || !mainLine) return null;
+
+  return (
+    <group>
+      <primitive object={backLine} />
+      <primitive object={mainLine} />
+      {Array.from({ length: FLY_DOT_COUNT }, (_, index) => (
+        <group
+          key={index}
+          ref={(el) => {
+            flyDotRefs.current[index] = el;
+          }}
+        >
+          {/* 白色核心 */}
+          <mesh>
+            <sphereGeometry args={[0.085, 12, 12]} />
+            <meshBasicMaterial color="#ffffff" toneMapped={false} />
+          </mesh>
+          {/* 彩色光晕 */}
+          <mesh>
+            <sphereGeometry args={[0.22, 12, 12]} />
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={0.4}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** 精品线路 POI 层：按类型画虚线路线，并在有名称的途经点渲染节点图标与标签。 */
+function RoutePoiLayer({
+  layout,
+  route,
+}: {
+  layout: ProjectedRouteLayout;
+  route: RecommendRoute;
+}) {
+  const segments = useMemo(() => {
+    const poi = poiData.find((entry) => entry.key === route.label);
+    if (!poi) return [];
+
+    return poi.poiInfo.map((segment) => {
+      const points = segment.routes.map((point) => ({
+        name: point.name,
+        position: bakePoiPoint(layout, point.value[0], point.value[1]),
+      }));
+      return {
+        type: segment.type,
+        points,
+        positions: points.map((point) => point.position),
+      };
+    });
+  }, [layout, route.label]);
+
+  return (
+    <>
+      {segments.map((segment, segmentIndex) => {
+        if (segment.points.length < 2) return null;
+
+        return (
+          <group key={segmentIndex}>
+            <RouteSegment
+              color={ROUTE_TYPE_COLORS[segment.type]}
+              points={segment.positions}
+            />
+
+            {segment.points.map((point, pointIndex) => {
+              if (!point.name) return null; // name 为空不显示节点图标
+              const [x, y] = point.position;
+              return (
+                <Html
+                  key={`${point.name}-${pointIndex}`}
+                  center
+                  position={[x, y, POI_NODE_Z]}
+                  distanceFactor={22 / layout.fitScale}
+                  zIndexRange={[30, 0]}
+                >
+                  <PoiMarkerWrap>
+                    <PoiNode $isWuhan={point.name === "武汉"} />
+                    <PoiLabel>{point.name}</PoiLabel>
+                  </PoiMarkerWrap>
+                </Html>
+              );
+            })}
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
 function RecommendLineScene({
   onReady,
   prepared,
+  route,
 }: {
   onReady: () => void;
   prepared: PreparedRoute;
+  route: RecommendRoute;
 }) {
   const { layout, textures } = prepared;
   const labelDistanceFactor = 22 / layout.fitScale;
@@ -1109,6 +1446,7 @@ function RecommendLineScene({
             />
           </group>
         )}
+        <RoutePoiLayer layout={layout} route={route} />
         <SceneReady key={layout.mapKey} onReady={onReady} />
       </group>
     </group>
@@ -1280,6 +1618,7 @@ function RecommendLineMap({
                 <RecommendLineScene
                   prepared={prepared}
                   onReady={handleSceneReady}
+                  route={route}
                 />
               </group>
             )}
