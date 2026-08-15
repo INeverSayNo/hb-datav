@@ -90,7 +90,7 @@ import yunnanTexture from "@/assets/recommendLine/yunnan.png";
 import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
 
 import {
-  ALL_RECOMMEND_PROVINCE_IDS,
+    ALL_RECOMMEND_PROVINCE_IDS,
   type OutRecommendMapId,
   type RecommendMapId,
   type ProvinceId,
@@ -141,6 +141,10 @@ type ProjectedMapRegion = MapRegionSource & {
   shapes: Shape[];
   boundarySegments: [number, number, number][];
   labelPosition: [number, number, number];
+  transform?: {
+    position: [number, number, 0];
+    scale: number;
+  };
 };
 
 type ProjectedRouteLayout = {
@@ -157,17 +161,16 @@ type PreparedRoute = {
   textures: ReadonlyMap<RecommendMapId, Texture>;
 };
 
-type MapTransitionPhase =
-  | "hidden"
-  | "entering"
-  | "visible"
-  | "exiting";
+type MapTransitionPhase = "hidden" | "entering" | "visible" | "exiting";
 
 const GLOBAL_MAP_WIDTH = 27;
 const TARGET_MAP_WIDTH = 27;
 const TARGET_MAP_HEIGHT = 17.5;
 const WORLD_TARGET_MAP_WIDTH = 30;
 const WORLD_TARGET_MAP_HEIGHT = 18;
+// 国外 out-* 区域显示参数
+const OUT_MAP_FRACTION = 0.25; // 国外区域宽度占主体区域宽度的最大比例
+const OUT_MAP_MARGIN = 1.6; // 与画布边缘的间距（世界单位）
 const EXIT_DURATION = 180;
 const ENTER_DURATION = 240;
 const REDUCED_MOTION_DURATION = 80;
@@ -177,37 +180,159 @@ function asAdministrativeData(data: unknown): AdministrativeGeoJSON {
 }
 
 const provinceSourceById: Record<ProvinceId, MapRegionSource> = {
-  anhui: { id: "anhui", data: asAdministrativeData(anhuiData), kind: "province", texture: anhuiTexture },
-  beijing: { id: "beijing", data: asAdministrativeData(beijingData), kind: "province", texture: beijingTexture },
-  chongqing: { id: "chongqing", data: asAdministrativeData(chongqingData), texture: chongqingTexture },
-  fujian: { id: "fujian", data: asAdministrativeData(fujianData), texture: fujianTexture },
-  gansu: { id: "gansu", data: asAdministrativeData(gansuData), texture: gansuTexture },
-  guangdong: { id: "guangdong", data: asAdministrativeData(guangdongData), texture: guangdongTexture },
-  guangxi: { id: "guangxi", data: asAdministrativeData(guangxiData), texture: guangxiTexture },
-  guizhou: { id: "guizhou", data: asAdministrativeData(guizhouData), texture: guizhouTexture },
+  anhui: {
+    id: "anhui",
+    data: asAdministrativeData(anhuiData),
+    kind: "province",
+    texture: anhuiTexture,
+  },
+  beijing: {
+    id: "beijing",
+    data: asAdministrativeData(beijingData),
+    kind: "province",
+    texture: beijingTexture,
+  },
+  chongqing: {
+    id: "chongqing",
+    data: asAdministrativeData(chongqingData),
+    texture: chongqingTexture,
+  },
+  fujian: {
+    id: "fujian",
+    data: asAdministrativeData(fujianData),
+    texture: fujianTexture,
+  },
+  gansu: {
+    id: "gansu",
+    data: asAdministrativeData(gansuData),
+    texture: gansuTexture,
+  },
+  guangdong: {
+    id: "guangdong",
+    data: asAdministrativeData(guangdongData),
+    texture: guangdongTexture,
+  },
+  guangxi: {
+    id: "guangxi",
+    data: asAdministrativeData(guangxiData),
+    texture: guangxiTexture,
+  },
+  guizhou: {
+    id: "guizhou",
+    data: asAdministrativeData(guizhouData),
+    texture: guizhouTexture,
+  },
   // hainan: { id: "hainan", data: asAdministrativeData(hainanData), texture: hainanTexture },
-  hebei: { id: "hebei", data: asAdministrativeData(hebeiData), texture: hebeiTexture },
-  heilongjiang: { id: "heilongjiang", data: asAdministrativeData(heilongjiangData), texture: heilongjiangTexture },
-  henan: { id: "henan", data: asAdministrativeData(henanData), texture: henanTexture },
-  hubei: { id: "hubei", data: asAdministrativeData(hubeiData), texture: hubeiTexture },
-  hunan: { id: "hunan", data: asAdministrativeData(hunanData), texture: hunanTexture },
-  jiangsu: { id: "jiangsu", data: asAdministrativeData(jiangsuData), texture: jiangsuTexture },
-  jiangxi: { id: "jiangxi", data: asAdministrativeData(jiangxiData), texture: jiangxiTexture },
-  jilin: { id: "jilin", data: asAdministrativeData(jilinData), texture: jilinTexture },
-  liaoning: { id: "liaoning", data: asAdministrativeData(liaoningData), texture: liaoningTexture },
-  neimenggu: { id: "neimenggu", data: asAdministrativeData(neimengguData), texture: neimengguTexture },
-  ningxia: { id: "ningxia", data: asAdministrativeData(ningxiaData), texture: ningxiaTexture },
-  qinghai: { id: "qinghai", data: asAdministrativeData(qinghaiData), texture: qinghaiTexture },
-  shaanxi: { id: "shaanxi", data: asAdministrativeData(ShaanxiData), texture: ShaanxiTexture },
-  shandong: { id: "shandong", data: asAdministrativeData(shandongData), texture: shandongTexture },
-  shanghai: { id: "shanghai", data: asAdministrativeData(shanghaiData), texture: shanghaiTexture },
-  shanxi: { id: "shanxi", data: asAdministrativeData(shanxiData), texture: shanxiTexture },
-  sichuan: { id: "sichuan", data: asAdministrativeData(sichuanData), texture: sichuanTexture },
-  tianjing: { id: "tianjing", data: asAdministrativeData(tianjingData), texture: tianjingTexture },
-  xinjiang: { id: "xinjiang", data: asAdministrativeData(xinjiangData), texture: xinjiangTexture },
-  xizang: { id: "xizang", data: asAdministrativeData(xizangData), texture: xizangTexture },
-  yunnan: { id: "yunnan", data: asAdministrativeData(yunnanData), texture: yunnanTexture },
-  zhejiang: { id: "zhejiang", data: asAdministrativeData(zhejiangData), texture: zhejiangTexture },
+  hebei: {
+    id: "hebei",
+    data: asAdministrativeData(hebeiData),
+    texture: hebeiTexture,
+  },
+  heilongjiang: {
+    id: "heilongjiang",
+    data: asAdministrativeData(heilongjiangData),
+    texture: heilongjiangTexture,
+  },
+  henan: {
+    id: "henan",
+    data: asAdministrativeData(henanData),
+    texture: henanTexture,
+  },
+  hubei: {
+    id: "hubei",
+    data: asAdministrativeData(hubeiData),
+    texture: hubeiTexture,
+  },
+  hunan: {
+    id: "hunan",
+    data: asAdministrativeData(hunanData),
+    texture: hunanTexture,
+  },
+  jiangsu: {
+    id: "jiangsu",
+    data: asAdministrativeData(jiangsuData),
+    texture: jiangsuTexture,
+  },
+  jiangxi: {
+    id: "jiangxi",
+    data: asAdministrativeData(jiangxiData),
+    texture: jiangxiTexture,
+  },
+  jilin: {
+    id: "jilin",
+    data: asAdministrativeData(jilinData),
+    texture: jilinTexture,
+  },
+  liaoning: {
+    id: "liaoning",
+    data: asAdministrativeData(liaoningData),
+    texture: liaoningTexture,
+  },
+  neimenggu: {
+    id: "neimenggu",
+    data: asAdministrativeData(neimengguData),
+    texture: neimengguTexture,
+  },
+  ningxia: {
+    id: "ningxia",
+    data: asAdministrativeData(ningxiaData),
+    texture: ningxiaTexture,
+  },
+  qinghai: {
+    id: "qinghai",
+    data: asAdministrativeData(qinghaiData),
+    texture: qinghaiTexture,
+  },
+  shaanxi: {
+    id: "shaanxi",
+    data: asAdministrativeData(ShaanxiData),
+    texture: ShaanxiTexture,
+  },
+  shandong: {
+    id: "shandong",
+    data: asAdministrativeData(shandongData),
+    texture: shandongTexture,
+  },
+  shanghai: {
+    id: "shanghai",
+    data: asAdministrativeData(shanghaiData),
+    texture: shanghaiTexture,
+  },
+  shanxi: {
+    id: "shanxi",
+    data: asAdministrativeData(shanxiData),
+    texture: shanxiTexture,
+  },
+  sichuan: {
+    id: "sichuan",
+    data: asAdministrativeData(sichuanData),
+    texture: sichuanTexture,
+  },
+  tianjing: {
+    id: "tianjing",
+    data: asAdministrativeData(tianjingData),
+    texture: tianjingTexture,
+  },
+  xinjiang: {
+    id: "xinjiang",
+    data: asAdministrativeData(xinjiangData),
+    texture: xinjiangTexture,
+  },
+  xizang: {
+    id: "xizang",
+    data: asAdministrativeData(xizangData),
+    texture: xizangTexture,
+  },
+  yunnan: {
+    id: "yunnan",
+    data: asAdministrativeData(yunnanData),
+    texture: yunnanTexture,
+  },
+  zhejiang: {
+    id: "zhejiang",
+    data: asAdministrativeData(zhejiangData),
+    texture: zhejiangTexture,
+  },
 };
 
 const provinceSources = ALL_RECOMMEND_PROVINCE_IDS.map(
@@ -254,9 +379,7 @@ const MapCanvasLayer = styled.div<{
   opacity: ${({ $phase }) =>
     $phase === "visible" || $phase === "entering" ? 1 : 0};
   transform: ${({ $phase }) =>
-    $phase === "hidden" || $phase === "exiting"
-      ? "scale(0.985)"
-      : "scale(1)"};
+    $phase === "hidden" || $phase === "exiting" ? "scale(0.985)" : "scale(1)"};
   transform-origin: 50% 52%;
   pointer-events: ${({ $phase }) => ($phase === "visible" ? "auto" : "none")};
   transition:
@@ -394,12 +517,19 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   if (cached) return cached;
 
   const regions = route.mapIds.map(getProjectedMapRegion);
-  const bounds = new Box2();
-  regions.forEach(({ bbox }) => bounds.union(bbox));
-  const size = bounds.getSize(new Vector2());
   const viewMode = route.mapIds.some((id) => id.startsWith("out-"))
     ? "world"
     : "regional";
+
+  // 主体 = 国内区域（省份 + 中国），只按它们计算布局，
+  // 保证中国显示大小不受国外 out-* 数据影响
+  const mainRegions = regions.filter((region) => region.kind !== "out");
+  const outRegions = regions.filter((region) => region.kind === "out");
+  const baseRegions = mainRegions.length > 0 ? mainRegions : regions;
+
+  const bounds = new Box2();
+  baseRegions.forEach(({ bbox }) => bounds.union(bbox));
+  const size = bounds.getSize(new Vector2());
   const targetWidth =
     viewMode === "world" ? WORLD_TARGET_MAP_WIDTH : TARGET_MAP_WIDTH;
   const targetHeight =
@@ -410,14 +540,61 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   );
   const center = bounds.getCenter(new Vector2());
 
+  // 国外 out-* 区域：缩小到主体宽度的 OUT_MAP_FRACTION，锚定到画布右下角
+  let outTransform:
+    | { position: [number, number, 0]; scale: number }
+    | undefined;
+  if (outRegions.length > 0) {
+    const outBounds = new Box2();
+    outRegions.forEach(({ bbox }) => outBounds.union(bbox));
+    const outSize = outBounds.getSize(new Vector2());
+    const outMax = outBounds.max;
+
+    const scale = Math.min(
+      (OUT_MAP_FRACTION * size.x) / Math.max(outSize.x, 0.001),
+      (OUT_MAP_FRACTION * size.y) / Math.max(outSize.y, 0.001),
+    );
+
+    // 世界坐标（layout 经 fitScale 缩放后）中目标边缘 → 换算回布局局部坐标
+    const rightEdge = targetWidth / 2 - OUT_MAP_MARGIN;
+    const bottomEdge = targetHeight / 2 - OUT_MAP_MARGIN;
+    outTransform = {
+      position: [
+        rightEdge / fitScale - outMax.x * scale,
+        bottomEdge / fitScale - outMax.y * scale,
+        0,
+      ],
+      scale,
+    };
+  }
+
+  // 边界线段：out 区域按同样变换烘焙坐标，与网格组的 transform 保持一致
+  const boundarySegments: [number, number, number][] = [];
+  regions.forEach((region) => {
+    const transform = region.kind === "out" ? outTransform : undefined;
+    region.boundarySegments.forEach(([x, y, z]) => {
+      if (!transform) {
+        boundarySegments.push([x, y, z]);
+        return;
+      }
+      boundarySegments.push([
+        x * transform.scale + transform.position[0],
+        y * transform.scale + transform.position[1],
+        z,
+      ]);
+    });
+  });
+
   const layout: ProjectedRouteLayout = {
-    boundarySegments: regions.flatMap(
-      ({ boundarySegments }) => boundarySegments,
-    ),
+    boundarySegments,
     center,
     fitScale,
     mapKey: route.mapKey,
-    regions,
+    regions: regions.map((region) =>
+      region.kind === "out" && outTransform
+        ? { ...region, transform: outTransform }
+        : region,
+    ),
     viewMode,
   };
   routeLayoutCache.set(route.mapKey, layout);
@@ -572,17 +749,22 @@ function RecommendLineScene({
     <group scale={layout.fitScale}>
       <group position={[-layout.center.x, -layout.center.y, 0]}>
         {layout.regions.map((region) => (
-          <MapRegionMesh
+          <group
             key={region.id}
-            labelDistanceFactor={labelDistanceFactor}
-            region={region}
-            showLabel={
-              layout.viewMode !== "world" ||
-              region.kind === "china" ||
-              region.kind === "out"
-            }
-            texture={textures.get(region.id)}
-          />
+            position={region.transform?.position ?? [0, 0, 0]}
+            scale={region.transform?.scale ?? 1}
+          >
+            <MapRegionMesh
+              labelDistanceFactor={labelDistanceFactor}
+              region={region}
+              showLabel={
+                layout.viewMode !== "world" ||
+                region.kind === "china" ||
+                region.kind === "out"
+              }
+              texture={textures.get(region.id)}
+            />
+          </group>
         ))}
         <Line
           points={layout.boundarySegments}
@@ -783,7 +965,9 @@ function RecommendLineMap({
             maxDistance={prepared?.layout.viewMode === "world" ? 100 : 70}
             minPolarAngle={prepared?.layout.viewMode === "world" ? 0.08 : 0.3}
             maxPolarAngle={prepared?.layout.viewMode === "world" ? 1.05 : 1.35}
-            minAzimuthAngle={prepared?.layout.viewMode === "world" ? -1.2 : -0.9}
+            minAzimuthAngle={
+              prepared?.layout.viewMode === "world" ? -1.2 : -0.9
+            }
             maxAzimuthAngle={prepared?.layout.viewMode === "world" ? 1.2 : 0.9}
             screenSpacePanning={false}
           />

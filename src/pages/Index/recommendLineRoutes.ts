@@ -35,6 +35,18 @@ export const ALL_RECOMMEND_PROVINCE_IDS = [
 export type ProvinceId = (typeof ALL_RECOMMEND_PROVINCE_IDS)[number];
 
 export type OutRecommendMapId = `out-${string}`;
+
+export type OutMapPlacement = {
+  /**
+   * 归一化锚点（0~1），表示该 out 地图**中心**在画布中的位置：
+   * x=0 贴左边缘、x=1 贴右边缘；y=0 贴下边缘、y=1 贴上边缘。
+   */
+  anchor: [number, number];
+  /** 相对默认基准的缩放倍率（可选，默认 1） */
+  scale?: number;
+};
+
+
 export type RecommendMapId = ProvinceId | "china" | OutRecommendMapId;
 
 export const mapRelation = [
