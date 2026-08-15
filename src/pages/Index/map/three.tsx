@@ -9,10 +9,12 @@ import {
   EdgesGeometry,
   ExtrudeGeometry,
   Float32BufferAttribute,
+  MOUSE,
   Path,
   Shape,
   ShapeUtils,
   SRGBColorSpace,
+  TOUCH,
   Vector2,
   Vector3,
   type ShaderMaterial as ThreeShaderMaterial,
@@ -545,6 +547,8 @@ export default function ThreeHubeiMap({ onReady }: ThreeHubeiMapProps) {
         </Suspense>
         <OrbitControls
           makeDefault
+          enablePan
+          enableZoom
           enableDamping
           dampingFactor={0.08}
           rotateSpeed={controlSpeed}
@@ -557,6 +561,16 @@ export default function ThreeHubeiMap({ onReady }: ThreeHubeiMapProps) {
           minAzimuthAngle={-0.9}
           maxAzimuthAngle={0.9}
           screenSpacePanning={false}
+          zoomToCursor
+          mouseButtons={{
+            LEFT: MOUSE.PAN,
+            MIDDLE: MOUSE.DOLLY,
+            RIGHT: MOUSE.ROTATE,
+          }}
+          touches={{
+            ONE: TOUCH.PAN,
+            TWO: TOUCH.DOLLY_ROTATE,
+          }}
         />
       </Canvas>
     </MapRoot>

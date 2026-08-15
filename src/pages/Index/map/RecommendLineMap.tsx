@@ -16,11 +16,13 @@ import {
   Box2,
   CatmullRomCurve3,
   LineCurve3,
+  MOUSE,
   Path,
   Shape,
   ShapeUtils,
   SRGBColorSpace,
   TextureLoader,
+  TOUCH,
   type Group,
   type PerspectiveCamera,
   type Sprite as ThreeSprite,
@@ -1690,6 +1692,8 @@ function RecommendLineMap({
           <OrbitControls
             ref={controlsRef}
             makeDefault
+            enablePan
+            enableZoom
             enableDamping
             dampingFactor={0.08}
             rotateSpeed={controlSpeed}
@@ -1704,6 +1708,16 @@ function RecommendLineMap({
             }
             maxAzimuthAngle={prepared?.layout.viewMode === "world" ? 1.2 : 0.9}
             screenSpacePanning={false}
+            zoomToCursor
+            mouseButtons={{
+              LEFT: MOUSE.PAN,
+              MIDDLE: MOUSE.DOLLY,
+              RIGHT: MOUSE.ROTATE,
+            }}
+            touches={{
+              ONE: TOUCH.PAN,
+              TWO: TOUCH.DOLLY_ROTATE,
+            }}
           />
         </Canvas>
       </MapCanvasLayer>
