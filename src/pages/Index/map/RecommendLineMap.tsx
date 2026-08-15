@@ -17,6 +17,7 @@ import {
   ShapeUtils,
   SRGBColorSpace,
   TextureLoader,
+  type PerspectiveCamera,
   type Texture,
   Vector2,
   type ShaderMaterial as ThreeShaderMaterial,
@@ -27,6 +28,7 @@ import ShaanxiData from "@/assets/recommendLine/Shaanxi.json";
 import anhuiData from "@/assets/recommendLine/anhui.json";
 import beijingData from "@/assets/recommendLine/beijing.json";
 import chongqingData from "@/assets/recommendLine/chongqing.json";
+import chinaData from "@/assets/recommendLine/china.json";
 import fujianData from "@/assets/recommendLine/fujian.json";
 import gansuData from "@/assets/recommendLine/gansu.json";
 import guangdongData from "@/assets/recommendLine/guangdong.json";
@@ -89,6 +91,8 @@ import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
 
 import {
   ALL_RECOMMEND_PROVINCE_IDS,
+  type OutRecommendMapId,
+  type RecommendMapId,
   type ProvinceId,
   type RecommendRoute,
 } from "../recommendLineRoutes";
@@ -112,7 +116,7 @@ type AdministrativeGeometry =
 
 type AdministrativeProperties = {
   name: string;
-  center: Coordinate;
+  center?: Coordinate;
   centroid?: Coordinate;
 };
 
@@ -125,13 +129,14 @@ type AdministrativeGeoJSON = {
   }>;
 };
 
-type ProvinceSource = {
-  id: ProvinceId;
+type MapRegionSource = {
+  id: RecommendMapId;
   data: AdministrativeGeoJSON;
-  texture: string;
+  kind?: "china" | "out" | "province";
+  texture?: string;
 };
 
-type ProjectedProvince = ProvinceSource & {
+type ProjectedMapRegion = MapRegionSource & {
   bbox: Box2;
   shapes: Shape[];
   boundarySegments: [number, number, number][];
@@ -142,14 +147,14 @@ type ProjectedRouteLayout = {
   boundarySegments: [number, number, number][];
   center: Vector2;
   fitScale: number;
-  hubeiAnchor: [number, number];
   mapKey: string;
-  provinces: ProjectedProvince[];
+  regions: ProjectedMapRegion[];
+  viewMode: "regional" | "world";
 };
 
 type PreparedRoute = {
   layout: ProjectedRouteLayout;
-  textures: ReadonlyMap<ProvinceId, Texture>;
+  textures: ReadonlyMap<RecommendMapId, Texture>;
 };
 
 type MapTransitionPhase =
@@ -161,6 +166,8 @@ type MapTransitionPhase =
 const GLOBAL_MAP_WIDTH = 27;
 const TARGET_MAP_WIDTH = 27;
 const TARGET_MAP_HEIGHT = 17.5;
+const WORLD_TARGET_MAP_WIDTH = 30;
+const WORLD_TARGET_MAP_HEIGHT = 18;
 const EXIT_DURATION = 180;
 const ENTER_DURATION = 240;
 const REDUCED_MOTION_DURATION = 80;
@@ -169,9 +176,9 @@ function asAdministrativeData(data: unknown): AdministrativeGeoJSON {
   return data as AdministrativeGeoJSON;
 }
 
-const provinceSourceById: Record<ProvinceId, ProvinceSource> = {
-  anhui: { id: "anhui", data: asAdministrativeData(anhuiData), texture: anhuiTexture },
-  beijing: { id: "beijing", data: asAdministrativeData(beijingData), texture: beijingTexture },
+const provinceSourceById: Record<ProvinceId, MapRegionSource> = {
+  anhui: { id: "anhui", data: asAdministrativeData(anhuiData), kind: "province", texture: anhuiTexture },
+  beijing: { id: "beijing", data: asAdministrativeData(beijingData), kind: "province", texture: beijingTexture },
   chongqing: { id: "chongqing", data: asAdministrativeData(chongqingData), texture: chongqingTexture },
   fujian: { id: "fujian", data: asAdministrativeData(fujianData), texture: fujianTexture },
   gansu: { id: "gansu", data: asAdministrativeData(gansuData), texture: gansuTexture },
@@ -206,10 +213,34 @@ const provinceSourceById: Record<ProvinceId, ProvinceSource> = {
 const provinceSources = ALL_RECOMMEND_PROVINCE_IDS.map(
   (id) => provinceSourceById[id],
 );
-const projectedProvinceCache = new Map<ProvinceId, ProjectedProvince>();
+const externalMapDataByPath = import.meta.glob<AdministrativeGeoJSON>(
+  "/src/assets/recommendLine/out-*.json",
+  { eager: true, import: "default" },
+);
+const externalMapSourceById = Object.fromEntries(
+  Object.entries(externalMapDataByPath).map(([path, data]) => {
+    const filename = path.split("/").at(-1);
+    const id = filename?.replace(/\.json$/, "") as OutRecommendMapId;
+    return [id, { id, data: asAdministrativeData(data), kind: "out" }] as const;
+  }),
+) as Record<OutRecommendMapId, MapRegionSource>;
+const mapRegionSourceById: Partial<Record<RecommendMapId, MapRegionSource>> = {
+  ...provinceSourceById,
+  china: { id: "china", data: asAdministrativeData(chinaData), kind: "china" },
+  ...externalMapSourceById,
+};
+
+function getMapRegionSource(id: RecommendMapId) {
+  const source = mapRegionSourceById[id];
+  if (!source) {
+    throw new Error(`未找到地图资源：assets/recommendLine/${id}.json`);
+  }
+  return source;
+}
+const projectedMapRegionCache = new Map<RecommendMapId, ProjectedMapRegion>();
 const routeLayoutCache = new Map<string, ProjectedRouteLayout>();
-const textureCache = new Map<ProvinceId, Texture>();
-const texturePromiseCache = new Map<ProvinceId, Promise<Texture>>();
+const textureCache = new Map<RecommendMapId, Texture>();
+const texturePromiseCache = new Map<RecommendMapId, Promise<Texture>>();
 const preparedRoutePromiseCache = new Map<string, Promise<PreparedRoute>>();
 const textureLoader = new TextureLoader();
 let projectionCache: ReturnType<typeof geoMercator> | undefined;
@@ -286,7 +317,7 @@ function getProjection() {
   return projection;
 }
 
-function buildProvince(source: ProvinceSource): ProjectedProvince {
+function buildMapRegion(source: MapRegionSource): ProjectedMapRegion {
   const projection = getProjection();
   const bbox = new Box2();
   const project = (coordinate: Coordinate) => {
@@ -331,26 +362,30 @@ function buildProvince(source: ProvinceSource): ProjectedProvince {
       });
   });
 
-  const properties = source.data.features[0].properties;
-  const [labelX, labelY] = projection(
-    properties.centroid ?? properties.center,
-  )!;
+  const properties = source.data.features[0]?.properties;
+  const labelCoordinate = properties?.centroid ?? properties?.center;
+  const labelPoint = labelCoordinate
+    ? (() => {
+        const [x, y] = projection(labelCoordinate)!;
+        return new Vector2(x, -y);
+      })()
+    : bbox.getCenter(new Vector2());
 
   return {
     ...source,
     bbox,
     shapes,
     boundarySegments,
-    labelPosition: [labelX, -labelY, MAP_DEPTH + 0.12],
+    labelPosition: [labelPoint.x, labelPoint.y, MAP_DEPTH + 0.12],
   };
 }
 
-function getProjectedProvince(id: ProvinceId) {
-  const cached = projectedProvinceCache.get(id);
+function getProjectedMapRegion(id: RecommendMapId) {
+  const cached = projectedMapRegionCache.get(id);
   if (cached) return cached;
 
-  const projected = buildProvince(provinceSourceById[id]);
-  projectedProvinceCache.set(id, projected);
+  const projected = buildMapRegion(getMapRegionSource(id));
+  projectedMapRegionCache.set(id, projected);
   return projected;
 }
 
@@ -358,40 +393,51 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   const cached = routeLayoutCache.get(route.mapKey);
   if (cached) return cached;
 
-  const provinces = route.provinceIds.map(getProjectedProvince);
+  const regions = route.mapIds.map(getProjectedMapRegion);
   const bounds = new Box2();
-  provinces.forEach(({ bbox }) => bounds.union(bbox));
+  regions.forEach(({ bbox }) => bounds.union(bbox));
   const size = bounds.getSize(new Vector2());
+  const viewMode = route.mapIds.some((id) => id.startsWith("out-"))
+    ? "world"
+    : "regional";
+  const targetWidth =
+    viewMode === "world" ? WORLD_TARGET_MAP_WIDTH : TARGET_MAP_WIDTH;
+  const targetHeight =
+    viewMode === "world" ? WORLD_TARGET_MAP_HEIGHT : TARGET_MAP_HEIGHT;
   const fitScale = Math.min(
-    TARGET_MAP_WIDTH / Math.max(size.x, 0.001),
-    TARGET_MAP_HEIGHT / Math.max(size.y, 0.001),
+    targetWidth / Math.max(size.x, 0.001),
+    targetHeight / Math.max(size.y, 0.001),
   );
   const center = bounds.getCenter(new Vector2());
-  const [hubeiX, hubeiY] = getProjection()([114.3, 30.9])!;
 
   const layout: ProjectedRouteLayout = {
-    boundarySegments: provinces.flatMap(
+    boundarySegments: regions.flatMap(
       ({ boundarySegments }) => boundarySegments,
     ),
     center,
     fitScale,
-    hubeiAnchor: [hubeiX, -hubeiY],
     mapKey: route.mapKey,
-    provinces,
+    regions,
+    viewMode,
   };
   routeLayoutCache.set(route.mapKey, layout);
   return layout;
 }
 
-function loadProvinceTexture(id: ProvinceId) {
+function loadMapRegionTexture(id: RecommendMapId) {
   const cachedTexture = textureCache.get(id);
   if (cachedTexture) return Promise.resolve(cachedTexture);
 
   const cachedPromise = texturePromiseCache.get(id);
   if (cachedPromise) return cachedPromise;
 
+  const textureUrl = getMapRegionSource(id).texture;
+  if (!textureUrl) {
+    return Promise.reject(new Error(`地图资源“${id}”没有纹理`));
+  }
+
   const texturePromise = textureLoader
-    .loadAsync(provinceSourceById[id].texture)
+    .loadAsync(textureUrl)
     .then((texture) => {
       texture.colorSpace = SRGBColorSpace;
       texture.anisotropy = 8;
@@ -412,8 +458,13 @@ function prepareRoute(route: RecommendRoute) {
   if (cached) return cached;
 
   const layout = getRouteLayout(route);
+  const texturedMapIds = route.mapIds.filter(
+    (id) => getMapRegionSource(id).texture,
+  );
   const preparedPromise = Promise.all(
-    route.provinceIds.map(async (id) => [id, await loadProvinceTexture(id)] as const),
+    texturedMapIds.map(
+      async (id) => [id, await loadMapRegionTexture(id)] as const,
+    ),
   )
     .then(
       (textures): PreparedRoute => ({
@@ -438,18 +489,21 @@ function getMotionDurations() {
     : { enter: ENTER_DURATION, exit: EXIT_DURATION };
 }
 
-function ProvinceMesh({
+function MapRegionMesh({
   labelDistanceFactor,
-  province,
+  region,
+  showLabel,
   texture,
 }: {
   labelDistanceFactor: number;
-  province: ProjectedProvince;
-  texture: Texture;
+  region: ProjectedMapRegion;
+  showLabel: boolean;
+  texture?: Texture;
 }) {
   const sideMaterialRef = useRef<ThreeShaderMaterial>(null!);
 
   useLayoutEffect(() => {
+    if (!texture) return;
     texture.colorSpace = SRGBColorSpace;
     texture.anisotropy = 8;
     texture.needsUpdate = true;
@@ -461,18 +515,28 @@ function ProvinceMesh({
     }
   });
 
-  const label = province.data.features[0].properties.name;
+  const label = region.data.features[0]?.properties.name ?? region.id;
 
   return (
     <group>
       <ShapeBox
-        bbox={province.bbox}
+        bbox={region.bbox}
         args={[
-          province.shapes,
+          region.shapes,
           { depth: MAP_DEPTH, bevelEnabled: false, curveSegments: 2 },
         ]}
       >
-        <TerrainTopMaterial attach="material-0" uMap={texture} />
+        {texture ? (
+          <TerrainTopMaterial attach="material-0" uMap={texture} />
+        ) : (
+          <meshBasicMaterial
+            attach="material-0"
+            color={region.kind === "china" ? "#168f9f" : "#19799b"}
+            transparent
+            opacity={0.9}
+            toneMapped={false}
+          />
+        )}
         <TerrainSideMaterial
           attach="material-1"
           ref={sideMaterialRef}
@@ -480,14 +544,16 @@ function ProvinceMesh({
         />
       </ShapeBox>
 
-      <Html
-        center
-        position={province.labelPosition}
-        distanceFactor={labelDistanceFactor}
-        zIndexRange={[20, 0]}
-      >
-        <MapLabel>{label}</MapLabel>
-      </Html>
+      {showLabel && (
+        <Html
+          center
+          position={region.labelPosition}
+          distanceFactor={labelDistanceFactor}
+          zIndexRange={[20, 0]}
+        >
+          <MapLabel>{label}</MapLabel>
+        </Html>
+      )}
     </group>
   );
 }
@@ -505,13 +571,17 @@ function RecommendLineScene({
   return (
     <group scale={layout.fitScale}>
       <group position={[-layout.center.x, -layout.center.y, 0]}>
-        {/* <WorldBase hubeiAnchor={layout.hubeiAnchor} /> */}
-        {layout.provinces.map((province) => (
-          <ProvinceMesh
-            key={province.id}
+        {layout.regions.map((region) => (
+          <MapRegionMesh
+            key={region.id}
             labelDistanceFactor={labelDistanceFactor}
-            province={province}
-            texture={textures.get(province.id)!}
+            region={region}
+            showLabel={
+              layout.viewMode !== "world" ||
+              region.kind === "china" ||
+              region.kind === "out"
+            }
+            texture={textures.get(region.id)}
           />
         ))}
         <Line
@@ -547,6 +617,7 @@ function RecommendLineMap({
 }: RecommendLineMapProps) {
   const controlSpeed = useControlSpeed();
   const controlsRef = useRef<OrbitControlsImpl>(null!);
+  const cameraRef = useRef<PerspectiveCamera | null>(null);
   const [prepared, setPrepared] = useState<PreparedRoute | null>(null);
   const preparedRef = useRef<PreparedRoute | null>(null);
   const [phase, setPhaseState] = useState<MapTransitionPhase>("hidden");
@@ -569,6 +640,30 @@ function RecommendLineMap({
     }
   }, []);
 
+  const applyCameraLayout = useCallback((layout: ProjectedRouteLayout) => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+
+    if (layout.viewMode === "world") {
+      camera.position.set(0, 36, 10.5);
+      camera.fov = 32;
+    } else {
+      camera.position.set(0, 31, 25.5);
+      camera.fov = 28.5;
+    }
+    camera.up.set(0, 1, 0);
+    camera.updateProjectionMatrix();
+
+    const controls = controlsRef.current;
+    if (controls) {
+      controls.target.set(0, 0, 0);
+      controls.update();
+      controls.saveState();
+    } else {
+      camera.lookAt(0, 0, 0);
+    }
+  }, []);
+
   useEffect(
     () => () => {
       requestIdRef.current += 1;
@@ -586,6 +681,7 @@ function RecommendLineMap({
         if (requestId !== requestIdRef.current) return;
 
         if (!preparedRef.current) {
+          applyCameraLayout(nextPrepared.layout);
           preparedRef.current = nextPrepared;
           setPrepared(nextPrepared);
           setPhase("hidden");
@@ -599,7 +695,7 @@ function RecommendLineMap({
         clearTransitionTimer();
         transitionTimerRef.current = window.setTimeout(() => {
           if (requestId !== requestIdRef.current) return;
-          controlsRef.current?.reset();
+          applyCameraLayout(nextPrepared.layout);
           preparedRef.current = nextPrepared;
           setPrepared(nextPrepared);
           setPhase("hidden");
@@ -612,7 +708,13 @@ function RecommendLineMap({
         transitionTargetRef.current = null;
         onRouteTransitionError?.(route);
       });
-  }, [clearTransitionTimer, onRouteTransitionError, route, setPhase]);
+  }, [
+    applyCameraLayout,
+    clearTransitionTimer,
+    onRouteTransitionError,
+    route,
+    setPhase,
+  ]);
 
   const handleSceneReady = useCallback(() => {
     if (phaseRef.current !== "hidden") return;
@@ -655,6 +757,9 @@ function RecommendLineMap({
             far: 360,
             position: [0, 31, 25.5],
           }}
+          onCreated={({ camera }) => {
+            cameraRef.current = camera as PerspectiveCamera;
+          }}
         >
           <Suspense fallback={null}>
             {prepared && (
@@ -674,12 +779,12 @@ function RecommendLineMap({
             rotateSpeed={controlSpeed}
             panSpeed={controlSpeed}
             zoomSpeed={0.9}
-            minDistance={14}
-            maxDistance={70}
-            minPolarAngle={0.3}
-            maxPolarAngle={1.35}
-            minAzimuthAngle={-0.9}
-            maxAzimuthAngle={0.9}
+            minDistance={prepared?.layout.viewMode === "world" ? 20 : 14}
+            maxDistance={prepared?.layout.viewMode === "world" ? 100 : 70}
+            minPolarAngle={prepared?.layout.viewMode === "world" ? 0.08 : 0.3}
+            maxPolarAngle={prepared?.layout.viewMode === "world" ? 1.05 : 1.35}
+            minAzimuthAngle={prepared?.layout.viewMode === "world" ? -1.2 : -0.9}
+            maxAzimuthAngle={prepared?.layout.viewMode === "world" ? 1.2 : 0.9}
             screenSpacePanning={false}
           />
         </Canvas>

@@ -34,6 +34,9 @@ export const ALL_RECOMMEND_PROVINCE_IDS = [
 
 export type ProvinceId = (typeof ALL_RECOMMEND_PROVINCE_IDS)[number];
 
+export type OutRecommendMapId = `out-${string}`;
+export type RecommendMapId = ProvinceId | "china" | OutRecommendMapId;
+
 export const mapRelation = [
   {
     label: "北粮南运",
@@ -350,8 +353,8 @@ export const poiData = [
 
 export type RecommendRoute = {
   label: string;
+  mapIds: readonly RecommendMapId[];
   mapKey: string;
-  provinceIds: readonly ProvinceId[];
 };
 
 type PayloadRoute = {
@@ -370,23 +373,19 @@ const ROUTE_BUTTON_ORDER = [
 const provinceIdSet = new Set<string>(ALL_RECOMMEND_PROVINCE_IDS);
 const rawRoutes = mapRelation as PayloadRoute[];
 
-function resolveProvinceIds(route: PayloadRoute): readonly ProvinceId[] {
-  if (route.map.length === 1 && route.map[0] === "all") {
-    return ALL_RECOMMEND_PROVINCE_IDS;
-  }
+function isRecommendMapId(id: string): id is RecommendMapId {
+  return provinceIdSet.has(id) || id === "china" || id.startsWith("out-");
+}
 
-  if (route.map.includes("all")) {
-    throw new Error(`线路“${route.label}”的 all 不能与其他省份同时配置`);
-  }
-
-  const invalidIds = route.map.filter((id) => !provinceIdSet.has(id));
+function resolveMapIds(route: PayloadRoute): readonly RecommendMapId[] {
+  const invalidIds = route.map.filter((id) => !isRecommendMapId(id));
   if (invalidIds.length > 0) {
     throw new Error(
       `线路“${route.label}”包含未知省份：${invalidIds.join(", ")}`,
     );
   }
 
-  return [...new Set(route.map)] as ProvinceId[];
+  return [...new Set(route.map)] as RecommendMapId[];
 }
 
 const payloadRouteByLabel = new Map(
@@ -412,14 +411,11 @@ export const RECOMMEND_ROUTES: readonly RecommendRoute[] = orderedLabels.map(
       throw new Error(`payload.json 缺少线路配置：${label}`);
     }
 
-    const provinceIds = resolveProvinceIds(route);
+    const mapIds = resolveMapIds(route);
     return {
       label,
-      mapKey:
-        provinceIds === ALL_RECOMMEND_PROVINCE_IDS
-          ? "all"
-          : [...provinceIds].sort().join("|"),
-      provinceIds,
+      mapIds,
+      mapKey: [...mapIds].sort().join("|"),
     };
   },
 );
