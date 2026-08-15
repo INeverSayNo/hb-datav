@@ -33,6 +33,8 @@ import hubeiDem from "@/assets/hb_dem.png";
 import worldTerrain from "@/assets/scene-transparent.png";
 import type { CityGeoJSON } from "@/types/map";
 import ShapeBox from "./shape";
+import HBHighway from "@/assets/hb-highway.json"
+
 
 /** 省份挤出厚度（墨卡托投影单位，湖北宽约 21） */
 const MAP_DEPTH = 0.66;
@@ -295,6 +297,26 @@ function MapMesh() {
       new Float32BufferAttribute(boundaryPositions, 3)
     );
 
+const highwayPositions: number[] = [];
+HBHighway.features.forEach((feature) => {
+  const coords = feature.geometry.coordinates as number[][];
+  for (let index = 1; index < coords.length; index += 1) {
+    const previous = project(coords[index - 1]);
+    const current = project(coords[index]);
+    highwayPositions.push(
+      previous.x, previous.y, MAP_DEPTH + 0.08,
+      current.x, current.y, MAP_DEPTH + 0.08
+    );
+  }
+});
+
+const highwayGeometry = new BufferGeometry();
+highwayGeometry.setAttribute(
+  "position",
+  new Float32BufferAttribute(highwayPositions, 3)
+);
+
+
     const extruded = new ExtrudeGeometry(shapes, {
       depth: MAP_DEPTH,
       bevelEnabled: false,
@@ -337,6 +359,7 @@ function MapMesh() {
       cityBoundaryGeometry,
       provinceEdgeGeometry,
       outlineRings,
+      highwayGeometry
     };
   }, []);
 
@@ -385,6 +408,10 @@ function MapMesh() {
         raycast={() => null}>
         <lineBasicMaterial color={GLOW_EMISSIVE_COLOR} toneMapped={false} />
       </lineSegments>
+
+      <lineSegments geometry={projected.highwayGeometry} renderOrder={14} raycast={() => null}>
+  <lineBasicMaterial color="#ffce4d" toneMapped={false} />
+</lineSegments>
 
       {/* 省界加粗发光描边：外层光晕 + 中层辉光 + 内层亮色主线 */}
       {projected.outlineRings.map((ring, index) => (
