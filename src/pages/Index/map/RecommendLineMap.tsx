@@ -1158,7 +1158,7 @@ function RecommendLineMap({
     if (!camera) return;
 
     if (layout.viewMode === "world") {
-      camera.position.set(0, 36, 10.5);
+      camera.position.set(0, 31, 9);
       camera.fov = 32;
     } else {
       camera.position.set(0, 31, 25.5);
