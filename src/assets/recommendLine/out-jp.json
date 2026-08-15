@@ -28254,8 +28254,8 @@
       "type": "Feature", 
       "properties": {
         "source": "https://simplemaps.com", 
-        "id": "JP", 
-        "name": "Japan"
+        "id": "", 
+        "name": ""
       }, 
       "id": 1
     }

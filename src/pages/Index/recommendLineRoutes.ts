@@ -138,10 +138,10 @@ export const mapRelation = [
     mainGroup: ["china", "out-jp", "out-kz"],
     // MapStage 为 2340×1570。positionPx 表示地图中心，原点在左上角。
     // 中国主体右移，为左侧的哈萨克斯坦和欧洲国家预留空间。
-    mainPlacement: { positionPx: [1580, 620], sizePx: [1220, 860] },
+    mainPlacement: { positionPx: [1380, 620], sizePx: [2220, 460] },
     outPlacements: {
       // 欧洲五国作为第二个布局组，与亚洲组分离。
-      "out-europe": { positionPx: [500, 950], sizePx: [820, 600] },
+      "out-europe": { positionPx: [500, 450], sizePx: [620, 400] },
     },
   },
   {

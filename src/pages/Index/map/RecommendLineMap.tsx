@@ -1036,8 +1036,7 @@ function RecommendLineScene({
               showLabel={
                 layout.viewMode !== "world" ||
                 region.kind === "china" ||
-                region.kind === "sansha" ||
-                region.kind === "out"
+                region.kind === "sansha"
               }
               texture={
                 region.id === "sansha" ? undefined : textures.get(region.id)
