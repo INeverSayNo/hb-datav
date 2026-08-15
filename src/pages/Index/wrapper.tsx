@@ -14,6 +14,12 @@ import MatrixRain from "./components/MatrixRain";
 import RightPanels from "./components/RightPanels";
 import EChartsHubeiMap from "./map";
 import ThreeHubeiMap from "./map/three";
+import {
+  DEFAULT_RECOMMEND_ROUTE,
+  getRecommendRoute,
+  RECOMMEND_ROUTES,
+  type RecommendRoute,
+} from "./recommendLineRoutes";
 import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
 import {
   Suspense,
@@ -33,9 +39,9 @@ const HubeiMap =
 const loadRecommendLineMap = () => import("./map/RecommendLineMap");
 const RecommendLineMap = lazy(loadRecommendLineMap);
 
-function preloadRecommendLineMap() {
+function preloadRecommendLineMap(route: RecommendRoute) {
   return loadRecommendLineMap().then(({ default: RecommendLineMapModule }) => {
-    RecommendLineMapModule.preload();
+    return RecommendLineMapModule.preload(route);
   });
 }
 
@@ -173,16 +179,27 @@ const MapLayer = styled.div<{ $phase: MapLayerPhase }>`
 
 function DashboardMap({
   onReady,
+  onRouteTransitionEnd,
+  onRouteTransitionError,
+  route,
   view,
 }: {
   onReady?: () => void;
+  onRouteTransitionEnd: (route: RecommendRoute) => void;
+  onRouteTransitionError: (route: RecommendRoute) => void;
+  route: RecommendRoute;
   view: DashboardMapView;
 }) {
   return view === "province" ? (
     <HubeiMap onReady={onReady} />
   ) : (
     <Suspense fallback={null}>
-      <RecommendLineMap onReady={onReady} />
+      <RecommendLineMap
+        route={route}
+        onReady={onReady}
+        onRouteTransitionEnd={onRouteTransitionEnd}
+        onRouteTransitionError={onRouteTransitionError}
+      />
     </Suspense>
   );
 }
@@ -195,7 +212,18 @@ export default function IndexDashboard() {
     null,
   );
   const [isAnimating, setIsAnimating] = useState(false);
+  const [activeRouteLabel, setActiveRouteLabel] = useState(
+    DEFAULT_RECOMMEND_ROUTE.label,
+  );
+  const [displayedRouteLabel, setDisplayedRouteLabel] = useState(
+    DEFAULT_RECOMMEND_ROUTE.label,
+  );
+  const [isRouteTransitioning, setIsRouteTransitioning] = useState(false);
   const transitionTimerRef = useRef<number | null>(null);
+  const activeRoute =
+    getRecommendRoute(activeRouteLabel) ?? DEFAULT_RECOMMEND_ROUTE;
+  const displayedRoute =
+    getRecommendRoute(displayedRouteLabel) ?? DEFAULT_RECOMMEND_ROUTE;
 
   useEffect(() => {
     let cancelled = false;
@@ -228,7 +256,7 @@ export default function IndexDashboard() {
     let idleHandle: number | null = null;
     const timeoutHandle = window.setTimeout(() => {
       const preload = () => {
-        void preloadRecommendLineMap().catch(() => {
+        void preloadRecommendLineMap(activeRoute).catch(() => {
           // 后台预加载失败时保留点击后的正常加载流程。
         });
       };
@@ -246,23 +274,60 @@ export default function IndexDashboard() {
         window.cancelIdleCallback(idleHandle);
       }
     };
-  }, [currentView, screenLoading]);
+  }, [activeRoute, currentView, screenLoading]);
 
   const handleViewChange = useCallback(
     (nextView: DashboardMapView) => {
-      if (nextView === currentView || incomingView || isAnimating) return;
+      if (
+        nextView === currentView ||
+        incomingView ||
+        isAnimating ||
+        isRouteTransitioning
+      ) {
+        return;
+      }
       setIncomingView(nextView);
     },
-    [currentView, incomingView, isAnimating],
+    [currentView, incomingView, isAnimating, isRouteTransitioning],
   );
 
   const handleViewIntent = useCallback((nextView: DashboardMapView) => {
     if (nextView === "recommendLine") {
-      void preloadRecommendLineMap().catch(() => {
+      void preloadRecommendLineMap(activeRoute).catch(() => {
         // 悬停预加载失败不影响用户点击后的正常加载。
       });
     }
+  }, [activeRoute]);
+
+  const handleRouteIntent = useCallback((route: RecommendRoute) => {
+    void preloadRecommendLineMap(route).catch(() => {
+      // 线路意图预加载失败时仍可在点击后重试。
+    });
   }, []);
+
+  const handleRouteChange = useCallback(
+    (route: RecommendRoute) => {
+      if (isRouteTransitioning || route.label === activeRoute.label) return;
+
+      setActiveRouteLabel(route.label);
+      if (route.mapKey === displayedRoute.mapKey) {
+        setDisplayedRouteLabel(route.label);
+        return;
+      }
+      setIsRouteTransitioning(true);
+    },
+    [activeRoute.label, displayedRoute.mapKey, isRouteTransitioning],
+  );
+
+  const handleRouteTransitionEnd = useCallback((route: RecommendRoute) => {
+    setDisplayedRouteLabel(route.label);
+    setIsRouteTransitioning(false);
+  }, []);
+
+  const handleRouteTransitionError = useCallback(() => {
+    setActiveRouteLabel(displayedRoute.label);
+    setIsRouteTransitioning(false);
+  }, [displayedRoute.label]);
 
   const handleIncomingReady = useCallback(() => {
     if (!incomingView || isAnimating) return;
@@ -296,7 +361,12 @@ export default function IndexDashboard() {
             $phase={isAnimating ? "exiting" : "current"}
             aria-hidden={isAnimating}
           >
-            <DashboardMap view={currentView} />
+            <DashboardMap
+              view={currentView}
+              route={activeRoute}
+              onRouteTransitionEnd={handleRouteTransitionEnd}
+              onRouteTransitionError={handleRouteTransitionError}
+            />
           </MapLayer>
           {incomingView && (
             <MapLayer
@@ -304,7 +374,13 @@ export default function IndexDashboard() {
               $phase={isAnimating ? "entering" : "incoming"}
               aria-hidden={!isAnimating}
             >
-              <DashboardMap view={incomingView} onReady={handleIncomingReady} />
+              <DashboardMap
+                view={incomingView}
+                route={activeRoute}
+                onReady={handleIncomingReady}
+                onRouteTransitionEnd={handleRouteTransitionEnd}
+                onRouteTransitionError={handleRouteTransitionError}
+              />
             </MapLayer>
           )}
 
@@ -314,14 +390,22 @@ export default function IndexDashboard() {
           </MapLoadingOverlay>
         </MapStage>
         {currentView === "province" && <MapLegend />}
-        {currentView === "recommendLine" && <RouteButtons />}
+        {currentView === "recommendLine" && (
+          <RouteButtons
+            activeRoute={activeRoute.label}
+            disabled={isRouteTransitioning}
+            routes={RECOMMEND_ROUTES}
+            onRouteChange={handleRouteChange}
+            onRouteIntent={handleRouteIntent}
+          />
+        )}
         <DashboardHeader />
         <LeftPanels />
         <CenterControls />
         <RightPanels />
         <BottomNavigation
           activeView={navigationView}
-          disabled={incomingView !== null}
+          disabled={incomingView !== null || isRouteTransitioning}
           onViewIntent={handleViewIntent}
           onViewChange={handleViewChange}
         />

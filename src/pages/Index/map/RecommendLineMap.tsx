@@ -1,57 +1,102 @@
-import { Suspense, useCallback, useLayoutEffect, useMemo, useRef } from "react";
-import { Html, Line, OrbitControls, useTexture } from "@react-three/drei";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { Html, Line, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { geoMercator } from "d3-geo";
+import styled from "styled-components";
 import {
   Box2,
   Path,
   Shape,
   ShapeUtils,
   SRGBColorSpace,
+  TextureLoader,
   type Texture,
   Vector2,
   type ShaderMaterial as ThreeShaderMaterial,
 } from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
+import ShaanxiData from "@/assets/recommendLine/Shaanxi.json";
 import anhuiData from "@/assets/recommendLine/anhui.json";
 import beijingData from "@/assets/recommendLine/beijing.json";
 import chongqingData from "@/assets/recommendLine/chongqing.json";
+import fujianData from "@/assets/recommendLine/fujian.json";
+import gansuData from "@/assets/recommendLine/gansu.json";
+import guangdongData from "@/assets/recommendLine/guangdong.json";
+import guangxiData from "@/assets/recommendLine/guangxi.json";
+import guizhouData from "@/assets/recommendLine/guizhou.json";
+import hainanData from "@/assets/recommendLine/hainan.json";
 import hebeiData from "@/assets/recommendLine/hebei.json";
+import heilongjiangData from "@/assets/recommendLine/heilongjiang.json";
 import henanData from "@/assets/recommendLine/henan.json";
+import hubeiData from "@/assets/recommendLine/hubei.json";
 import hunanData from "@/assets/recommendLine/hunan.json";
 import jiangsuData from "@/assets/recommendLine/jiangsu.json";
 import jiangxiData from "@/assets/recommendLine/jiangxi.json";
+import jilinData from "@/assets/recommendLine/jilin.json";
 import liaoningData from "@/assets/recommendLine/liaoning.json";
+import neimengguData from "@/assets/recommendLine/neimenggu.json";
+import ningxiaData from "@/assets/recommendLine/ningxia.json";
+import qinghaiData from "@/assets/recommendLine/qinghai.json";
 import shandongData from "@/assets/recommendLine/shandong.json";
 import shanghaiData from "@/assets/recommendLine/shanghai.json";
+import shanxiData from "@/assets/recommendLine/shanxi.json";
 import sichuanData from "@/assets/recommendLine/sichuan.json";
 import tianjingData from "@/assets/recommendLine/tianjing.json";
+import xinjiangData from "@/assets/recommendLine/xinjiang.json";
+import xizangData from "@/assets/recommendLine/xizang.json";
+import yunnanData from "@/assets/recommendLine/yunnan.json";
 import zhejiangData from "@/assets/recommendLine/zhejiang.json";
-import hubeiOutlineData from "@/assets/recommendLine/hubei.json";
-import recommendLineOutlineData from "@/assets/recommendLine/outline.json";
 
+import ShaanxiTexture from "@/assets/recommendLine/Shaanxi.png";
 import anhuiTexture from "@/assets/recommendLine/anhui.png";
 import beijingTexture from "@/assets/recommendLine/beijing.png";
 import chongqingTexture from "@/assets/recommendLine/chongqing.png";
+import fujianTexture from "@/assets/recommendLine/fujian.png";
+import gansuTexture from "@/assets/recommendLine/gansu.png";
+import guangdongTexture from "@/assets/recommendLine/guangdong.png";
+import guangxiTexture from "@/assets/recommendLine/guangxi.png";
+import guizhouTexture from "@/assets/recommendLine/guizhou.png";
+import hainanTexture from "@/assets/recommendLine/hainan.png";
 import hebeiTexture from "@/assets/recommendLine/hebei.png";
+import heilongjiangTexture from "@/assets/recommendLine/heilongjiang.png";
 import henanTexture from "@/assets/recommendLine/henan.png";
 import hubeiTexture from "@/assets/recommendLine/hubei.png";
 import hunanTexture from "@/assets/recommendLine/hunan.png";
 import jiangsuTexture from "@/assets/recommendLine/jiangsu.png";
 import jiangxiTexture from "@/assets/recommendLine/jiangxi.png";
+import jilinTexture from "@/assets/recommendLine/jilin.png";
 import liaoningTexture from "@/assets/recommendLine/liaoning.png";
+import neimengguTexture from "@/assets/recommendLine/neimenggu.png";
+import ningxiaTexture from "@/assets/recommendLine/ningxia.png";
+import qinghaiTexture from "@/assets/recommendLine/qinghai.png";
 import shandongTexture from "@/assets/recommendLine/shandong.png";
 import shanghaiTexture from "@/assets/recommendLine/shanghai.png";
+import shanxiTexture from "@/assets/recommendLine/shanxi.png";
 import sichuanTexture from "@/assets/recommendLine/sichuan.png";
 import tianjingTexture from "@/assets/recommendLine/tianjing.png";
+import xinjiangTexture from "@/assets/recommendLine/xinjiang.png";
+import xizangTexture from "@/assets/recommendLine/xizang.png";
+import yunnanTexture from "@/assets/recommendLine/yunnan.png";
 import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
 
+import {
+  ALL_RECOMMEND_PROVINCE_IDS,
+  type ProvinceId,
+  type RecommendRoute,
+} from "../recommendLineRoutes";
 import ShapeBox from "./shape";
 import {
   MAP_DEPTH,
   MapLabel,
   MapRoot,
-  OutlineGlow,
   SceneReady,
   TerrainSideMaterial,
   TerrainTopMaterial,
@@ -82,7 +127,7 @@ type AdministrativeGeoJSON = {
 };
 
 type ProvinceSource = {
-  id: string;
+  id: ProvinceId;
   data: AdministrativeGeoJSON;
   texture: string;
 };
@@ -94,40 +139,105 @@ type ProjectedProvince = ProvinceSource & {
   labelPosition: [number, number, number];
 };
 
-type ProjectedRecommendLineMap = {
-  aggregateOutline: [number, number, number][][];
+type ProjectedRouteLayout = {
+  boundarySegments: [number, number, number][];
   center: Vector2;
-  provinces: ProjectedProvince[];
-  provinceBoundarySegments: [number, number, number][];
+  fitScale: number;
   hubeiAnchor: [number, number];
+  mapKey: string;
+  provinces: ProjectedProvince[];
 };
 
+type PreparedRoute = {
+  layout: ProjectedRouteLayout;
+  textures: ReadonlyMap<ProvinceId, Texture>;
+};
+
+type MapTransitionPhase =
+  | "hidden"
+  | "entering"
+  | "visible"
+  | "exiting";
+
+const GLOBAL_MAP_WIDTH = 27;
 const TARGET_MAP_WIDTH = 27;
+const TARGET_MAP_HEIGHT = 17.5;
+const EXIT_DURATION = 180;
+const ENTER_DURATION = 240;
+const REDUCED_MOTION_DURATION = 80;
 
 function asAdministrativeData(data: unknown): AdministrativeGeoJSON {
   return data as AdministrativeGeoJSON;
 }
 
-const provinceSources: ProvinceSource[] = [
-  { id: "sichuan", data: asAdministrativeData(sichuanData), texture: sichuanTexture },
-  { id: "chongqing", data: asAdministrativeData(chongqingData), texture: chongqingTexture },
-  { id: "hubei", data: asAdministrativeData(hubeiOutlineData), texture: hubeiTexture },
-  { id: "hunan", data: asAdministrativeData(hunanData), texture: hunanTexture },
-  { id: "henan", data: asAdministrativeData(henanData), texture: henanTexture },
-  { id: "jiangxi", data: asAdministrativeData(jiangxiData), texture: jiangxiTexture },
-  { id: "anhui", data: asAdministrativeData(anhuiData), texture: anhuiTexture },
-  { id: "jiangsu", data: asAdministrativeData(jiangsuData), texture: jiangsuTexture },
-  { id: "zhejiang", data: asAdministrativeData(zhejiangData), texture: zhejiangTexture },
-  { id: "shanghai", data: asAdministrativeData(shanghaiData), texture: shanghaiTexture },
-  { id: "shandong", data: asAdministrativeData(shandongData), texture: shandongTexture },
-  { id: "hebei", data: asAdministrativeData(hebeiData), texture: hebeiTexture },
-  { id: "beijing", data: asAdministrativeData(beijingData), texture: beijingTexture },
-  { id: "tianjing", data: asAdministrativeData(tianjingData), texture: tianjingTexture },
-  { id: "liaoning", data: asAdministrativeData(liaoningData), texture: liaoningTexture },
-];
+const provinceSourceById: Record<ProvinceId, ProvinceSource> = {
+  anhui: { id: "anhui", data: asAdministrativeData(anhuiData), texture: anhuiTexture },
+  beijing: { id: "beijing", data: asAdministrativeData(beijingData), texture: beijingTexture },
+  chongqing: { id: "chongqing", data: asAdministrativeData(chongqingData), texture: chongqingTexture },
+  fujian: { id: "fujian", data: asAdministrativeData(fujianData), texture: fujianTexture },
+  gansu: { id: "gansu", data: asAdministrativeData(gansuData), texture: gansuTexture },
+  guangdong: { id: "guangdong", data: asAdministrativeData(guangdongData), texture: guangdongTexture },
+  guangxi: { id: "guangxi", data: asAdministrativeData(guangxiData), texture: guangxiTexture },
+  guizhou: { id: "guizhou", data: asAdministrativeData(guizhouData), texture: guizhouTexture },
+  hainan: { id: "hainan", data: asAdministrativeData(hainanData), texture: hainanTexture },
+  hebei: { id: "hebei", data: asAdministrativeData(hebeiData), texture: hebeiTexture },
+  heilongjiang: { id: "heilongjiang", data: asAdministrativeData(heilongjiangData), texture: heilongjiangTexture },
+  henan: { id: "henan", data: asAdministrativeData(henanData), texture: henanTexture },
+  hubei: { id: "hubei", data: asAdministrativeData(hubeiData), texture: hubeiTexture },
+  hunan: { id: "hunan", data: asAdministrativeData(hunanData), texture: hunanTexture },
+  jiangsu: { id: "jiangsu", data: asAdministrativeData(jiangsuData), texture: jiangsuTexture },
+  jiangxi: { id: "jiangxi", data: asAdministrativeData(jiangxiData), texture: jiangxiTexture },
+  jilin: { id: "jilin", data: asAdministrativeData(jilinData), texture: jilinTexture },
+  liaoning: { id: "liaoning", data: asAdministrativeData(liaoningData), texture: liaoningTexture },
+  neimenggu: { id: "neimenggu", data: asAdministrativeData(neimengguData), texture: neimengguTexture },
+  ningxia: { id: "ningxia", data: asAdministrativeData(ningxiaData), texture: ningxiaTexture },
+  qinghai: { id: "qinghai", data: asAdministrativeData(qinghaiData), texture: qinghaiTexture },
+  shaanxi: { id: "shaanxi", data: asAdministrativeData(ShaanxiData), texture: ShaanxiTexture },
+  shandong: { id: "shandong", data: asAdministrativeData(shandongData), texture: shandongTexture },
+  shanghai: { id: "shanghai", data: asAdministrativeData(shanghaiData), texture: shanghaiTexture },
+  shanxi: { id: "shanxi", data: asAdministrativeData(shanxiData), texture: shanxiTexture },
+  sichuan: { id: "sichuan", data: asAdministrativeData(sichuanData), texture: sichuanTexture },
+  tianjing: { id: "tianjing", data: asAdministrativeData(tianjingData), texture: tianjingTexture },
+  xinjiang: { id: "xinjiang", data: asAdministrativeData(xinjiangData), texture: xinjiangTexture },
+  xizang: { id: "xizang", data: asAdministrativeData(xizangData), texture: xizangTexture },
+  yunnan: { id: "yunnan", data: asAdministrativeData(yunnanData), texture: yunnanTexture },
+  zhejiang: { id: "zhejiang", data: asAdministrativeData(zhejiangData), texture: zhejiangTexture },
+};
 
-const provinceTextures = provinceSources.map(({ texture }) => texture);
-let projectedRecommendLineMap: ProjectedRecommendLineMap | undefined;
+const provinceSources = ALL_RECOMMEND_PROVINCE_IDS.map(
+  (id) => provinceSourceById[id],
+);
+const projectedProvinceCache = new Map<ProvinceId, ProjectedProvince>();
+const routeLayoutCache = new Map<string, ProjectedRouteLayout>();
+const textureCache = new Map<ProvinceId, Texture>();
+const texturePromiseCache = new Map<ProvinceId, Promise<Texture>>();
+const preparedRoutePromiseCache = new Map<string, Promise<PreparedRoute>>();
+const textureLoader = new TextureLoader();
+let projectionCache: ReturnType<typeof geoMercator> | undefined;
+
+const MapCanvasLayer = styled.div<{
+  $duration: number;
+  $phase: MapTransitionPhase;
+}>`
+  width: 100%;
+  height: 100%;
+  opacity: ${({ $phase }) =>
+    $phase === "visible" || $phase === "entering" ? 1 : 0};
+  transform: ${({ $phase }) =>
+    $phase === "hidden" || $phase === "exiting"
+      ? "scale(0.985)"
+      : "scale(1)"};
+  transform-origin: 50% 52%;
+  pointer-events: ${({ $phase }) => ($phase === "visible" ? "auto" : "none")};
+  transition:
+    opacity ${({ $duration }) => $duration}ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform ${({ $duration }) => $duration}ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+
+  @media (prefers-reduced-motion: reduce) {
+    transform: none;
+  }
+`;
 
 function getPolygons(geometry: AdministrativeGeometry): PolygonCoordinates[] {
   return geometry.type === "Polygon"
@@ -146,7 +256,9 @@ function forEachCoordinate(
   });
 }
 
-function createProjection() {
+function getProjection() {
+  if (projectionCache) return projectionCache;
+
   const geographicBounds = new Box2();
   provinceSources.forEach(({ data }) => {
     forEachCoordinate(data, ([longitude, latitude]) => {
@@ -168,15 +280,15 @@ function createProjection() {
   });
 
   projection.scale(
-    projection.scale() * (TARGET_MAP_WIDTH / projectedBounds.getSize(new Vector2()).x),
+    projection.scale() *
+      (GLOBAL_MAP_WIDTH / projectedBounds.getSize(new Vector2()).x),
   );
+  projectionCache = projection;
   return projection;
 }
 
-function buildProvince(
-  source: ProvinceSource,
-  projection: ReturnType<typeof geoMercator>,
-): ProjectedProvince {
+function buildProvince(source: ProvinceSource): ProjectedProvince {
+  const projection = getProjection();
   const bbox = new Box2();
   const project = (coordinate: Coordinate) => {
     const [x, y] = projection(coordinate)!;
@@ -221,7 +333,9 @@ function buildProvince(
   });
 
   const properties = source.data.features[0].properties;
-  const [labelX, labelY] = projection(properties.centroid ?? properties.center)!;
+  const [labelX, labelY] = projection(
+    properties.centroid ?? properties.center,
+  )!;
 
   return {
     ...source,
@@ -232,64 +346,105 @@ function buildProvince(
   };
 }
 
-function buildAggregateOutline(
-  projection: ReturnType<typeof geoMercator>,
-): [number, number, number][][] {
-  const data = asAdministrativeData(recommendLineOutlineData);
-  const rings: [number, number, number][][] = [];
+function getProjectedProvince(id: ProvinceId) {
+  const cached = projectedProvinceCache.get(id);
+  if (cached) return cached;
 
-  data.features.forEach((feature) => {
-    getPolygons(feature.geometry).forEach((polygon) => {
-      const exterior = polygon[0];
-      if (!exterior || exterior.length < 3) return;
-      rings.push(
-        exterior.map((coordinate) => {
-          const [x, y] = projection(coordinate)!;
-          return [x, -y, MAP_DEPTH + 0.04];
-        }),
-      );
-    });
-  });
-
-  return rings;
+  const projected = buildProvince(provinceSourceById[id]);
+  projectedProvinceCache.set(id, projected);
+  return projected;
 }
 
-function getProjectedRecommendLineMap(): ProjectedRecommendLineMap {
-  if (projectedRecommendLineMap) return projectedRecommendLineMap;
+function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
+  const cached = routeLayoutCache.get(route.mapKey);
+  if (cached) return cached;
 
-  const projection = createProjection();
-  const provinces = provinceSources.map((source) =>
-    buildProvince(source, projection),
-  );
+  const provinces = route.provinceIds.map(getProjectedProvince);
   const bounds = new Box2();
-  provinces.forEach((province) => {
-    bounds.union(province.bbox);
-  });
+  provinces.forEach(({ bbox }) => bounds.union(bbox));
+  const size = bounds.getSize(new Vector2());
+  const fitScale = Math.min(
+    TARGET_MAP_WIDTH / Math.max(size.x, 0.001),
+    TARGET_MAP_HEIGHT / Math.max(size.y, 0.001),
+  );
   const center = bounds.getCenter(new Vector2());
-  const hubeiCenter = projection([114.3, 30.9])!;
+  const [hubeiX, hubeiY] = getProjection()([114.3, 30.9])!;
 
-  projectedRecommendLineMap = {
-    aggregateOutline: buildAggregateOutline(projection),
-    center,
-    provinces,
-    provinceBoundarySegments: provinces.flatMap(
+  const layout: ProjectedRouteLayout = {
+    boundarySegments: provinces.flatMap(
       ({ boundarySegments }) => boundarySegments,
     ),
-    hubeiAnchor: [hubeiCenter[0], -hubeiCenter[1]],
+    center,
+    fitScale,
+    hubeiAnchor: [hubeiX, -hubeiY],
+    mapKey: route.mapKey,
+    provinces,
   };
-  return projectedRecommendLineMap;
+  routeLayoutCache.set(route.mapKey, layout);
+  return layout;
 }
 
-/** 在用户切换前预取纹理，并在空闲阶段完成投影与边界数据计算。 */
-function preloadRecommendLineMapAssets() {
-  getProjectedRecommendLineMap();
-  useTexture.preload(provinceTextures);
+function loadProvinceTexture(id: ProvinceId) {
+  const cachedTexture = textureCache.get(id);
+  if (cachedTexture) return Promise.resolve(cachedTexture);
+
+  const cachedPromise = texturePromiseCache.get(id);
+  if (cachedPromise) return cachedPromise;
+
+  const texturePromise = textureLoader
+    .loadAsync(provinceSourceById[id].texture)
+    .then((texture) => {
+      texture.colorSpace = SRGBColorSpace;
+      texture.anisotropy = 8;
+      texture.needsUpdate = true;
+      textureCache.set(id, texture);
+      return texture;
+    })
+    .catch((error: unknown) => {
+      texturePromiseCache.delete(id);
+      throw error;
+    });
+  texturePromiseCache.set(id, texturePromise);
+  return texturePromise;
+}
+
+function prepareRoute(route: RecommendRoute) {
+  const cached = preparedRoutePromiseCache.get(route.mapKey);
+  if (cached) return cached;
+
+  const layout = getRouteLayout(route);
+  const preparedPromise = Promise.all(
+    route.provinceIds.map(async (id) => [id, await loadProvinceTexture(id)] as const),
+  )
+    .then(
+      (textures): PreparedRoute => ({
+        layout,
+        textures: new Map(textures),
+      }),
+    )
+    .catch((error: unknown) => {
+      preparedRoutePromiseCache.delete(route.mapKey);
+      throw error;
+    });
+  preparedRoutePromiseCache.set(route.mapKey, preparedPromise);
+  return preparedPromise;
+}
+
+function getMotionDurations() {
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  return reduceMotion
+    ? { enter: REDUCED_MOTION_DURATION, exit: REDUCED_MOTION_DURATION }
+    : { enter: ENTER_DURATION, exit: EXIT_DURATION };
 }
 
 function ProvinceMesh({
+  labelDistanceFactor,
   province,
   texture,
 }: {
+  labelDistanceFactor: number;
   province: ProjectedProvince;
   texture: Texture;
 }) {
@@ -329,7 +484,7 @@ function ProvinceMesh({
       <Html
         center
         position={province.labelPosition}
-        distanceFactor={22}
+        distanceFactor={labelDistanceFactor}
         zIndexRange={[20, 0]}
       >
         <MapLabel>{label}</MapLabel>
@@ -338,80 +493,203 @@ function ProvinceMesh({
   );
 }
 
-function RecommendLineScene({ onReady }: { onReady?: () => void }) {
-  const projected = useMemo(getProjectedRecommendLineMap, []);
-  const textures = useTexture(provinceTextures);
+function RecommendLineScene({
+  onReady,
+  prepared,
+}: {
+  onReady: () => void;
+  prepared: PreparedRoute;
+}) {
+  const { layout, textures } = prepared;
+  const labelDistanceFactor = 22 / layout.fitScale;
 
   return (
-    <group position={[-projected.center.x, -projected.center.y, 0]}>
-      <WorldBase hubeiAnchor={projected.hubeiAnchor} />
-      {projected.provinces.map((province, index) => (
-        <ProvinceMesh
-          key={province.id}
-          province={province}
-          texture={textures[index]}
+    <group scale={layout.fitScale}>
+      <group position={[-layout.center.x, -layout.center.y, 0]}>
+        <WorldBase hubeiAnchor={layout.hubeiAnchor} />
+        {layout.provinces.map((province) => (
+          <ProvinceMesh
+            key={province.id}
+            labelDistanceFactor={labelDistanceFactor}
+            province={province}
+            texture={textures.get(province.id)!}
+          />
+        ))}
+        <Line
+          points={layout.boundarySegments}
+          segments
+          lineWidth={0.75}
+          color="#8fe9ff"
+          transparent
+          opacity={0.52}
+          depthWrite={false}
+          toneMapped={false}
+          renderOrder={9}
+          raycast={() => null}
         />
-      ))}
-      <Line
-        points={projected.provinceBoundarySegments}
-        segments
-        lineWidth={0.75}
-        color="#8fe9ff"
-        transparent
-        opacity={0.52}
-        depthWrite={false}
-        toneMapped={false}
-        renderOrder={9}
-        raycast={() => null}
-      />
-      <OutlineGlow rings={projected.aggregateOutline} />
-      <SceneReady onReady={onReady} />
+        <SceneReady key={layout.mapKey} onReady={onReady} />
+      </group>
     </group>
   );
 }
 
 export type RecommendLineMapProps = {
   onReady?: () => void;
+  onRouteTransitionEnd?: (route: RecommendRoute) => void;
+  onRouteTransitionError?: (route: RecommendRoute) => void;
+  route: RecommendRoute;
 };
 
-function RecommendLineMap({ onReady }: RecommendLineMapProps) {
+function RecommendLineMap({
+  onReady,
+  onRouteTransitionEnd,
+  onRouteTransitionError,
+  route,
+}: RecommendLineMapProps) {
   const controlSpeed = useControlSpeed();
-  const handleReady = useCallback(() => onReady?.(), [onReady]);
+  const controlsRef = useRef<OrbitControlsImpl>(null!);
+  const [prepared, setPrepared] = useState<PreparedRoute | null>(null);
+  const preparedRef = useRef<PreparedRoute | null>(null);
+  const [phase, setPhaseState] = useState<MapTransitionPhase>("hidden");
+  const phaseRef = useRef<MapTransitionPhase>("hidden");
+  const [transitionDuration, setTransitionDuration] = useState(ENTER_DURATION);
+  const requestIdRef = useRef(0);
+  const transitionTimerRef = useRef<number | null>(null);
+  const transitionTargetRef = useRef<RecommendRoute | null>(null);
+  const hasSignalledInitialReadyRef = useRef(false);
+
+  const setPhase = useCallback((nextPhase: MapTransitionPhase) => {
+    phaseRef.current = nextPhase;
+    setPhaseState(nextPhase);
+  }, []);
+
+  const clearTransitionTimer = useCallback(() => {
+    if (transitionTimerRef.current !== null) {
+      window.clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(
+    () => () => {
+      requestIdRef.current += 1;
+      clearTransitionTimer();
+    },
+    [clearTransitionTimer],
+  );
+
+  useEffect(() => {
+    if (preparedRef.current?.layout.mapKey === route.mapKey) return;
+
+    const requestId = ++requestIdRef.current;
+    void prepareRoute(route)
+      .then((nextPrepared) => {
+        if (requestId !== requestIdRef.current) return;
+
+        if (!preparedRef.current) {
+          preparedRef.current = nextPrepared;
+          setPrepared(nextPrepared);
+          setPhase("hidden");
+          return;
+        }
+
+        transitionTargetRef.current = route;
+        const durations = getMotionDurations();
+        setTransitionDuration(durations.exit);
+        setPhase("exiting");
+        clearTransitionTimer();
+        transitionTimerRef.current = window.setTimeout(() => {
+          if (requestId !== requestIdRef.current) return;
+          controlsRef.current?.reset();
+          preparedRef.current = nextPrepared;
+          setPrepared(nextPrepared);
+          setPhase("hidden");
+          transitionTimerRef.current = null;
+        }, durations.exit);
+      })
+      .catch((error: unknown) => {
+        if (requestId !== requestIdRef.current) return;
+        console.error(`精品线路“${route.label}”地图加载失败`, error);
+        transitionTargetRef.current = null;
+        onRouteTransitionError?.(route);
+      });
+  }, [clearTransitionTimer, onRouteTransitionError, route, setPhase]);
+
+  const handleSceneReady = useCallback(() => {
+    if (phaseRef.current !== "hidden") return;
+
+    const durations = getMotionDurations();
+    setTransitionDuration(durations.enter);
+    setPhase("entering");
+
+    if (!hasSignalledInitialReadyRef.current) {
+      hasSignalledInitialReadyRef.current = true;
+      onReady?.();
+    }
+
+    const completedRoute = transitionTargetRef.current;
+    clearTransitionTimer();
+    transitionTimerRef.current = window.setTimeout(() => {
+      setPhase("visible");
+      transitionTimerRef.current = null;
+      if (completedRoute) {
+        transitionTargetRef.current = null;
+        onRouteTransitionEnd?.(completedRoute);
+      }
+    }, durations.enter);
+  }, [clearTransitionTimer, onReady, onRouteTransitionEnd, setPhase]);
 
   return (
     <MapRoot role="img" aria-label="精品线路覆盖省份三维地形地图">
-      <Canvas
-        dpr={[1, 1.5]}
-        resize={{ offsetSize: true }}
-        gl={{ alpha: true, antialias: true }}
-        camera={{ fov: 28.5, near: 0.1, far: 360, position: [0, 31, 25.5] }}
+      <MapCanvasLayer
+        $duration={transitionDuration}
+        $phase={phase}
+        aria-busy={phase !== "visible"}
       >
-        <Suspense fallback={null}>
-          <group rotation={[-Math.PI / 2, 0, 0]}>
-            <RecommendLineScene onReady={handleReady} />
-          </group>
-        </Suspense>
-        <OrbitControls
-          makeDefault
-          enableDamping
-          dampingFactor={0.08}
-          rotateSpeed={controlSpeed}
-          panSpeed={controlSpeed}
-          zoomSpeed={0.9}
-          minDistance={14}
-          maxDistance={70}
-          minPolarAngle={0.3}
-          maxPolarAngle={1.35}
-          minAzimuthAngle={-0.9}
-          maxAzimuthAngle={0.9}
-          screenSpacePanning={false}
-        />
-      </Canvas>
+        <Canvas
+          dpr={[1, 1.5]}
+          resize={{ offsetSize: true }}
+          gl={{ alpha: true, antialias: true }}
+          camera={{
+            fov: 28.5,
+            near: 0.1,
+            far: 360,
+            position: [0, 31, 25.5],
+          }}
+        >
+          <Suspense fallback={null}>
+            {prepared && (
+              <group rotation={[-Math.PI / 2, 0, 0]}>
+                <RecommendLineScene
+                  prepared={prepared}
+                  onReady={handleSceneReady}
+                />
+              </group>
+            )}
+          </Suspense>
+          <OrbitControls
+            ref={controlsRef}
+            makeDefault
+            enableDamping
+            dampingFactor={0.08}
+            rotateSpeed={controlSpeed}
+            panSpeed={controlSpeed}
+            zoomSpeed={0.9}
+            minDistance={14}
+            maxDistance={70}
+            minPolarAngle={0.3}
+            maxPolarAngle={1.35}
+            minAzimuthAngle={-0.9}
+            maxAzimuthAngle={0.9}
+            screenSpacePanning={false}
+          />
+        </Canvas>
+      </MapCanvasLayer>
     </MapRoot>
   );
 }
 
-RecommendLineMap.preload = preloadRecommendLineMapAssets;
+RecommendLineMap.preload = (route: RecommendRoute) =>
+  prepareRoute(route).then(() => undefined);
 
 export default RecommendLineMap;
-  

@@ -1,7 +1,6 @@
-import { useState } from "react";
 import styled from "styled-components";
 
-const ROUTES = ["北粮南运", "赶肉下江", "楚天翼连", "棉纺丝路", "疆煤入鄂"];
+import type { RecommendRoute } from "../recommendLineRoutes";
 
 const Group = styled.div`
   position: absolute;
@@ -31,21 +30,43 @@ const RouteButton = styled.button<{ $active: boolean }>`
     border-color 180ms ease,
     background 180ms ease,
     color 180ms ease;
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.78;
+  }
 `;
 
-export default function RouteButtons() {
-  const [active, setActive] = useState(ROUTES[0]);
+export type RouteButtonsProps = {
+  activeRoute: string;
+  disabled?: boolean;
+  routes: readonly RecommendRoute[];
+  onRouteChange: (route: RecommendRoute) => void;
+  onRouteIntent?: (route: RecommendRoute) => void;
+};
+
+export default function RouteButtons({
+  activeRoute,
+  disabled = false,
+  routes,
+  onRouteChange,
+  onRouteIntent,
+}: RouteButtonsProps) {
 
   return (
-    <Group aria-label="精品线路选择">
-      {ROUTES.map((route) => (
+    <Group aria-label="精品线路选择" aria-busy={disabled}>
+      {routes.map((route) => (
         <RouteButton
-          key={route}
+          key={route.label}
           type="button"
-          $active={active === route}
-          onClick={() => setActive(route)}
+          $active={activeRoute === route.label}
+          disabled={disabled}
+          aria-pressed={activeRoute === route.label}
+          onFocus={() => onRouteIntent?.(route)}
+          onPointerEnter={() => onRouteIntent?.(route)}
+          onClick={() => onRouteChange(route)}
         >
-          {route}
+          {route.label}
         </RouteButton>
       ))}
     </Group>
