@@ -69,7 +69,10 @@ const Label = styled.span<{ $active?: boolean }>`
   text-shadow: 0 4px 4px rgba(0, 0, 0, 0.55), 0 0 15px rgba(89, 255, 226, 0.7);
 `;
 
-export type DashboardMapView = "province" | "recommendLine";
+export type DashboardMapView =
+  | "wuhanChannel"
+  | "province"
+  | "recommendLine";
 
 export type BottomNavigationProps = {
   activeView: DashboardMapView;
@@ -84,14 +87,24 @@ export default function BottomNavigation({
   onViewIntent,
   onViewChange,
 }: BottomNavigationProps) {
+  const wuhanChannelActive = activeView === "wuhanChannel";
   const provinceActive = activeView === "province";
   const recommendLineActive = activeView === "recommendLine";
 
   return (
     <Navigation aria-label="大屏视图切换">
-      <NavButton type="button" $side="left" disabled aria-disabled="true">
-        <img src={leftButton} alt="" />
-        <Label>武汉通道网</Label>
+      <NavButton
+        type="button"
+        $active={wuhanChannelActive}
+        $side="left"
+        disabled={disabled}
+        aria-current={wuhanChannelActive ? "page" : undefined}
+        onFocus={() => onViewIntent?.("wuhanChannel")}
+        onPointerEnter={() => onViewIntent?.("wuhanChannel")}
+        onClick={() => onViewChange("wuhanChannel")}
+      >
+        <img src={wuhanChannelActive ? activeButton : leftButton} alt="" />
+        <Label $active={wuhanChannelActive}>武汉通道网</Label>
       </NavButton>
       <NavButton
         type="button"

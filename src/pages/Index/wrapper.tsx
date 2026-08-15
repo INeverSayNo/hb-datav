@@ -2,6 +2,7 @@ import styled from "styled-components";
 
 import AutoFit from "@/components/autoFit";
 import dashboardBackground from "@/assets/datav-bg.png";
+import wuhanChannelImage from "@/assets/wh-channel.png";
 import BottomNavigation, {
   type DashboardMapView,
 } from "./components/BottomNavigation";
@@ -38,11 +39,28 @@ const HubeiMap =
     : ThreeHubeiMap;
 const loadRecommendLineMap = () => import("./map/RecommendLineMap");
 const RecommendLineMap = lazy(loadRecommendLineMap);
+let wuhanChannelPreloadPromise: Promise<void> | null = null;
 
 function preloadRecommendLineMap(route: RecommendRoute) {
   return loadRecommendLineMap().then(({ default: RecommendLineMapModule }) => {
     return RecommendLineMapModule.preload(route);
   });
+}
+
+function preloadWuhanChannel() {
+  if (wuhanChannelPreloadPromise) return wuhanChannelPreloadPromise;
+
+  wuhanChannelPreloadPromise = new Promise<void>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("武汉通道网图片加载失败"));
+    image.src = wuhanChannelImage;
+  }).catch((error) => {
+    wuhanChannelPreloadPromise = null;
+    throw error;
+  });
+
+  return wuhanChannelPreloadPromise;
 }
 
 // 地图后方数字雨动画开关：
@@ -90,11 +108,27 @@ const CenterGlow = styled.div`
 
 const MapStage = styled.div`
   position: absolute;
-  left: 1600px;
-  top: 360px;
+  left: 1700px;
+  top: 390px;
   z-index: 2;
   width: 2340px;
   height: 1570px;
+`;
+
+const WuhanChannelStage = styled.section`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+`;
+
+const WuhanChannelImage = styled.img`
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 `;
 
 const MapLoadingOverlay = styled.div<{ $visible: boolean }>`
@@ -177,6 +211,35 @@ const MapLayer = styled.div<{ $phase: MapLayerPhase }>`
   }
 `;
 
+function WuhanChannelMap({ onReady }: { onReady?: () => void }) {
+  const readyRef = useRef(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  const signalReady = useCallback(() => {
+    if (readyRef.current) return;
+    readyRef.current = true;
+    onReady?.();
+  }, [onReady]);
+
+  useEffect(() => {
+    if (imageRef.current?.complete && imageRef.current.naturalWidth > 0) {
+      signalReady();
+    }
+  }, [signalReady]);
+
+  return (
+    <WuhanChannelStage role="img" aria-label="武汉通道网">
+      <WuhanChannelImage
+        ref={imageRef}
+        src={wuhanChannelImage}
+        alt="武汉通道网"
+        decoding="async"
+        onLoad={signalReady}
+      />
+    </WuhanChannelStage>
+  );
+}
+
 function DashboardMap({
   onReady,
   onRouteTransitionEnd,
@@ -190,9 +253,15 @@ function DashboardMap({
   route: RecommendRoute;
   view: DashboardMapView;
 }) {
-  return view === "province" ? (
-    <HubeiMap onReady={onReady} />
-  ) : (
+  if (view === "wuhanChannel") {
+    return <WuhanChannelMap onReady={onReady} />;
+  }
+
+  if (view === "province") {
+    return <HubeiMap onReady={onReady} />;
+  }
+
+  return (
     <Suspense fallback={null}>
       <RecommendLineMap
         route={route}
@@ -292,6 +361,13 @@ export default function IndexDashboard() {
   );
 
   const handleViewIntent = useCallback((nextView: DashboardMapView) => {
+    if (nextView === "wuhanChannel") {
+      void preloadWuhanChannel().catch(() => {
+        // 悬停预加载失败时仍可在点击后通过 img 正常重试。
+      });
+      return;
+    }
+
     if (nextView === "recommendLine") {
       void preloadRecommendLineMap(activeRoute).catch(() => {
         // 悬停预加载失败不影响用户点击后的正常加载。
