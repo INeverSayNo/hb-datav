@@ -1,7 +1,7 @@
 import { useState } from "react";
 import styled from "styled-components";
 
-const ROUTES = ["北粮南运", "赶肉下江", "楚天翼连", "棉纺丝路", "华南油脂"];
+const ROUTES = ["北粮南运", "赶肉下江", "楚天翼连", "棉纺丝路", "疆煤入鄂"];
 
 const Group = styled.div`
   position: absolute;
