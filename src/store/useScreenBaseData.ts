@@ -40,7 +40,7 @@ interface ScreenBaseDataStore extends ScreenBaseData {
 }
 
 export const useScreenBaseDataStore = create<ScreenBaseDataStore>()(
-  subscribeWithSelector((set, _, store) => ({
+  subscribeWithSelector((set) => ({
     leftTopPanel: {
       freightVolume: 0,
       containerCount: 0,

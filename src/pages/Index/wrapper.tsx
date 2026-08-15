@@ -2,7 +2,9 @@ import styled from "styled-components";
 
 import AutoFit from "@/components/autoFit";
 import dashboardBackground from "@/assets/datav-bg.png";
-import BottomNavigation from "./components/BottomNavigation";
+import BottomNavigation, {
+  type DashboardMapView,
+} from "./components/BottomNavigation";
 import CenterControls from "./components/CenterControls";
 import DashboardHeader from "./components/DashboardHeader";
 import LeftPanels from "./components/LeftPanels";
@@ -12,7 +14,14 @@ import RightPanels from "./components/RightPanels";
 import EChartsHubeiMap from "./map";
 import ThreeHubeiMap from "./map/three";
 import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
-import { useEffect } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { GetScreenBaseData } from "@/api/modules/baseDataApi";
 
 // 默认使用 three.js 三维地图，可通过 ?map=echarts 回退到 ECharts 版本
@@ -20,6 +29,7 @@ const HubeiMap =
   new URLSearchParams(window.location.search).get("map") === "echarts"
     ? EChartsHubeiMap
     : ThreeHubeiMap;
+const RecommendLineMap = lazy(() => import("./map/RecommendLineMap"));
 
 // 地图后方数字雨动画开关：
 // - 代码控制：改为 false 即常驻隐藏
@@ -73,8 +83,56 @@ const MapStage = styled.div`
   height: 1470px;
 `;
 
+type MapLayerPhase = "current" | "incoming" | "entering" | "exiting";
+
+const MapLayer = styled.div<{ $phase: MapLayerPhase }>`
+  position: absolute;
+  inset: 0;
+  opacity: ${({ $phase }) =>
+    $phase === "current" || $phase === "entering" ? 1 : 0};
+  transform: ${({ $phase }) => {
+    if ($phase === "incoming") return "scale(1.02)";
+    if ($phase === "exiting") return "scale(0.98)";
+    return "scale(1)";
+  }};
+  transform-origin: 50% 52%;
+  pointer-events: ${({ $phase }) => ($phase === "current" ? "auto" : "none")};
+  transition:
+    opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+
+  @media (prefers-reduced-motion: reduce) {
+    transform: none;
+    transition-duration: 80ms;
+  }
+`;
+
+function DashboardMap({
+  onReady,
+  view,
+}: {
+  onReady?: () => void;
+  view: DashboardMapView;
+}) {
+  return view === "province" ? (
+    <HubeiMap onReady={onReady} />
+  ) : (
+    <Suspense fallback={null}>
+      <RecommendLineMap onReady={onReady} />
+    </Suspense>
+  );
+}
+
 export default function IndexDashboard() {
   const updateStore = useScreenBaseDataStore((s) => s.updateStore);
+  const [currentView, setCurrentView] =
+    useState<DashboardMapView>("province");
+  const [incomingView, setIncomingView] =
+    useState<DashboardMapView | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const transitionTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     const fetchData = async () => {
@@ -89,6 +147,43 @@ export default function IndexDashboard() {
     };
   }, [updateStore]);
 
+  useEffect(
+    () => () => {
+      if (transitionTimerRef.current !== null) {
+        window.clearTimeout(transitionTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleViewChange = useCallback(
+    (nextView: DashboardMapView) => {
+      if (nextView === currentView || incomingView || isAnimating) return;
+      setIncomingView(nextView);
+    },
+    [currentView, incomingView, isAnimating],
+  );
+
+  const handleIncomingReady = useCallback(() => {
+    if (!incomingView || isAnimating) return;
+
+    setIsAnimating(true);
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    transitionTimerRef.current = window.setTimeout(
+      () => {
+        setCurrentView(incomingView);
+        setIncomingView(null);
+        setIsAnimating(false);
+        transitionTimerRef.current = null;
+      },
+      reduceMotion ? 100 : 440,
+    );
+  }, [incomingView, isAnimating]);
+
+  const navigationView = incomingView ?? currentView;
+
   return (
     <AutoFit dw={5600} dh={2320} aria-label="武汉多式联运服务中心数据大屏">
       <Dashboard>
@@ -96,14 +191,36 @@ export default function IndexDashboard() {
         <CenterGlow />
         <MatrixRain visible={SHOW_MATRIX_RAIN} />
         <MapStage>
-          <HubeiMap />
+          <MapLayer
+            key={currentView}
+            $phase={isAnimating ? "exiting" : "current"}
+            aria-hidden={isAnimating}
+          >
+            <DashboardMap view={currentView} />
+          </MapLayer>
+          {incomingView && (
+            <MapLayer
+              key={incomingView}
+              $phase={isAnimating ? "entering" : "incoming"}
+              aria-hidden={!isAnimating}
+            >
+              <DashboardMap
+                view={incomingView}
+                onReady={handleIncomingReady}
+              />
+            </MapLayer>
+          )}
         </MapStage>
         <MapLegend />
         <DashboardHeader />
         <LeftPanels />
         <CenterControls />
         <RightPanels />
-        <BottomNavigation />
+        <BottomNavigation
+          activeView={navigationView}
+          disabled={incomingView !== null}
+          onViewChange={handleViewChange}
+        />
       </Dashboard>
     </AutoFit>
   );

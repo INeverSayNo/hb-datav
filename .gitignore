@@ -26,8 +26,6 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
-recommendLine/
-
 # 环境变量
 .env
 .env.local

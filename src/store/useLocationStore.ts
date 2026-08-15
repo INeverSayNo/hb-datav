@@ -21,7 +21,7 @@ interface ConfigStore extends LocationInfo {
 }
 
 export const useConfigStore = create<ConfigStore>()(
-  subscribeWithSelector((set, _, store) => ({
+  subscribeWithSelector((set) => ({
     lat: 30.598624,
     lng: 114.311734,
     districtId: "",

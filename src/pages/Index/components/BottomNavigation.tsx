@@ -30,14 +30,18 @@ const NavButton = styled.button<{ $active?: boolean; $side?: "left" | "right" }>
   filter: ${({ $active }) => ($active ? "brightness(1.12)" : "brightness(.86)")};
   transition: transform 160ms ease, filter 160ms ease;
 
-  &:hover,
-  &:focus-visible {
+  &:disabled {
+    cursor: default;
+  }
+
+  &:not(:disabled):hover,
+  &:not(:disabled):focus-visible {
     filter: brightness(1.24);
     transform: translateY(-7px);
     outline: none;
   }
 
-  &:active {
+  &:not(:disabled):active {
     transform: translateY(-3px) scale(0.99);
   }
 
@@ -59,26 +63,54 @@ const Label = styled.span<{ $active?: boolean }>`
   padding-top: ${({ $active }) => ($active ? 4 : 16)}px;
   font-family: 'YouSheBiaoTiHei', "Microsoft YaHei", sans-serif;
   font-size: ${({ $active }) => ($active ? 58 : 46)}px;
-      top: 50%;
-    transform: translateY(-75%);
+  top: 50%;
+  transform: translateY(-75%);
   letter-spacing: 4px;
   text-shadow: 0 4px 4px rgba(0, 0, 0, 0.55), 0 0 15px rgba(89, 255, 226, 0.7);
 `;
 
-export default function BottomNavigation() {
+export type DashboardMapView = "province" | "recommendLine";
+
+export type BottomNavigationProps = {
+  activeView: DashboardMapView;
+  disabled?: boolean;
+  onViewChange: (view: DashboardMapView) => void;
+};
+
+export default function BottomNavigation({
+  activeView,
+  disabled = false,
+  onViewChange,
+}: BottomNavigationProps) {
+  const provinceActive = activeView === "province";
+  const recommendLineActive = activeView === "recommendLine";
+
   return (
     <Navigation aria-label="大屏视图切换">
-      <NavButton type="button" $side="left">
+      <NavButton type="button" $side="left" disabled aria-disabled="true">
         <img src={leftButton} alt="" />
         <Label>武汉通道网</Label>
       </NavButton>
-      <NavButton type="button" $active aria-current="page">
-        <img src={activeButton} alt="" />
-        <Label $active>全省物流网</Label>
+      <NavButton
+        type="button"
+        $active={provinceActive}
+        disabled={disabled}
+        aria-current={provinceActive ? "page" : undefined}
+        onClick={() => onViewChange("province")}
+      >
+        <img src={provinceActive ? activeButton : leftButton} alt="" />
+        <Label $active={provinceActive}>全省物流网</Label>
       </NavButton>
-      <NavButton type="button" $side="right">
-        <img src={rightButton} alt="" />
-        <Label>精品线路网</Label>
+      <NavButton
+        type="button"
+        $active={recommendLineActive}
+        $side="right"
+        disabled={disabled}
+        aria-current={recommendLineActive ? "page" : undefined}
+        onClick={() => onViewChange("recommendLine")}
+      >
+        <img src={recommendLineActive ? activeButton : rightButton} alt="" />
+        <Label $active={recommendLineActive}>精品线路网</Label>
       </NavButton>
     </Navigation>
   );

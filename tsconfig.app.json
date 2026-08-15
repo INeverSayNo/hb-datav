@@ -25,10 +25,7 @@
         "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true,
         "baseUrl": "./",
-        "types": ["vite/client", "bmapgl"],
-        "typeRoots": [
-            "./node_modules/@types",
-        ],
+        "types": ["vite/client"],
         "paths": {
             "@/*": [
                 "src/*"

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as echarts from "echarts/core";
 import { GeoComponent } from "echarts/components";
 import styled from "styled-components";
@@ -79,7 +79,15 @@ function createStackLayer(index: number): echarts.EChartsCoreOption {
   };
 }
 
-export default function HubeiMap() {
+export type HubeiMapProps = {
+  onReady?: () => void;
+};
+
+export default function HubeiMap({ onReady }: HubeiMapProps) {
+  useEffect(() => {
+    onReady?.();
+  }, [onReady]);
+
   const [stackOption, mainOption] = useMemo<
     [echarts.EChartsCoreOption, echarts.EChartsCoreOption]
   >(() => {
