@@ -26,24 +26,28 @@ import {
   type ShaderMaterial as ThreeShaderMaterial,
   type Texture,
 } from "three";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 
+import hubeiHighwayData from "@/assets/hb-highway.json";
 import hubeiMapData from "@/assets/hb.json";
 import hubeiOutlineData from "@/assets/hb_outline.json";
 import hubeiDem from "@/assets/hb_dem.png";
 import worldTerrain from "@/assets/scene-transparent.png";
 import type { CityGeoJSON } from "@/types/map";
 import ShapeBox from "./shape";
-import HBHighway from "@/assets/hb-highway.json"
-
 
 /** 省份挤出厚度（墨卡托投影单位，湖北宽约 21） */
 const MAP_DEPTH = 0.66;
 const MAP_GLOW_COLOR = "#20dbdb";
-const testColor = '#20dbdb24'
+const testColor = "#20dbdb24";
 /** toneMapped=false 时颜色超过 1 会被渲染为高亮霓虹色 */
 const GLOW_EMISSIVE_COLOR = new Color(MAP_GLOW_COLOR).multiplyScalar(2.6);
 /** 省界描边宽度（px，与设计稿 1:1） */
 const OUTLINE_WIDTH = 2;
+/** 高速公路线宽（屏幕像素） */
+const HIGHWAY_WIDTH = 4;
 
 /** 世界地形背景贴图宽高比 2262 / 1478 */
 const WORLD_ASPECT = 1478 / 2262;
@@ -190,6 +194,11 @@ type ProjectedCity = {
   center: Vector3;
 };
 
+type HighwayMultiLineString = {
+  type: "MultiLineString";
+  coordinates: [number, number][][];
+};
+
 /** 补偿 AutoFit 的 CSS 缩放：缩放越小鼠标位移越小，需要放大控制器速度 */
 function useControlSpeed() {
   const [speed, setSpeed] = useState(1);
@@ -297,25 +306,48 @@ function MapMesh() {
       new Float32BufferAttribute(boundaryPositions, 3)
     );
 
-const highwayPositions: number[] = [];
-HBHighway.features.forEach((feature) => {
-  const coords = feature.geometry.coordinates as number[][];
-  for (let index = 1; index < coords.length; index += 1) {
-    const previous = project(coords[index - 1]);
-    const current = project(coords[index]);
-    highwayPositions.push(
-      previous.x, previous.y, MAP_DEPTH + 0.08,
-      current.x, current.y, MAP_DEPTH + 0.08
+    const highwayData = hubeiHighwayData as unknown as HighwayMultiLineString;
+    const highwaySegmentCount = highwayData.coordinates.reduce(
+      (total, coordinates) => total + Math.max(0, coordinates.length - 1),
+      0
     );
-  }
-});
+    const highwayPositions = new Float32Array(highwaySegmentCount * 6);
+    let highwayPositionOffset = 0;
 
-const highwayGeometry = new BufferGeometry();
-highwayGeometry.setAttribute(
-  "position",
-  new Float32BufferAttribute(highwayPositions, 3)
-);
+    highwayData.coordinates.forEach((coordinates) => {
+      if (coordinates.length < 2) return;
 
+      let [previousX, previousY] = projection(coordinates[0])!;
+      for (let index = 1; index < coordinates.length; index += 1) {
+        const [currentX, currentY] = projection(coordinates[index])!;
+        highwayPositions[highwayPositionOffset++] = previousX;
+        highwayPositions[highwayPositionOffset++] = -previousY;
+        highwayPositions[highwayPositionOffset++] = MAP_DEPTH + 0.08;
+        highwayPositions[highwayPositionOffset++] = currentX;
+        highwayPositions[highwayPositionOffset++] = -currentY;
+        highwayPositions[highwayPositionOffset++] = MAP_DEPTH + 0.08;
+        previousX = currentX;
+        previousY = currentY;
+      }
+    });
+
+    const highwayGeometry = new LineSegmentsGeometry();
+    highwayGeometry.setPositions(highwayPositions);
+    const highwayMaterial = new LineMaterial({
+      color: "#ffce4d",
+      linewidth: HIGHWAY_WIDTH,
+      worldUnits: false,
+      toneMapped: false,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+    });
+    const highwayLine = new LineSegments2(
+      highwayGeometry,
+      highwayMaterial
+    );
+    highwayLine.renderOrder = 14;
+    highwayLine.raycast = () => {};
 
     const extruded = new ExtrudeGeometry(shapes, {
       depth: MAP_DEPTH,
@@ -359,7 +391,7 @@ highwayGeometry.setAttribute(
       cityBoundaryGeometry,
       provinceEdgeGeometry,
       outlineRings,
-      highwayGeometry
+      highwayLine,
     };
   }, []);
 
@@ -368,6 +400,14 @@ highwayGeometry.setAttribute(
     demTexture.anisotropy = 8;
     demTexture.needsUpdate = true;
   }, [demTexture]);
+
+  useLayoutEffect(
+    () => () => {
+      projected.highwayLine.geometry.dispose();
+      projected.highwayLine.material.dispose();
+    },
+    [projected]
+  );
 
   useFrame((_, delta) => {
     if (sideMaterialRef.current) {
@@ -409,9 +449,7 @@ highwayGeometry.setAttribute(
         <lineBasicMaterial color={GLOW_EMISSIVE_COLOR} toneMapped={false} />
       </lineSegments>
 
-      <lineSegments geometry={projected.highwayGeometry} renderOrder={14} raycast={() => null}>
-  <lineBasicMaterial color="#ffce4d" toneMapped={false} />
-</lineSegments>
+      <primitive object={projected.highwayLine} />
 
       {/* 省界加粗发光描边：外层光晕 + 中层辉光 + 内层亮色主线 */}
       {projected.outlineRings.map((ring, index) => (
