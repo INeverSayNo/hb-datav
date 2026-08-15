@@ -204,14 +204,6 @@ const RouteTrack = styled.div<{ $groupCount: number }>`
   animation-duration: ${({ $groupCount }) => $groupCount * 8}s;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-
-  ${RouteViewport}:hover & {
-    animation-play-state: paused;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
 `;
 
 const RouteGroup = styled.div`
@@ -319,11 +311,7 @@ const ROUTES_PER_GROUP = 3;
 export default function RightPanels() {
   const rightTopPanel = useScreenBaseDataStore((s) => s.rightTopPanel);
   const rightMiddlePanel = useScreenBaseDataStore((s) => s.rightMiddlePanel);
-  const rightBottomPanel = [
-    { text1: "湖北", text2: "动画验证线路一" },
-    { text1: "湖北", text2: "动画验证线路二" },
-    { text1: "湖北", text2: "动画验证线路三" },
-  ];
+  const rightBottomPanel = useScreenBaseDataStore((s) => s.rightBottomPanel);
 
   const topServiceMetrics = useMemo(
       () =>
