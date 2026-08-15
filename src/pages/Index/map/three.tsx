@@ -51,58 +51,83 @@ import MapWarehouse from "@/assets/map-warehouse.png";
 
 const poiList = [
   {
-    lat: "30.86",
-    lng: "110.96",
-    label: "秭归港",
+    lat: "30.2274",
+    lng: "115.1620",
+    label: "棋盘洲港区",
     icon: MapWaterPort,
   },
   {
-    lat: "30.31",
-    lng: "112.25",
-    label: "荆州港",
+    lat: "30.4175",
+    lng: "111.2461",
+    label: "云池/白洋港区",
     icon: MapWaterPort,
   },
   {
-    lat: "30.67",
-    lng: "114.57",
-    label: "阳逻港",
+    lat: "30.6628",
+    lng: "114.5637",
+    label: "阳逻港区",
     icon: MapWaterPort,
   },
   {
-    lat: "29.84",
-    lng: "113.55",
-    label: "洪湖港",
+    lat: "30.3147",
+    lng: "112.2813",
+    label: "盐卡港区",
     icon: MapWaterPort,
   },
   {
-    lat: "32.02",
-    lng: "112.17",
-    label: "襄阳南站",
+    lat: "30.4963",
+    lng: "114.8275",
+    label: "唐家渡港区",
+    icon: MapWaterPort,
+  },
+  {
+    lat: "30.6447,114.1205",
+    lng: "114.120",
+    label: "吴家山站",
     icon: MapRailwayStation,
   },
   {
-    lat: "31.73",
-    lng: "113.42",
-    label: "随州站",
+    lat: "30.6681",
+    lng: "114.5496",
+    label: "香炉山站",
     icon: MapRailwayStation,
   },
   {
-    lat: "30.92717865",
-    lng: "113.65160654",
-    label: "应城东站",
+    lat: "32.2074",
+    lng: "112.2782",
+    label: "襄州北站",
     icon: MapRailwayStation,
   },
   {
-    lat: "30.27",
-    lng: "109.46",
-    label: "恩施仓库",
+    lat: "30.6837",
+    lng: "111.3401",
+    label: "宜昌东站货场",
+    icon: MapRailwayStation,
+  },
+
+  {
+    lat: "30.34",
+    lng: "115.05",
+    label: "花湖机场",
+    icon: MapAirPort,
+  },
+  {
+    lat: "30.6341",
+    lng: "114.1172",
+    label: "武汉传化公路港",
+    icon: MapWarehouse,
+  },
+  {
+    lat: "30.5221",
+    lng: "114.8742",
+    label: "黄冈禹王物流园",
     icon: MapWarehouse,
   },
   {
     lat: "30.34",
     lng: "115.05",
     label: "花湖机场",
-    icon: MapAirPort,
+    icon: MapWarehouse,
   },
 ];
 
@@ -128,8 +153,8 @@ const PoiMarker = styled.div`
   pointer-events: none;
 
   img {
-    width: 88px;
-    height: 88px;
+    width: 60px;
+    height: 60px;
     object-fit: contain;
     filter: drop-shadow(0 2px 6px rgba(0, 18, 28, 0.9));
   }
@@ -501,7 +526,10 @@ function MapMesh() {
           zIndexRange={[20, 0]}
         >
           <PoiMarker>
-            <img src={poi.icon} alt={poi.label} />
+            <img
+              src={poi.icon}
+              alt={poi.label}
+            />
             <span>{poi.label}</span>
           </PoiMarker>
         </Html>

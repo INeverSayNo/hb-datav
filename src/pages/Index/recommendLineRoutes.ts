@@ -191,6 +191,10 @@ export const poiData: RecommendPoiEntry[] = [
             value: [115.06, 30.36],
           },
           {
+            name: "",
+            value: [125.47,39.88],
+          },
+          {
             name: "成田国际机场",
             value: [140.39, 35.77],
           },
@@ -203,6 +207,10 @@ export const poiData: RecommendPoiEntry[] = [
           {
             name: "花湖机场",
             value: [115.06, 30.36],
+          },
+          {
+            name: "",
+            value: [100.53,42.12],
           },
           {
             name: "图尔克斯坦机场",
@@ -219,6 +227,10 @@ export const poiData: RecommendPoiEntry[] = [
             value: [115.06, 30.36],
           },
           {
+            name: "",
+            value: [79.61,48.62],
+          },
+          {
             name: "米兰国际机场",
             value: [8.7281, 45.6306],
           },
@@ -228,51 +240,51 @@ export const poiData: RecommendPoiEntry[] = [
       {
         routes: [
           {
-            name: "花湖机场",
-            value: [115.06, 30.36],
-          },
-          {
             name: "德国仓",
             value: [13.405, 52.52],
+          },
+          {
+            name: "米兰国际机场",
+            value: [8.7281, 45.6306],
           },
         ],
         type: "airway",
       },
       {
         routes: [
-          {
-            name: "花湖机场",
-            value: [115.06, 30.36],
-          },
           {
             name: "波兰仓",
             value: [21.0122, 52.2297],
           },
+          {
+            name: "米兰国际机场",
+            value: [8.7281, 45.6306],
+          },
         ],
         type: "airway",
       },
       {
         routes: [
-          {
-            name: "花湖机场",
-            value: [115.06, 30.36],
-          },
           {
             name: "西班牙仓",
             value: [-4.0249, 39.8577],
           },
+          {
+            name: "米兰国际机场",
+            value: [8.7281, 45.6306],
+          },
         ],
         type: "airway",
       },
       {
         routes: [
           {
-            name: "花湖机场",
-            value: [115.06, 30.36],
-          },
-          {
             name: "法国仓",
             value: [2.2, 46.2],
+          },
+          {
+            name: "米兰国际机场",
+            value: [8.7281, 45.6306],
           },
         ],
         type: "airway",
