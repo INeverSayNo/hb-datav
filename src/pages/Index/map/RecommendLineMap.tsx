@@ -729,17 +729,19 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   if (cached) return cached;
 
   const regions = route.mapIds.map(getProjectedMapRegion);
-  // if (route.mapIds.includes("china")) {
-  //   regions.push(getProjectedMapRegion("sansha"));
-  // }
   const viewMode = route.mapIds.some((id) => id.startsWith("out-"))
     ? "world"
     : "regional";
 
-  // 主体 = 国内区域（省份 + 中国），只按它们计算布局，
-  // 保证中国显示大小不受国外 out-* 数据影响
-  const mainRegions = regions.filter((region) => region.kind !== "out");
-  const outRegions = regions.filter((region) => region.kind === "out");
+  // mainGroup 中的地图共享主体投影和变换；未配置时保持“国内主体 + 独立 out”的默认行为。
+  const mainMapIdSet = route.mainMapIds
+    ? new Set<MapRegionId>(route.mainMapIds)
+    : undefined;
+  const mainRegions = regions.filter(
+    (region) =>
+      region.kind !== "out" || mainMapIdSet?.has(region.id) === true,
+  );
+  const outRegions = regions.filter((region) => !mainRegions.includes(region));
   const baseRegions = mainRegions.length > 0 ? mainRegions : regions;
 
   const occupiedOutRects: PixelRect[] = [];

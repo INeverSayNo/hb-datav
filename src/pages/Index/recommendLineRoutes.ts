@@ -134,16 +134,13 @@ export const mapRelation = [
   {
     label: "楚天翼连",
     map: ["china", "out-europe", "out-jp", "out-kz"],
+    // 亚洲组共享投影和变换，保持 China、KZ、JP 的真实地理关系。
+    mainGroup: ["china", "out-jp", "out-kz"],
     // MapStage 为 2340×1570。positionPx 表示地图中心，原点在左上角。
     // 中国主体右移，为左侧的哈萨克斯坦和欧洲国家预留空间。
-    mainPlacement: { positionPx: [1720, 860], sizePx: [900, 1000] },
+    mainPlacement: { positionPx: [1580, 620], sizePx: [1220, 860] },
     outPlacements: {
-      // 所有 out 均与中国上沿持平或低于中国，不再贴地图舞台顶部。
-      // JP：中国右侧。
-      "out-jp": { positionPx: [2190, 980], sizePx: [220, 360] },
-      // KZ：中国左侧，与中国上部大致持平。
-      "out-kz": { positionPx: [1130, 710], sizePx: [340, 220] },
-      // 欧洲五国共用同一投影和变换，保持真实接壤关系；右缘距 KZ 约 50px。
+      // 欧洲五国作为第二个布局组，与亚洲组分离。
       "out-europe": { positionPx: [500, 950], sizePx: [820, 600] },
     },
   },
@@ -388,6 +385,7 @@ export const poiData = [
 
 export type RecommendRoute = {
   label: string;
+  mainMapIds?: readonly RecommendMapId[];
   mainPlacement?: MainMapPlacement;
   mapIds: readonly RecommendMapId[];
   mapKey: string;
@@ -396,6 +394,7 @@ export type RecommendRoute = {
 
 type PayloadRoute = {
   label: string;
+  mainGroup?: string[];
   mainPlacement?: MainMapPlacement;
   map: string[];
   outPlacements?: Partial<Record<OutRecommendMapId, OutMapPlacement>>;
@@ -427,6 +426,23 @@ function resolveMapIds(route: PayloadRoute): readonly RecommendMapId[] {
   return [...new Set(route.map)] as RecommendMapId[];
 }
 
+function resolveMainMapIds(
+  route: PayloadRoute,
+  mapIds: readonly RecommendMapId[],
+) {
+  if (!route.mainGroup) return undefined;
+
+  const invalidIds = route.mainGroup.filter(
+    (id) => !isRecommendMapId(id) || !mapIds.includes(id as RecommendMapId),
+  );
+  if (invalidIds.length > 0) {
+    throw new Error(
+      `线路“${route.label}”的 mainGroup 包含未挂载地图：${invalidIds.join(", ")}`,
+    );
+  }
+  return [...new Set(route.mainGroup)] as RecommendMapId[];
+}
+
 const payloadRouteByLabel = new Map(
   rawRoutes.map((route) => [route.label, route] as const),
 );
@@ -451,12 +467,15 @@ export const RECOMMEND_ROUTES: readonly RecommendRoute[] = orderedLabels.map(
     }
 
     const mapIds = resolveMapIds(route);
+    const mainMapIds = resolveMainMapIds(route, mapIds);
     return {
       label,
+      mainMapIds,
       mainPlacement: route.mainPlacement,
       mapIds,
       mapKey: JSON.stringify({
         mapIds: [...mapIds].sort(),
+        mainMapIds,
         mainPlacement: route.mainPlacement,
         outPlacements: route.outPlacements,
       }),
