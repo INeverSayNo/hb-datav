@@ -11,6 +11,7 @@ import {
   Float32BufferAttribute,
   MOUSE,
   Path,
+  Quaternion,
   Shape,
   ShapeUtils,
   SRGBColorSpace,
@@ -82,7 +83,7 @@ const poiList = [
     icon: MapWaterPort,
   },
   {
-    lat: "30.6447,114.1205",
+    lat: "30.6447",
     lng: "114.120",
     label: "吴家山站",
     icon: MapRailwayStation,
@@ -145,8 +146,13 @@ const RAILWAY_WHITE = "#ffffff";
 const WATERWAY_WIDTH = 12;
 /** 水运颜色 */
 const WATERWAY_COLOR = "#1e90ff";
+const POI_LABEL_COLLISION_PADDING = 4;
+const POI_LABEL_ABOVE_GAP = 28;
+const POI_LABEL_STACK_GAP = 6;
+const POI_LABEL_MAX_LEVELS = 12;
 
 const PoiMarker = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -154,25 +160,142 @@ const PoiMarker = styled.div`
   pointer-events: none;
 
   img {
+    position: relative;
+    z-index: 2;
     width: 60px;
     height: 60px;
     object-fit: contain;
     filter: drop-shadow(0 2px 6px rgba(0, 18, 28, 0.9));
   }
+`;
 
-  span {
-    color: rgba(232, 250, 255, 0.95);
-    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-    line-height: 1;
-    white-space: nowrap;
-    border-radius: 4px;
-    border: 1px solid rgba(32, 219, 219, 0.35);
-    background: #003a55c9;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 32px;
+const PoiTextLabel = styled.span`
+  position: relative;
+  z-index: 2;
+  color: rgba(232, 250, 255, 0.95);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 32px;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid rgba(32, 219, 219, 0.35);
+  border-radius: 10px;
+  background: #003a55c9;
+  padding: 10px 14px;
+  transform: translateY(var(--poi-label-offset-y, 0px));
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+`;
+
+const PoiLeader = styled.i`
+  position: absolute;
+  top: var(--poi-leader-top, 0px);
+  left: 50%;
+  z-index: 1;
+  display: var(--poi-leader-display, none);
+  width: 4px;
+  height: var(--poi-leader-height, 0px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(143, 233, 255, 0.45),
+    rgba(85, 226, 255, 0.95)
+  );
+  box-shadow: 0 0 7px rgba(32, 219, 219, 0.75);
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -1px;
+    width: 9px;
+    height: 9px;
+    border-right: 3px solid #8fe9ff;
+    border-bottom: 3px solid #8fe9ff;
+    transform: translateX(-50%) rotate(45deg);
   }
 `;
+
+type LabelScreenRect = {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+};
+
+function labelsOverlap(a: LabelScreenRect, b: LabelScreenRect) {
+  return !(
+    a.right + POI_LABEL_COLLISION_PADDING <= b.left ||
+    a.left >= b.right + POI_LABEL_COLLISION_PADDING ||
+    a.bottom + POI_LABEL_COLLISION_PADDING <= b.top ||
+    a.top >= b.bottom + POI_LABEL_COLLISION_PADDING
+  );
+}
+
+function resolvePoiLabelCollisions(markers: Array<HTMLDivElement | null>) {
+  const accepted: LabelScreenRect[] = [];
+
+  markers.forEach((marker) => {
+    if (!marker || marker.offsetWidth === 0) return;
+
+    const icon = marker.querySelector<HTMLElement>("[data-poi-icon]");
+    const label = marker.querySelector<HTMLElement>("[data-poi-label]");
+    if (!icon || !label) return;
+
+    const markerRect = marker.getBoundingClientRect();
+    const screenScale = markerRect.width / marker.offsetWidth;
+    if (!Number.isFinite(screenScale) || screenScale <= 0) return;
+
+    const baseLeft = markerRect.left + label.offsetLeft * screenScale;
+    const baseTop = markerRect.top + label.offsetTop * screenScale;
+    const width = label.offsetWidth * screenScale;
+    const height = label.offsetHeight * screenScale;
+    let candidate: LabelScreenRect = {
+      bottom: baseTop + height,
+      left: baseLeft,
+      right: baseLeft + width,
+      top: baseTop,
+    };
+    let offsetY = 0;
+
+    if (accepted.some((other) => labelsOverlap(candidate, other))) {
+      const iconTop = markerRect.top + icon.offsetTop * screenScale;
+      const levelStep =
+        height +
+        POI_LABEL_COLLISION_PADDING +
+        POI_LABEL_STACK_GAP * screenScale;
+
+      for (let level = 0; level < POI_LABEL_MAX_LEVELS; level += 1) {
+        const candidateTop =
+          iconTop -
+          height -
+          POI_LABEL_ABOVE_GAP * screenScale -
+          level * levelStep;
+        candidate = {
+          bottom: candidateTop + height,
+          left: baseLeft,
+          right: baseLeft + width,
+          top: candidateTop,
+        };
+        offsetY = (candidateTop - baseTop) / screenScale;
+        if (!accepted.some((other) => labelsOverlap(candidate, other))) break;
+      }
+    }
+
+    marker.style.setProperty("--poi-label-offset-y", `${offsetY}px`);
+    if (offsetY < 0) {
+      const labelBottom = label.offsetTop + offsetY + label.offsetHeight;
+      const leaderHeight = Math.max(0, icon.offsetTop - labelBottom);
+      marker.style.setProperty("--poi-leader-display", "block");
+      marker.style.setProperty("--poi-leader-top", `${labelBottom}px`);
+      marker.style.setProperty("--poi-leader-height", `${leaderHeight}px`);
+    } else {
+      marker.style.setProperty("--poi-leader-display", "none");
+    }
+
+    accepted.push(candidate);
+  });
+}
 
 type ProjectedCity = {
   name: string;
@@ -211,6 +334,11 @@ function createLine(
 function MapMesh() {
   const demTexture = useTexture(hubeiDem);
   const sideMaterialRef = useRef<ThreeShaderMaterial>(null!);
+  const poiMarkerRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const collisionFramesRef = useRef(3);
+  const lastCameraPositionRef = useRef(new Vector3());
+  const lastCameraQuaternionRef = useRef<Quaternion | null>(null);
+  const lastCanvasSizeRef = useRef<[number, number]>([0, 0]);
 
   const projected = useMemo(() => {
     const mapData = hubeiMapData as CityGeoJSON;
@@ -468,10 +596,42 @@ function MapMesh() {
     [projected],
   );
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (sideMaterialRef.current) {
       sideMaterialRef.current.uniforms.uTime.value += delta;
     }
+
+    const cameraMoved =
+      lastCameraQuaternionRef.current === null ||
+      lastCameraPositionRef.current.distanceToSquared(state.camera.position) >
+        0.000001 ||
+      1 -
+          Math.abs(
+            lastCameraQuaternionRef.current.dot(state.camera.quaternion),
+          ) >
+        0.000001;
+    const canvasResized =
+      lastCanvasSizeRef.current[0] !== state.size.width ||
+      lastCanvasSizeRef.current[1] !== state.size.height;
+    const markersReady =
+      poiMarkerRefs.current.length === projected.pois.length &&
+      poiMarkerRefs.current.every(Boolean);
+
+    if (cameraMoved || canvasResized) collisionFramesRef.current = 2;
+    if (!markersReady) collisionFramesRef.current = 3;
+
+    if (markersReady && collisionFramesRef.current > 0) {
+      resolvePoiLabelCollisions(poiMarkerRefs.current);
+      collisionFramesRef.current -= 1;
+    }
+
+    lastCameraPositionRef.current.copy(state.camera.position);
+    if (!lastCameraQuaternionRef.current) {
+      lastCameraQuaternionRef.current = new Quaternion();
+    }
+    lastCameraQuaternionRef.current.copy(state.camera.quaternion);
+    lastCanvasSizeRef.current[0] = state.size.width;
+    lastCanvasSizeRef.current[1] = state.size.height;
   });
 
   return (
@@ -528,12 +688,19 @@ function MapMesh() {
           eps={0}
           zIndexRange={[20, 0]}
         >
-          <PoiMarker>
+          <PoiMarker
+            ref={(element) => {
+              poiMarkerRefs.current[poiIndex] = element;
+              collisionFramesRef.current = 3;
+            }}
+          >
+            <PoiLeader aria-hidden="true" />
             <img
+              data-poi-icon
               src={poi.icon}
               alt={poi.label}
             />
-            <span>{poi.label}</span>
+            <PoiTextLabel data-poi-label>{poi.label}</PoiTextLabel>
           </PoiMarker>
         </Html>
       ))}
