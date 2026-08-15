@@ -49,7 +49,7 @@ import neimengguData from "@/assets/recommendLine/neimenggu.json";
 import ningxiaData from "@/assets/recommendLine/ningxia.json";
 import qinghaiData from "@/assets/recommendLine/qinghai.json";
 import shandongData from "@/assets/recommendLine/shandong.json";
-import sanshaData from "@/assets/recommendLine/sansha.json";
+// import sanshaData from "@/assets/recommendLine/sansha.json";
 import shanghaiData from "@/assets/recommendLine/shanghai.json";
 import shanxiData from "@/assets/recommendLine/shanxi.json";
 import sichuanData from "@/assets/recommendLine/sichuan.json";
@@ -382,12 +382,12 @@ const mapRegionSourceById: Partial<Record<MapRegionId, MapRegionSource>> = {
     kind: "china",
     label: "中国",
   },
-  sansha: {
-    id: "sansha",
-    data: asAdministrativeData(sanshaData),
-    kind: "sansha",
-    label: "三沙市",
-  },
+  // sansha: {
+  //   id: "sansha",
+  //   data: asAdministrativeData(sanshaData),
+  //   kind: "sansha",
+  //   label: "三沙市",
+  // },
   ...externalMapSourceById,
 };
 
@@ -686,9 +686,9 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   if (cached) return cached;
 
   const regions = route.mapIds.map(getProjectedMapRegion);
-  if (route.mapIds.includes("china")) {
-    regions.push(getProjectedMapRegion("sansha"));
-  }
+  // if (route.mapIds.includes("china")) {
+  //   regions.push(getProjectedMapRegion("sansha"));
+  // }
   const viewMode = route.mapIds.some((id) => id.startsWith("out-"))
     ? "world"
     : "regional";

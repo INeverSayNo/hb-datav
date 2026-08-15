@@ -102,7 +102,7 @@ export const mapRelation = [
     ],
     out: ["out-br"],
     outPlacements: {
-      "out-br": { positionPx: [1990, 1120], sizePx: [480, 380] },
+      "out-br": { positionPx: [520, 1270], sizePx: [480, 380] },
     },
   },
   {
@@ -136,11 +136,11 @@ export const mapRelation = [
     map: ["china", "out-it", "out-jp", "out-kz", "out-de", "out-fr"],
     mainPlacement: { positionPx: [790, 820], sizePx: [1320, 1120] },
     outPlacements: {
-      "out-de": { positionPx: [1710, 300], sizePx: [300, 240] },
-      "out-fr": { positionPx: [2070, 300], sizePx: [300, 240] },
-      "out-it": { positionPx: [1710, 750], sizePx: [300, 300] },
-      "out-kz": { positionPx: [2070, 750], sizePx: [360, 280] },
-      "out-jp": { positionPx: [1890, 1210], sizePx: [360, 300] },
+      "out-de": { positionPx: [710, 300], sizePx: [300, 240] },
+      "out-fr": { positionPx: [770, 300], sizePx: [300, 240] },
+      "out-it": { positionPx: [510, 750], sizePx: [300, 300] },
+      "out-kz": { positionPx: [100, 450], sizePx: [360, 280] },
+      "out-jp": { positionPx: [1990, 750], sizePx: [360, 300] },
     },
   },
   {
