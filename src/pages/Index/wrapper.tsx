@@ -30,7 +30,14 @@ const HubeiMap =
   new URLSearchParams(window.location.search).get("map") === "echarts"
     ? EChartsHubeiMap
     : ThreeHubeiMap;
-const RecommendLineMap = lazy(() => import("./map/RecommendLineMap"));
+const loadRecommendLineMap = () => import("./map/RecommendLineMap");
+const RecommendLineMap = lazy(loadRecommendLineMap);
+
+function preloadRecommendLineMap() {
+  return loadRecommendLineMap().then(({ default: RecommendLineMapModule }) => {
+    RecommendLineMapModule.preload();
+  });
+}
 
 // 地图后方数字雨动画开关：
 // - 代码控制：改为 false 即常驻隐藏
@@ -215,6 +222,32 @@ export default function IndexDashboard() {
     [],
   );
 
+  useEffect(() => {
+    if (screenLoading || currentView === "recommendLine") return;
+
+    let idleHandle: number | null = null;
+    const timeoutHandle = window.setTimeout(() => {
+      const preload = () => {
+        void preloadRecommendLineMap().catch(() => {
+          // 后台预加载失败时保留点击后的正常加载流程。
+        });
+      };
+
+      if ("requestIdleCallback" in window) {
+        idleHandle = window.requestIdleCallback(preload, { timeout: 2000 });
+      } else {
+        preload();
+      }
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timeoutHandle);
+      if (idleHandle !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleHandle);
+      }
+    };
+  }, [currentView, screenLoading]);
+
   const handleViewChange = useCallback(
     (nextView: DashboardMapView) => {
       if (nextView === currentView || incomingView || isAnimating) return;
@@ -222,6 +255,14 @@ export default function IndexDashboard() {
     },
     [currentView, incomingView, isAnimating],
   );
+
+  const handleViewIntent = useCallback((nextView: DashboardMapView) => {
+    if (nextView === "recommendLine") {
+      void preloadRecommendLineMap().catch(() => {
+        // 悬停预加载失败不影响用户点击后的正常加载。
+      });
+    }
+  }, []);
 
   const handleIncomingReady = useCallback(() => {
     if (!incomingView || isAnimating) return;
@@ -281,6 +322,7 @@ export default function IndexDashboard() {
         <BottomNavigation
           activeView={navigationView}
           disabled={incomingView !== null}
+          onViewIntent={handleViewIntent}
           onViewChange={handleViewChange}
         />
 

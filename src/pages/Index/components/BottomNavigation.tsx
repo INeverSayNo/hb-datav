@@ -74,12 +74,14 @@ export type DashboardMapView = "province" | "recommendLine";
 export type BottomNavigationProps = {
   activeView: DashboardMapView;
   disabled?: boolean;
+  onViewIntent?: (view: DashboardMapView) => void;
   onViewChange: (view: DashboardMapView) => void;
 };
 
 export default function BottomNavigation({
   activeView,
   disabled = false,
+  onViewIntent,
   onViewChange,
 }: BottomNavigationProps) {
   const provinceActive = activeView === "province";
@@ -96,6 +98,8 @@ export default function BottomNavigation({
         $active={provinceActive}
         disabled={disabled}
         aria-current={provinceActive ? "page" : undefined}
+        onFocus={() => onViewIntent?.("province")}
+        onPointerEnter={() => onViewIntent?.("province")}
         onClick={() => onViewChange("province")}
       >
         <img src={provinceActive ? activeButton : leftButton} alt="" />
@@ -107,6 +111,8 @@ export default function BottomNavigation({
         $side="right"
         disabled={disabled}
         aria-current={recommendLineActive ? "page" : undefined}
+        onFocus={() => onViewIntent?.("recommendLine")}
+        onPointerEnter={() => onViewIntent?.("recommendLine")}
         onClick={() => onViewChange("recommendLine")}
       >
         <img src={recommendLineActive ? activeButton : rightButton} alt="" />

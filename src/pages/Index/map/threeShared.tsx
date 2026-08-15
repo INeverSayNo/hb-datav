@@ -203,10 +203,21 @@ export function OutlineGlow({
 }: {
   rings: [number, number, number][][];
 }) {
-  return rings.map((ring, index) => (
-    <group key={index}>
+  const segments = rings.flatMap((ring) => {
+    const ringSegments: [number, number, number][] = [];
+    for (let index = 1; index < ring.length; index += 1) {
+      ringSegments.push(ring[index - 1], ring[index]);
+    }
+    return ringSegments;
+  });
+
+  if (segments.length === 0) return null;
+
+  return (
+    <group>
       <Line
-        points={ring}
+        points={segments}
+        segments
         lineWidth={OUTLINE_WIDTH * 4}
         color={MAP_GLOW_COLOR}
         transparent
@@ -218,7 +229,8 @@ export function OutlineGlow({
         raycast={() => null}
       />
       <Line
-        points={ring}
+        points={segments}
+        segments
         lineWidth={OUTLINE_WIDTH * 14}
         color={SOFT_GLOW_COLOR}
         transparent
@@ -230,7 +242,8 @@ export function OutlineGlow({
         raycast={() => null}
       />
       <Line
-        points={ring}
+        points={segments}
+        segments
         lineWidth={OUTLINE_WIDTH}
         color={GLOW_EMISSIVE_COLOR}
         toneMapped={false}
@@ -238,7 +251,7 @@ export function OutlineGlow({
         raycast={() => null}
       />
     </group>
-  ));
+  );
 }
 
 /** 在当前 Suspense 场景的资源全部就绪并完成首帧后通知外层。 */

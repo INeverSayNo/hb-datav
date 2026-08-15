@@ -8,6 +8,7 @@ import {
   Shape,
   ShapeUtils,
   SRGBColorSpace,
+  type Texture,
   Vector2,
   type ShaderMaterial as ThreeShaderMaterial,
 } from "three";
@@ -89,8 +90,16 @@ type ProvinceSource = {
 type ProjectedProvince = ProvinceSource & {
   bbox: Box2;
   shapes: Shape[];
-  boundaryRings: [number, number, number][][];
+  boundarySegments: [number, number, number][];
   labelPosition: [number, number, number];
+};
+
+type ProjectedRecommendLineMap = {
+  aggregateOutline: [number, number, number][][];
+  center: Vector2;
+  provinces: ProjectedProvince[];
+  provinceBoundarySegments: [number, number, number][];
+  hubeiAnchor: [number, number];
 };
 
 const TARGET_MAP_WIDTH = 27;
@@ -116,6 +125,9 @@ const provinceSources: ProvinceSource[] = [
   { id: "tianjing", data: asAdministrativeData(tianjingData), texture: tianjingTexture },
   { id: "liaoning", data: asAdministrativeData(liaoningData), texture: liaoningTexture },
 ];
+
+const provinceTextures = provinceSources.map(({ texture }) => texture);
+let projectedRecommendLineMap: ProjectedRecommendLineMap | undefined;
 
 function getPolygons(geometry: AdministrativeGeometry): PolygonCoordinates[] {
   return geometry.type === "Polygon"
@@ -191,18 +203,20 @@ function buildProvince(
     });
   });
 
-  const boundaryRings: [number, number, number][][] = [];
+  const boundarySegments: [number, number, number][] = [];
   shapes.forEach((shape) => {
     [shape.getPoints(), ...shape.holes.map((hole) => hole.getPoints())]
       .filter((ring) => ring.length > 1)
       .forEach((ring) => {
-        boundaryRings.push(
-          [...ring, ring[0]].map((point) => [
-            point.x,
-            point.y,
-            MAP_DEPTH + 0.018,
-          ]),
-        );
+        const closedRing = [...ring, ring[0]];
+        for (let index = 1; index < closedRing.length; index += 1) {
+          const previous = closedRing[index - 1];
+          const current = closedRing[index];
+          boundarySegments.push(
+            [previous.x, previous.y, MAP_DEPTH + 0.018],
+            [current.x, current.y, MAP_DEPTH + 0.018],
+          );
+        }
       });
   });
 
@@ -213,7 +227,7 @@ function buildProvince(
     ...source,
     bbox,
     shapes,
-    boundaryRings,
+    boundarySegments,
     labelPosition: [labelX, -labelY, MAP_DEPTH + 0.12],
   };
 }
@@ -240,8 +254,45 @@ function buildAggregateOutline(
   return rings;
 }
 
-function ProvinceMesh({ province }: { province: ProjectedProvince }) {
-  const texture = useTexture(province.texture);
+function getProjectedRecommendLineMap(): ProjectedRecommendLineMap {
+  if (projectedRecommendLineMap) return projectedRecommendLineMap;
+
+  const projection = createProjection();
+  const provinces = provinceSources.map((source) =>
+    buildProvince(source, projection),
+  );
+  const bounds = new Box2();
+  provinces.forEach((province) => {
+    bounds.union(province.bbox);
+  });
+  const center = bounds.getCenter(new Vector2());
+  const hubeiCenter = projection([114.3, 30.9])!;
+
+  projectedRecommendLineMap = {
+    aggregateOutline: buildAggregateOutline(projection),
+    center,
+    provinces,
+    provinceBoundarySegments: provinces.flatMap(
+      ({ boundarySegments }) => boundarySegments,
+    ),
+    hubeiAnchor: [hubeiCenter[0], -hubeiCenter[1]],
+  };
+  return projectedRecommendLineMap;
+}
+
+/** 在用户切换前预取纹理，并在空闲阶段完成投影与边界数据计算。 */
+function preloadRecommendLineMapAssets() {
+  getProjectedRecommendLineMap();
+  useTexture.preload(provinceTextures);
+}
+
+function ProvinceMesh({
+  province,
+  texture,
+}: {
+  province: ProjectedProvince;
+  texture: Texture;
+}) {
   const sideMaterialRef = useRef<ThreeShaderMaterial>(null!);
 
   useLayoutEffect(() => {
@@ -275,21 +326,6 @@ function ProvinceMesh({ province }: { province: ProjectedProvince }) {
         />
       </ShapeBox>
 
-      {province.boundaryRings.map((ring, index) => (
-        <Line
-          key={index}
-          points={ring}
-          lineWidth={0.75}
-          color="#8fe9ff"
-          transparent
-          opacity={0.52}
-          depthWrite={false}
-          toneMapped={false}
-          renderOrder={9}
-          raycast={() => null}
-        />
-      ))}
-
       <Html
         center
         position={province.labelPosition}
@@ -303,33 +339,31 @@ function ProvinceMesh({ province }: { province: ProjectedProvince }) {
 }
 
 function RecommendLineScene({ onReady }: { onReady?: () => void }) {
-  const projected = useMemo(() => {
-    const projection = createProjection();
-    const provinces = provinceSources.map((source) =>
-      buildProvince(source, projection),
-    );
-    const bounds = new Box2();
-    provinces.forEach((province) => {
-      bounds.union(province.bbox);
-    });
-    const center = bounds.getCenter(new Vector2());
-    const hubeiCenter = projection([114.3, 30.9])!;
-    const aggregateOutline = buildAggregateOutline(projection);
-
-    return {
-      aggregateOutline,
-      center,
-      provinces,
-      hubeiAnchor: [hubeiCenter[0], -hubeiCenter[1]] as [number, number],
-    };
-  }, []);
+  const projected = useMemo(getProjectedRecommendLineMap, []);
+  const textures = useTexture(provinceTextures);
 
   return (
     <group position={[-projected.center.x, -projected.center.y, 0]}>
       <WorldBase hubeiAnchor={projected.hubeiAnchor} />
-      {projected.provinces.map((province) => (
-        <ProvinceMesh key={province.id} province={province} />
+      {projected.provinces.map((province, index) => (
+        <ProvinceMesh
+          key={province.id}
+          province={province}
+          texture={textures[index]}
+        />
       ))}
+      <Line
+        points={projected.provinceBoundarySegments}
+        segments
+        lineWidth={0.75}
+        color="#8fe9ff"
+        transparent
+        opacity={0.52}
+        depthWrite={false}
+        toneMapped={false}
+        renderOrder={9}
+        raycast={() => null}
+      />
       <OutlineGlow rings={projected.aggregateOutline} />
       <SceneReady onReady={onReady} />
     </group>
@@ -340,7 +374,7 @@ export type RecommendLineMapProps = {
   onReady?: () => void;
 };
 
-export default function RecommendLineMap({ onReady }: RecommendLineMapProps) {
+function RecommendLineMap({ onReady }: RecommendLineMapProps) {
   const controlSpeed = useControlSpeed();
   const handleReady = useCallback(() => onReady?.(), [onReady]);
 
@@ -376,3 +410,7 @@ export default function RecommendLineMap({ onReady }: RecommendLineMapProps) {
     </MapRoot>
   );
 }
+
+RecommendLineMap.preload = preloadRecommendLineMapAssets;
+
+export default RecommendLineMap;
