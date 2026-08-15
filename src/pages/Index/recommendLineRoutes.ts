@@ -133,14 +133,35 @@ export const mapRelation = [
   },
   {
     label: "楚天翼连",
-    map: ["china", "out-it", "out-jp", "out-kz", "out-de", "out-fr"],
-    mainPlacement: { positionPx: [790, 820], sizePx: [1320, 1120] },
+    map: [
+      "china",
+      "out-it",
+      "out-jp",
+      "out-kz",
+      "out-pl",
+      "out-de",
+      "out-fr",
+      "out-es",
+    ],
+    // MapStage 为 2340×1570。positionPx 表示地图中心，原点在左上角。
+    // 中国主体右移，为左侧的哈萨克斯坦和欧洲国家预留空间。
+    mainPlacement: { positionPx: [1720, 860], sizePx: [900, 1000] },
     outPlacements: {
-      "out-de": { positionPx: [710, 300], sizePx: [300, 240] },
-      "out-fr": { positionPx: [770, 300], sizePx: [300, 240] },
-      "out-it": { positionPx: [510, 750], sizePx: [300, 300] },
-      "out-kz": { positionPx: [100, 450], sizePx: [360, 280] },
-      "out-jp": { positionPx: [1990, 750], sizePx: [360, 300] },
+      // 所有 out 均与中国上沿持平或低于中国，不再贴地图舞台顶部。
+      // JP：中国右侧。
+      "out-jp": { positionPx: [2190, 980], sizePx: [220, 360] },
+      // KZ：中国左侧，与中国上部大致持平。
+      "out-kz": { positionPx: [1130, 710], sizePx: [340, 220] },
+      // PL：位于 KZ 左侧，两个最大占位框间隔约 50px。
+      "out-pl": { positionPx: [790, 710], sizePx: [240, 200] },
+      // DE：位于 PL 左侧并与其平行。
+      "out-de": { positionPx: [490, 710], sizePx: [260, 210] },
+      // FR：位于 DE 左侧，纵向位置略低。
+      "out-fr": { positionPx: [200, 810], sizePx: [240, 230] },
+      // IT：位于 DE 下方。
+      "out-it": { positionPx: [490, 1110], sizePx: [250, 300] },
+      // ES：位于 FR 左下方。
+      "out-es": { positionPx: [190, 1180], sizePx: [260, 210] },
     },
   },
   {
