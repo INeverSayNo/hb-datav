@@ -1,11 +1,9 @@
 import { Suspense, useCallback, useLayoutEffect, useMemo, useRef } from "react";
-import { Html, OrbitControls, useTexture } from "@react-three/drei";
+import { Html, Line, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { geoMercator } from "d3-geo";
 import {
   Box2,
-  EdgesGeometry,
-  ExtrudeGeometry,
   Path,
   Shape,
   ShapeUtils,
@@ -29,6 +27,7 @@ import sichuanData from "@/assets/recommendLine/sichuan.json";
 import tianjingData from "@/assets/recommendLine/tianjing.json";
 import zhejiangData from "@/assets/recommendLine/zhejiang.json";
 import hubeiOutlineData from "@/assets/hb_outline.json";
+import recommendLineOutlineData from "@/assets/recommendLine/outline.json";
 
 import anhuiTexture from "@/assets/recommendLine/optimized/anhui.png";
 import beijingTexture from "@/assets/recommendLine/optimized/beijing.png";
@@ -48,7 +47,6 @@ import zhejiangTexture from "@/assets/recommendLine/optimized/zhejiang.png";
 
 import ShapeBox from "./shape";
 import {
-  GLOW_EMISSIVE_COLOR,
   MAP_DEPTH,
   MapLabel,
   MapRoot,
@@ -91,8 +89,7 @@ type ProvinceSource = {
 type ProjectedProvince = ProvinceSource & {
   bbox: Box2;
   shapes: Shape[];
-  outlineRings: [number, number, number][][];
-  edgeGeometry: EdgesGeometry;
+  boundaryRings: [number, number, number][][];
   labelPosition: [number, number, number];
 };
 
@@ -194,23 +191,16 @@ function buildProvince(
     });
   });
 
-  const extruded = new ExtrudeGeometry(shapes, {
-    depth: MAP_DEPTH,
-    bevelEnabled: false,
-  });
-  const edgeGeometry = new EdgesGeometry(extruded, 18);
-  extruded.dispose();
-
-  const outlineRings: [number, number, number][][] = [];
+  const boundaryRings: [number, number, number][][] = [];
   shapes.forEach((shape) => {
     [shape.getPoints(), ...shape.holes.map((hole) => hole.getPoints())]
       .filter((ring) => ring.length > 1)
       .forEach((ring) => {
-        outlineRings.push(
+        boundaryRings.push(
           [...ring, ring[0]].map((point) => [
             point.x,
             point.y,
-            MAP_DEPTH + 0.03,
+            MAP_DEPTH + 0.018,
           ]),
         );
       });
@@ -223,10 +213,31 @@ function buildProvince(
     ...source,
     bbox,
     shapes,
-    outlineRings,
-    edgeGeometry,
+    boundaryRings,
     labelPosition: [labelX, -labelY, MAP_DEPTH + 0.12],
   };
+}
+
+function buildAggregateOutline(
+  projection: ReturnType<typeof geoMercator>,
+): [number, number, number][][] {
+  const data = asAdministrativeData(recommendLineOutlineData);
+  const rings: [number, number, number][][] = [];
+
+  data.features.forEach((feature) => {
+    getPolygons(feature.geometry).forEach((polygon) => {
+      const exterior = polygon[0];
+      if (!exterior || exterior.length < 3) return;
+      rings.push(
+        exterior.map((coordinate) => {
+          const [x, y] = projection(coordinate)!;
+          return [x, -y, MAP_DEPTH + 0.04];
+        }),
+      );
+    });
+  });
+
+  return rings;
 }
 
 function ProvinceMesh({ province }: { province: ProjectedProvince }) {
@@ -238,13 +249,6 @@ function ProvinceMesh({ province }: { province: ProjectedProvince }) {
     texture.anisotropy = 8;
     texture.needsUpdate = true;
   }, [texture]);
-
-  useLayoutEffect(
-    () => () => {
-      province.edgeGeometry.dispose();
-    },
-    [province.edgeGeometry],
-  );
 
   useFrame((_, delta) => {
     if (sideMaterialRef.current) {
@@ -271,15 +275,20 @@ function ProvinceMesh({ province }: { province: ProjectedProvince }) {
         />
       </ShapeBox>
 
-      <lineSegments
-        geometry={province.edgeGeometry}
-        renderOrder={10}
-        raycast={() => null}
-      >
-        <lineBasicMaterial color={GLOW_EMISSIVE_COLOR} toneMapped={false} />
-      </lineSegments>
-
-      <OutlineGlow rings={province.outlineRings} />
+      {province.boundaryRings.map((ring, index) => (
+        <Line
+          key={index}
+          points={ring}
+          lineWidth={0.75}
+          color="#8fe9ff"
+          transparent
+          opacity={0.52}
+          depthWrite={false}
+          toneMapped={false}
+          renderOrder={9}
+          raycast={() => null}
+        />
+      ))}
 
       <Html
         center
@@ -305,8 +314,10 @@ function RecommendLineScene({ onReady }: { onReady?: () => void }) {
     });
     const center = bounds.getCenter(new Vector2());
     const hubeiCenter = projection([114.3, 30.9])!;
+    const aggregateOutline = buildAggregateOutline(projection);
 
     return {
+      aggregateOutline,
       center,
       provinces,
       hubeiAnchor: [hubeiCenter[0], -hubeiCenter[1]] as [number, number],
@@ -319,6 +330,7 @@ function RecommendLineScene({ onReady }: { onReady?: () => void }) {
       {projected.provinces.map((province) => (
         <ProvinceMesh key={province.id} province={province} />
       ))}
+      <OutlineGlow rings={projected.aggregateOutline} />
       <SceneReady onReady={onReady} />
     </group>
   );
