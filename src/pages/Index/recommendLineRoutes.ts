@@ -38,14 +38,22 @@ export type OutRecommendMapId = `out-${string}`;
 
 export type OutMapPlacement = {
   /**
-   * 归一化锚点（0~1），表示该 out 地图**中心**在画布中的位置：
-   * x=0 贴左边缘、x=1 贴右边缘；y=0 贴下边缘、y=1 贴上边缘。
+   * 地图中心在 MapStage 2340×1570 设计坐标中的位置。
+   * 原点位于左上角，x 向右、y 向下。
    */
-  anchor: [number, number];
-  /** 相对默认基准的缩放倍率（可选，默认 1） */
-  scale?: number;
+  positionPx: [number, number];
+  /**
+   * 地图允许占用的最大宽高，渲染时保持 GeoJSON 原始比例，不会拉伸。
+   */
+  sizePx: [number, number];
 };
 
+export type MainMapPlacement = {
+  /** 国内主体地图中心位置；不填时由 out 占位情况自动计算。 */
+  positionPx?: [number, number];
+  /** 国内主体地图最大占用宽高；不填时自动使用无碰撞区域。 */
+  sizePx?: [number, number];
+};
 
 export type RecommendMapId = ProvinceId | "china" | OutRecommendMapId;
 
@@ -93,6 +101,9 @@ export const mapRelation = [
       "out-br",
     ],
     out: ["out-br"],
+    outPlacements: {
+      "out-br": { positionPx: [1990, 1120], sizePx: [480, 380] },
+    },
   },
   {
     label: "棉纺丝路",
@@ -123,6 +134,14 @@ export const mapRelation = [
   {
     label: "楚天翼连",
     map: ["china", "out-it", "out-jp", "out-kz", "out-de", "out-fr"],
+    mainPlacement: { positionPx: [790, 820], sizePx: [1320, 1120] },
+    outPlacements: {
+      "out-de": { positionPx: [1710, 300], sizePx: [300, 240] },
+      "out-fr": { positionPx: [2070, 300], sizePx: [300, 240] },
+      "out-it": { positionPx: [1710, 750], sizePx: [300, 300] },
+      "out-kz": { positionPx: [2070, 750], sizePx: [360, 280] },
+      "out-jp": { positionPx: [1890, 1210], sizePx: [360, 300] },
+    },
   },
   {
     label: "疆煤入鄂",
@@ -365,13 +384,17 @@ export const poiData = [
 
 export type RecommendRoute = {
   label: string;
+  mainPlacement?: MainMapPlacement;
   mapIds: readonly RecommendMapId[];
   mapKey: string;
+  outPlacements?: Partial<Record<OutRecommendMapId, OutMapPlacement>>;
 };
 
 type PayloadRoute = {
   label: string;
+  mainPlacement?: MainMapPlacement;
   map: string[];
+  outPlacements?: Partial<Record<OutRecommendMapId, OutMapPlacement>>;
 };
 
 const ROUTE_BUTTON_ORDER = [
@@ -426,8 +449,14 @@ export const RECOMMEND_ROUTES: readonly RecommendRoute[] = orderedLabels.map(
     const mapIds = resolveMapIds(route);
     return {
       label,
+      mainPlacement: route.mainPlacement,
       mapIds,
-      mapKey: [...mapIds].sort().join("|"),
+      mapKey: JSON.stringify({
+        mapIds: [...mapIds].sort(),
+        mainPlacement: route.mainPlacement,
+        outPlacements: route.outPlacements,
+      }),
+      outPlacements: route.outPlacements,
     };
   },
 );

@@ -12,6 +12,7 @@ import { geoMercator } from "d3-geo";
 import styled from "styled-components";
 import {
   Box2,
+  AdditiveBlending,
   Path,
   Shape,
   ShapeUtils,
@@ -48,6 +49,7 @@ import neimengguData from "@/assets/recommendLine/neimenggu.json";
 import ningxiaData from "@/assets/recommendLine/ningxia.json";
 import qinghaiData from "@/assets/recommendLine/qinghai.json";
 import shandongData from "@/assets/recommendLine/shandong.json";
+import sanshaData from "@/assets/recommendLine/sansha.json";
 import shanghaiData from "@/assets/recommendLine/shanghai.json";
 import shanxiData from "@/assets/recommendLine/shanxi.json";
 import sichuanData from "@/assets/recommendLine/sichuan.json";
@@ -92,6 +94,7 @@ import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
 import {
     ALL_RECOMMEND_PROVINCE_IDS,
   type OutRecommendMapId,
+  type OutMapPlacement,
   type RecommendMapId,
   type ProvinceId,
   type RecommendRoute,
@@ -120,19 +123,24 @@ type AdministrativeProperties = {
   centroid?: Coordinate;
 };
 
-type AdministrativeGeoJSON = {
-  type: "FeatureCollection";
-  features: Array<{
-    type: "Feature";
-    properties: AdministrativeProperties;
-    geometry: AdministrativeGeometry;
-  }>;
+type AdministrativeFeature = {
+  type: "Feature";
+  properties: AdministrativeProperties;
+  geometry: AdministrativeGeometry;
 };
 
+type AdministrativeGeoJSON = {
+  type: "FeatureCollection";
+  features: AdministrativeFeature[];
+};
+
+type MapRegionId = RecommendMapId | "sansha";
+
 type MapRegionSource = {
-  id: RecommendMapId;
+  id: MapRegionId;
   data: AdministrativeGeoJSON;
-  kind?: "china" | "out" | "province";
+  kind?: "china" | "out" | "province" | "sansha";
+  label?: string;
   texture?: string;
 };
 
@@ -149,6 +157,7 @@ type ProjectedMapRegion = MapRegionSource & {
 
 type ProjectedRouteLayout = {
   boundarySegments: [number, number, number][];
+  chinaBoundarySegments: [number, number, number][];
   center: Vector2;
   fitScale: number;
   mapKey: string;
@@ -168,16 +177,32 @@ const TARGET_MAP_WIDTH = 27;
 const TARGET_MAP_HEIGHT = 17.5;
 const WORLD_TARGET_MAP_WIDTH = 30;
 const WORLD_TARGET_MAP_HEIGHT = 18;
-// 国外 out-* 区域显示参数
-const OUT_MAP_FRACTION = 0.25; // 国外区域宽度占主体区域宽度的最大比例
-const OUT_MAP_MARGIN = 1.6; // 与画布边缘的间距（世界单位）
+const MAP_STAGE_WIDTH = 2340;
+const MAP_STAGE_HEIGHT = 1570;
+const MAP_LAYOUT_MARGIN = 70;
+const MAP_COLLISION_GAP = 36;
+const DEFAULT_OUT_SIZE: [number, number] = [360, 300];
 const EXIT_DURATION = 180;
 const ENTER_DURATION = 240;
 const REDUCED_MOTION_DURATION = 80;
 
 function asAdministrativeData(data: unknown): AdministrativeGeoJSON {
-  return data as AdministrativeGeoJSON;
+  const geoData = data as AdministrativeGeoJSON | AdministrativeFeature;
+  return geoData.type === "FeatureCollection"
+    ? geoData
+    : { type: "FeatureCollection", features: [geoData] };
 }
+
+/** 修改中国地图颜色时只需调整这一处。 */
+export const RECOMMEND_CHINA_THEME = {
+  boundary: "#86f4ff",
+  glow: "#20dbdb",
+  glowOpacity: 0.24,
+  sideBottom: "#031d38",
+  sideScan: "#7ef7ff",
+  sideTop: "#21bce0",
+  top: "#168f9f",
+} as const;
 
 const provinceSourceById: Record<ProvinceId, MapRegionSource> = {
   anhui: {
@@ -349,20 +374,31 @@ const externalMapSourceById = Object.fromEntries(
     return [id, { id, data: asAdministrativeData(data), kind: "out" }] as const;
   }),
 ) as Record<OutRecommendMapId, MapRegionSource>;
-const mapRegionSourceById: Partial<Record<RecommendMapId, MapRegionSource>> = {
+const mapRegionSourceById: Partial<Record<MapRegionId, MapRegionSource>> = {
   ...provinceSourceById,
-  china: { id: "china", data: asAdministrativeData(chinaData), kind: "china" },
+  china: {
+    id: "china",
+    data: asAdministrativeData(chinaData),
+    kind: "china",
+    label: "中国",
+  },
+  sansha: {
+    id: "sansha",
+    data: asAdministrativeData(sanshaData),
+    kind: "sansha",
+    label: "三沙市",
+  },
   ...externalMapSourceById,
 };
 
-function getMapRegionSource(id: RecommendMapId) {
+function getMapRegionSource(id: MapRegionId) {
   const source = mapRegionSourceById[id];
   if (!source) {
     throw new Error(`未找到地图资源：assets/recommendLine/${id}.json`);
   }
   return source;
 }
-const projectedMapRegionCache = new Map<RecommendMapId, ProjectedMapRegion>();
+const projectedMapRegionCache = new Map<MapRegionId, ProjectedMapRegion>();
 const routeLayoutCache = new Map<string, ProjectedRouteLayout>();
 const textureCache = new Map<RecommendMapId, Texture>();
 const texturePromiseCache = new Map<RecommendMapId, Promise<Texture>>();
@@ -487,7 +523,9 @@ function buildMapRegion(source: MapRegionSource): ProjectedMapRegion {
 
   const properties = source.data.features[0]?.properties;
   const labelCoordinate = properties?.centroid ?? properties?.center;
-  const labelPoint = labelCoordinate
+  const labelPoint = source.kind === "china"
+    ? bbox.getCenter(new Vector2())
+    : labelCoordinate
     ? (() => {
         const [x, y] = projection(labelCoordinate)!;
         return new Vector2(x, -y);
@@ -503,7 +541,7 @@ function buildMapRegion(source: MapRegionSource): ProjectedMapRegion {
   };
 }
 
-function getProjectedMapRegion(id: RecommendMapId) {
+function getProjectedMapRegion(id: MapRegionId) {
   const cached = projectedMapRegionCache.get(id);
   if (cached) return cached;
 
@@ -512,11 +550,145 @@ function getProjectedMapRegion(id: RecommendMapId) {
   return projected;
 }
 
+type PixelRect = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+function clampRect(rect: PixelRect): PixelRect {
+  return {
+    ...rect,
+    x: Math.min(
+      MAP_STAGE_WIDTH - MAP_LAYOUT_MARGIN - rect.width,
+      Math.max(MAP_LAYOUT_MARGIN, rect.x),
+    ),
+    y: Math.min(
+      MAP_STAGE_HEIGHT - MAP_LAYOUT_MARGIN - rect.height,
+      Math.max(MAP_LAYOUT_MARGIN, rect.y),
+    ),
+  };
+}
+
+function rectanglesOverlap(a: PixelRect, b: PixelRect, gap = 0) {
+  return !(
+    a.x + a.width + gap <= b.x ||
+    b.x + b.width + gap <= a.x ||
+    a.y + a.height + gap <= b.y ||
+    b.y + b.height + gap <= a.y
+  );
+}
+
+function defaultOutPlacement(index: number, count: number): OutMapPlacement {
+  const columns = count <= 2 ? 1 : 2;
+  const rows = Math.ceil(count / columns);
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  const columnWidth = 390;
+  const usableHeight = MAP_STAGE_HEIGHT - MAP_LAYOUT_MARGIN * 2;
+
+  return {
+    positionPx: [
+      MAP_STAGE_WIDTH - 260 - (columns - 1 - column) * columnWidth,
+      MAP_LAYOUT_MARGIN + ((row + 0.5) * usableHeight) / rows,
+    ],
+    sizePx: DEFAULT_OUT_SIZE,
+  };
+}
+
+function fitPlacementRect(
+  region: ProjectedMapRegion,
+  placement: OutMapPlacement,
+): PixelRect {
+  const size = region.bbox.getSize(new Vector2());
+  const pixelScale = Math.min(
+    placement.sizePx[0] / Math.max(size.x, 0.001),
+    placement.sizePx[1] / Math.max(size.y, 0.001),
+  );
+  const width = size.x * pixelScale;
+  const height = size.y * pixelScale;
+  return clampRect({
+    height,
+    width,
+    x: placement.positionPx[0] - width / 2,
+    y: placement.positionPx[1] - height / 2,
+  });
+}
+
+function avoidOutCollisions(rect: PixelRect, occupied: PixelRect[]) {
+  if (!occupied.some((other) => rectanglesOverlap(rect, other, MAP_COLLISION_GAP))) {
+    return rect;
+  }
+
+  const originalCenter = new Vector2(
+    rect.x + rect.width / 2,
+    rect.y + rect.height / 2,
+  );
+  for (let radius = 40; radius <= MAP_STAGE_WIDTH; radius += 40) {
+    for (let step = 0; step < 16; step += 1) {
+      const angle = (step / 16) * Math.PI * 2;
+      const candidate = clampRect({
+        ...rect,
+        x: originalCenter.x + Math.cos(angle) * radius - rect.width / 2,
+        y: originalCenter.y + Math.sin(angle) * radius - rect.height / 2,
+      });
+      if (
+        !occupied.some((other) =>
+          rectanglesOverlap(candidate, other, MAP_COLLISION_GAP),
+        )
+      ) {
+        return candidate;
+      }
+    }
+  }
+
+  return rect;
+}
+
+function getAutomaticMainRect(outRects: PixelRect[]): PixelRect {
+  const fullRect: PixelRect = {
+    x: MAP_LAYOUT_MARGIN,
+    y: MAP_LAYOUT_MARGIN,
+    width: MAP_STAGE_WIDTH - MAP_LAYOUT_MARGIN * 2,
+    height: MAP_STAGE_HEIGHT - MAP_LAYOUT_MARGIN * 2,
+  };
+  if (outRects.length === 0) return fullRect;
+
+  const minLeft = Math.min(...outRects.map(({ x }) => x));
+  const maxRight = Math.max(...outRects.map(({ x, width }) => x + width));
+  const minTop = Math.min(...outRects.map(({ y }) => y));
+  const maxBottom = Math.max(...outRects.map(({ y, height }) => y + height));
+  const candidates: PixelRect[] = [
+    { ...fullRect, width: minLeft - MAP_COLLISION_GAP - fullRect.x },
+    {
+      ...fullRect,
+      x: maxRight + MAP_COLLISION_GAP,
+      width: fullRect.x + fullRect.width - maxRight - MAP_COLLISION_GAP,
+    },
+    { ...fullRect, height: minTop - MAP_COLLISION_GAP - fullRect.y },
+    {
+      ...fullRect,
+      y: maxBottom + MAP_COLLISION_GAP,
+      height: fullRect.y + fullRect.height - maxBottom - MAP_COLLISION_GAP,
+    },
+  ];
+
+  return (
+    candidates
+      .filter(({ width, height }) => width >= 520 && height >= 420)
+      .sort((a, b) => b.width * b.height - a.width * a.height)[0] ?? fullRect
+  );
+}
+
 function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   const cached = routeLayoutCache.get(route.mapKey);
   if (cached) return cached;
 
   const regions = route.mapIds.map(getProjectedMapRegion);
+  if (route.mapIds.includes("china")) {
+    regions.push(getProjectedMapRegion("sansha"));
+  }
   const viewMode = route.mapIds.some((id) => id.startsWith("out-"))
     ? "world"
     : "regional";
@@ -527,74 +699,127 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
   const outRegions = regions.filter((region) => region.kind === "out");
   const baseRegions = mainRegions.length > 0 ? mainRegions : regions;
 
+  const occupiedOutRects: PixelRect[] = [];
+  const outRectById = new Map<MapRegionId, PixelRect>();
+  outRegions.forEach((region, index) => {
+    const placement =
+      route.outPlacements?.[region.id as OutRecommendMapId] ??
+      defaultOutPlacement(index, outRegions.length);
+    const rect = avoidOutCollisions(
+      fitPlacementRect(region, placement),
+      occupiedOutRects,
+    );
+    occupiedOutRects.push(rect);
+    outRectById.set(region.id, rect);
+  });
+
   const bounds = new Box2();
   baseRegions.forEach(({ bbox }) => bounds.union(bbox));
   const size = bounds.getSize(new Vector2());
+  const automaticMainRect = getAutomaticMainRect(occupiedOutRects);
+  const requestedMainRect = route.mainPlacement
+    ? clampRect({
+        width: route.mainPlacement.sizePx?.[0] ?? automaticMainRect.width,
+        height: route.mainPlacement.sizePx?.[1] ?? automaticMainRect.height,
+        x:
+          (route.mainPlacement.positionPx?.[0] ??
+            automaticMainRect.x + automaticMainRect.width / 2) -
+          (route.mainPlacement.sizePx?.[0] ?? automaticMainRect.width) / 2,
+        y:
+          (route.mainPlacement.positionPx?.[1] ??
+            automaticMainRect.y + automaticMainRect.height / 2) -
+          (route.mainPlacement.sizePx?.[1] ?? automaticMainRect.height) / 2,
+      })
+    : automaticMainRect;
+  const mainRect = occupiedOutRects.some((outRect) =>
+    rectanglesOverlap(requestedMainRect, outRect, MAP_COLLISION_GAP),
+  )
+    ? automaticMainRect
+    : requestedMainRect;
   const targetWidth =
     viewMode === "world" ? WORLD_TARGET_MAP_WIDTH : TARGET_MAP_WIDTH;
   const targetHeight =
     viewMode === "world" ? WORLD_TARGET_MAP_HEIGHT : TARGET_MAP_HEIGHT;
   const fitScale = Math.min(
-    targetWidth / Math.max(size.x, 0.001),
-    targetHeight / Math.max(size.y, 0.001),
+    ((mainRect.width / MAP_STAGE_WIDTH) * targetWidth) /
+      Math.max(size.x, 0.001),
+    ((mainRect.height / MAP_STAGE_HEIGHT) * targetHeight) /
+      Math.max(size.y, 0.001),
   );
-  const center = bounds.getCenter(new Vector2());
+  const mainPixelCenter = new Vector2(
+    mainRect.x + mainRect.width / 2,
+    mainRect.y + mainRect.height / 2,
+  );
+  const mainWorldCenter = new Vector2(
+    ((mainPixelCenter.x / MAP_STAGE_WIDTH) - 0.5) * targetWidth,
+    (0.5 - mainPixelCenter.y / MAP_STAGE_HEIGHT) * targetHeight,
+  );
+  const center = bounds
+    .getCenter(new Vector2())
+    .sub(mainWorldCenter.clone().divideScalar(fitScale));
 
-  // 国外 out-* 区域：缩小到主体宽度的 OUT_MAP_FRACTION，锚定到画布右下角
-  let outTransform:
-    | { position: [number, number, 0]; scale: number }
-    | undefined;
-  if (outRegions.length > 0) {
-    const outBounds = new Box2();
-    outRegions.forEach(({ bbox }) => outBounds.union(bbox));
-    const outSize = outBounds.getSize(new Vector2());
-    const outMax = outBounds.max;
-
-    const scale = Math.min(
-      (OUT_MAP_FRACTION * size.x) / Math.max(outSize.x, 0.001),
-      (OUT_MAP_FRACTION * size.y) / Math.max(outSize.y, 0.001),
+  const transformById = new Map<MapRegionId, NonNullable<ProjectedMapRegion["transform"]>>();
+  outRegions.forEach((region) => {
+    const rect = outRectById.get(region.id)!;
+    const outSize = region.bbox.getSize(new Vector2());
+    const desiredWorldWidth = (rect.width / MAP_STAGE_WIDTH) * targetWidth;
+    const desiredWorldHeight = (rect.height / MAP_STAGE_HEIGHT) * targetHeight;
+    const localScale =
+      Math.min(
+        desiredWorldWidth / Math.max(outSize.x, 0.001),
+        desiredWorldHeight / Math.max(outSize.y, 0.001),
+      ) / fitScale;
+    const pixelCenter = new Vector2(
+      rect.x + rect.width / 2,
+      rect.y + rect.height / 2,
     );
-
-    // 世界坐标（layout 经 fitScale 缩放后）中目标边缘 → 换算回布局局部坐标
-    const rightEdge = targetWidth / 2 - OUT_MAP_MARGIN;
-    const bottomEdge = targetHeight / 2 - OUT_MAP_MARGIN;
-    outTransform = {
+    const desiredWorldCenter = new Vector2(
+      ((pixelCenter.x / MAP_STAGE_WIDTH) - 0.5) * targetWidth,
+      (0.5 - pixelCenter.y / MAP_STAGE_HEIGHT) * targetHeight,
+    );
+    const rawCenter = region.bbox.getCenter(new Vector2());
+    transformById.set(region.id, {
       position: [
-        rightEdge / fitScale - outMax.x * scale,
-        bottomEdge / fitScale - outMax.y * scale,
+        center.x + desiredWorldCenter.x / fitScale - rawCenter.x * localScale,
+        center.y + desiredWorldCenter.y / fitScale - rawCenter.y * localScale,
         0,
       ],
-      scale,
-    };
-  }
+      scale: localScale,
+    });
+  });
 
   // 边界线段：out 区域按同样变换烘焙坐标，与网格组的 transform 保持一致
   const boundarySegments: [number, number, number][] = [];
+  const chinaBoundarySegments: [number, number, number][] = [];
   regions.forEach((region) => {
-    const transform = region.kind === "out" ? outTransform : undefined;
+    const transform = transformById.get(region.id);
     region.boundarySegments.forEach(([x, y, z]) => {
+      const target =
+        region.kind === "china" || region.kind === "sansha"
+          ? chinaBoundarySegments
+          : boundarySegments;
       if (!transform) {
-        boundarySegments.push([x, y, z]);
+        target.push([x, y, z]);
         return;
       }
-      boundarySegments.push([
+      target.push([
         x * transform.scale + transform.position[0],
         y * transform.scale + transform.position[1],
-        z,
+        z * transform.scale,
       ]);
     });
   });
 
   const layout: ProjectedRouteLayout = {
     boundarySegments,
+    chinaBoundarySegments,
     center,
     fitScale,
     mapKey: route.mapKey,
-    regions: regions.map((region) =>
-      region.kind === "out" && outTransform
-        ? { ...region, transform: outTransform }
-        : region,
-    ),
+    regions: regions.map((region) => ({
+      ...region,
+      transform: transformById.get(region.id),
+    })),
     viewMode,
   };
   routeLayoutCache.set(route.mapKey, layout);
@@ -692,7 +917,10 @@ function MapRegionMesh({
     }
   });
 
-  const label = region.data.features[0]?.properties.name ?? region.id;
+  const label =
+    region.label ?? region.data.features[0]?.properties.name ?? region.id;
+  const usesChinaTheme =
+    region.kind === "china" || region.kind === "sansha";
 
   return (
     <group>
@@ -708,7 +936,7 @@ function MapRegionMesh({
         ) : (
           <meshBasicMaterial
             attach="material-0"
-            color={region.kind === "china" ? "#168f9f" : "#19799b"}
+            color={usesChinaTheme ? RECOMMEND_CHINA_THEME.top : "#19799b"}
             transparent
             opacity={0.9}
             toneMapped={false}
@@ -718,6 +946,9 @@ function MapRegionMesh({
           attach="material-1"
           ref={sideMaterialRef}
           transparent
+          uBottom={usesChinaTheme ? RECOMMEND_CHINA_THEME.sideBottom : undefined}
+          uScan={usesChinaTheme ? RECOMMEND_CHINA_THEME.sideScan : undefined}
+          uTop={usesChinaTheme ? RECOMMEND_CHINA_THEME.sideTop : undefined}
         />
       </ShapeBox>
 
@@ -760,24 +991,58 @@ function RecommendLineScene({
               showLabel={
                 layout.viewMode !== "world" ||
                 region.kind === "china" ||
+                region.kind === "sansha" ||
                 region.kind === "out"
               }
-              texture={textures.get(region.id)}
+              texture={
+                region.id === "sansha" ? undefined : textures.get(region.id)
+              }
             />
           </group>
         ))}
-        <Line
-          points={layout.boundarySegments}
-          segments
-          lineWidth={0.75}
-          color="#8fe9ff"
-          transparent
-          opacity={0.52}
-          depthWrite={false}
-          toneMapped={false}
-          renderOrder={9}
-          raycast={() => null}
-        />
+        {layout.boundarySegments.length > 0 && (
+          <Line
+            points={layout.boundarySegments}
+            segments
+            lineWidth={0.75}
+            color="#8fe9ff"
+            transparent
+            opacity={0.52}
+            depthWrite={false}
+            toneMapped={false}
+            renderOrder={9}
+            raycast={() => null}
+          />
+        )}
+        {layout.chinaBoundarySegments.length > 0 && (
+          <group>
+            <Line
+              points={layout.chinaBoundarySegments}
+              segments
+              lineWidth={5}
+              color={RECOMMEND_CHINA_THEME.glow}
+              transparent
+              opacity={RECOMMEND_CHINA_THEME.glowOpacity}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+              renderOrder={8}
+              raycast={() => null}
+            />
+            <Line
+              points={layout.chinaBoundarySegments}
+              segments
+              lineWidth={0.9}
+              color={RECOMMEND_CHINA_THEME.boundary}
+              transparent
+              opacity={0.82}
+              depthWrite={false}
+              toneMapped={false}
+              renderOrder={9}
+              raycast={() => null}
+            />
+          </group>
+        )}
         <SceneReady key={layout.mapKey} onReady={onReady} />
       </group>
     </group>
