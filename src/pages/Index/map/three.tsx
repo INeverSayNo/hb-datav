@@ -42,6 +42,7 @@ import {
   TerrainSideMaterial,
   TerrainTopMaterial,
   WorldBase,
+  calculateMapHtmlPosition,
   useControlSpeed,
 } from "./threeShared";
 import MapWaterPort from "@/assets/map-waterway-port.png";
@@ -517,12 +518,14 @@ function MapMesh() {
 
       <OutlineGlow rings={projected.outlineRings} />
 
-      {projected.pois.map((poi) => (
+      {projected.pois.map((poi, poiIndex) => (
         <Html
-          key={poi.label}
+          calculatePosition={calculateMapHtmlPosition}
+          key={`${poi.label}-${poiIndex}`}
           center
           position={poi.position}
           distanceFactor={18}
+          eps={0}
           zIndexRange={[20, 0]}
         >
           <PoiMarker>
@@ -537,10 +540,12 @@ function MapMesh() {
 
       {projected.cities.map((city) => (
         <Html
+          calculatePosition={calculateMapHtmlPosition}
           key={city.name}
           center
           position={city.center}
           distanceFactor={18}
+          eps={0}
           zIndexRange={[20, 0]}
         >
           <MapLabel>{city.name}</MapLabel>

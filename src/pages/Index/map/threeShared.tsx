@@ -5,9 +5,12 @@ import { extend, useFrame } from "@react-three/fiber";
 import styled from "styled-components";
 import {
   AdditiveBlending,
+  type Camera,
   Color,
+  type Object3D,
   SRGBColorSpace,
   type Texture,
+  Vector3,
 } from "three";
 
 import worldTerrain from "@/assets/scene-transparent.png";
@@ -23,6 +26,29 @@ const WORLD_ASPECT = 1478 / 2262;
 const WORLD_WIDTH = 92;
 const WORLD_HUBEI_U = 0.435;
 const WORLD_HUBEI_V = 0.376;
+const htmlWorldPosition = new Vector3();
+const htmlProjectedPosition = new Vector3();
+
+/**
+ * Drei Html 默认只根据屏幕坐标判断是否更新。zoomToCursor 会让光标下的
+ * 锚点保持不动，因此需要把相机距离编码成不可见的亚像素偏移，确保缩放
+ * 期间 distanceFactor 仍会重新计算；静止后不会产生额外 DOM 更新。
+ */
+export function calculateMapHtmlPosition(
+  object: Object3D,
+  camera: Camera,
+  size: { width: number; height: number },
+) {
+  object.getWorldPosition(htmlWorldPosition);
+  htmlProjectedPosition.copy(htmlWorldPosition).project(camera);
+
+  return [
+    htmlProjectedPosition.x * (size.width / 2) +
+      size.width / 2 +
+      htmlWorldPosition.distanceTo(camera.position) * 0.00001,
+    -htmlProjectedPosition.y * (size.height / 2) + size.height / 2,
+  ];
+}
 
 export const MapRoot = styled.section`
   position: relative;

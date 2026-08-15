@@ -121,6 +121,7 @@ import {
   SceneReady,
   TerrainSideMaterial,
   TerrainTopMaterial,
+  calculateMapHtmlPosition,
   useControlSpeed,
 } from "./threeShared";
 
@@ -1164,7 +1165,9 @@ function MapRegionMesh({
       {showLabel &&
         region.labels.map(({ position, text }) => (
           <Html
+            calculatePosition={calculateMapHtmlPosition}
             center
+            eps={0}
             key={text}
             position={position}
             distanceFactor={labelDistanceFactor}
@@ -1412,8 +1415,10 @@ function RoutePoiLayer({
               const [x, y] = point.position;
               return (
                 <Html
+                  calculatePosition={calculateMapHtmlPosition}
                   key={`${point.name}-${pointIndex}`}
                   center
+                  eps={0}
                   position={[x, y, POI_NODE_Z]}
                   distanceFactor={22 / layout.fitScale}
                   zIndexRange={[30, 0]}
