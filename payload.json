@@ -1,0 +1,78 @@
+[
+  {
+    "label": "北粮南运",
+    "map": [
+      "sichuan",
+      "chongqing",
+      "hunan",
+      "jiangxi",
+      "zhejiang",
+      "shanghai",
+      "anhui",
+      "hubei",
+      "henan",
+      "jiangsu",
+      "shandong",
+      "hebei",
+      "tianjing",
+      "beijing",
+      "liaoning"
+    ]
+  },
+  {
+    "label": "赶肉下江",
+    "map": [
+      "sichuan",
+      "chongqing",
+      "hunan",
+      "jiangxi",
+      "zhejiang",
+      "shanghai",
+      "anhui",
+      "hubei",
+      "henan",
+      "jiangsu",
+      "shandong",
+      "shaanxi",
+      "shanxi",
+      "guizhou",
+      "guangxi",
+      "guangdong",
+      "fujian"
+    ]
+  },
+  {
+    "label": "棉纺丝路",
+    "map": [
+      "sichuan",
+      "chongqing",
+      "hunan",
+      "jiangxi",
+      "zhejiang",
+      "anhui",
+      "hubei",
+      "henan",
+      "jiangsu",
+      "shandong",
+      "shaanxi",
+      "shanxi",
+      "guizhou",
+      "guangxi",
+      "guangdong",
+      "fujian",
+      "xinjiang",
+      "xizang",
+      "qinghai",
+      "gansu",
+      "ningxia"
+    ]
+  },
+  {
+    "label": "楚天翼连",
+    "map": ["all"]
+  },
+  {
+    "label": "疆煤入鄂",
+    "map": ["all"]
+  }
+]
