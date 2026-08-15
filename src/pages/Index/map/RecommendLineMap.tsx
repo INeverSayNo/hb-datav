@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Html, Line, OrbitControls } from "@react-three/drei";
+import { Html, Line, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { geoMercator } from "d3-geo";
 import styled from "styled-components";
@@ -23,6 +23,7 @@ import {
   TextureLoader,
   type Group,
   type PerspectiveCamera,
+  type Sprite as ThreeSprite,
   type Texture,
   Vector2,
   Vector3,
@@ -98,6 +99,7 @@ import xinjiangTexture from "@/assets/recommendLine/xinjiang.png";
 import xizangTexture from "@/assets/recommendLine/xizang.png";
 import yunnanTexture from "@/assets/recommendLine/yunnan.png";
 import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
+import airPlaneIcon from "@/assets/air-plan.png";
 
 import {
   ALL_RECOMMEND_PROVINCE_IDS,
@@ -222,7 +224,7 @@ const ROUTE_TYPE_COLORS: Record<RecommendPoiSegment["type"], string> = {
   waterway: "#2ecc71",
   highway: "#2f8cff",
   railway: "#ff4d4f",
-  airway: "258bd6"
+  airway: "#258bd6",
 };
 
 /** 普通节点外环（蓝） */
@@ -249,6 +251,11 @@ const POI_FLOW_SPEED = 0.22;
 const FLY_DOT_COUNT = 2;
 /** 飞线光点每秒沿曲线行进的弧长比例 */
 const FLY_SPEED = 0.14;
+/** 飞机每秒沿整条航线前进的弧长比例。 */
+const AIR_PLANE_SPEED = 0.1;
+/** 飞机在最终地图坐标中的显示尺寸，组件内会抵消线路布局缩放。 */
+const AIR_PLANE_SIZE = 0.82;
+const AIR_PLANE_Z = POI_LINE_Z + 0.15;
 
 const provinceSourceById: Record<ProvinceId, MapRegionSource> = {
   anhui: {
@@ -519,7 +526,7 @@ const PoiNode = styled.div<{ $isWuhan?: boolean }>`
 `;
 
 /** 节点名称：白底黑字。 */
-const PoiLabel = styled.span`
+const PoiLabel = styled.span<{ $isAirRoute?: boolean }>`
   position: absolute;
   left: 50%;
   top: 17px;
@@ -527,12 +534,12 @@ const PoiLabel = styled.span`
   background: #ffffff;
   color: #000000;
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  font-size: 38px;
+  font-size: ${({ $isAirRoute }) => ($isAirRoute ? 16 : 38)}px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: ${({ $isAirRoute }) => ($isAirRoute ? "5px 7px" : "10px 12px")};
+  border-radius: ${({ $isAirRoute }) => ($isAirRoute ? 5 : 10)}px;
 `;
 
 function getPolygons(geometry: AdministrativeGeometry): PolygonCoordinates[] {
@@ -1173,12 +1180,31 @@ function MapRegionMesh({
  */
 function RouteSegment({
   color,
+  planeSize,
   points,
+  showFlyDots,
+  showPlane,
 }: {
   color: string;
+  planeSize: number;
   points: [number, number][];
+  showFlyDots: boolean;
+  showPlane: boolean;
 }) {
   const { size, viewport } = useThree();
+  const planeTexture = useTexture(airPlaneIcon);
+  const planeRef = useRef<ThreeSprite>(null);
+  const planeStartTimeRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    planeTexture.colorSpace = SRGBColorSpace;
+    planeTexture.anisotropy = 8;
+    planeTexture.needsUpdate = true;
+  }, [planeTexture]);
+
+  useEffect(() => {
+    planeStartTimeRef.current = null;
+  }, [points, showPlane]);
 
   const { curve, backLine, mainLine } = useMemo(() => {
     if (points.length < 2) {
@@ -1261,13 +1287,30 @@ function RouteSegment({
     mainLine.material.dashOffset -= delta * POI_FLOW_SPEED;
 
     // 飞线光点沿曲线前进
-    const t = (state.clock.elapsedTime * FLY_SPEED) % 1;
-    flyDotRefs.current.forEach((dot, index) => {
-      if (!dot) return;
-      const distance = (t + index / FLY_DOT_COUNT) % 1;
-      const p = curve.getPointAt(distance);
-      dot.position.set(p.x, p.y, POI_LINE_Z + 0.07);
-    });
+    if (showFlyDots) {
+      const t = (state.clock.elapsedTime * FLY_SPEED) % 1;
+      flyDotRefs.current.forEach((dot, index) => {
+        if (!dot) return;
+        const distance = (t + index / FLY_DOT_COUNT) % 1;
+        const p = curve.getPointAt(distance);
+        dot.position.set(p.x, p.y, POI_LINE_Z + 0.07);
+      });
+    }
+
+    if (showPlane && planeRef.current) {
+      planeStartTimeRef.current ??= state.clock.elapsedTime;
+      const planeElapsed =
+        state.clock.elapsedTime - planeStartTimeRef.current;
+      const planeProgress =
+        (planeElapsed * AIR_PLANE_SPEED) % 1;
+      const position = curve.getPointAt(planeProgress);
+      const tangent = curve.getTangentAt(planeProgress);
+      planeRef.current.position.set(position.x, position.y, AIR_PLANE_Z);
+
+      // 原图机头朝上（+Y），因此相对曲线切线角度减去 90°。
+      planeRef.current.material.rotation =
+        Math.atan2(tangent.y, tangent.x) - Math.PI / 2;
+    }
   });
 
   if (!curve || !backLine || !mainLine) return null;
@@ -1276,7 +1319,22 @@ function RouteSegment({
     <group>
       <primitive object={backLine} />
       <primitive object={mainLine} />
-      {Array.from({ length: FLY_DOT_COUNT }, (_, index) => (
+      {showPlane && (
+        <sprite
+          ref={planeRef}
+          position={[points[0][0], points[0][1], AIR_PLANE_Z]}
+          scale={[planeSize, planeSize, 1]}
+          renderOrder={12}
+        >
+          <spriteMaterial
+            map={planeTexture}
+            transparent
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </sprite>
+      )}
+      {showFlyDots && Array.from({ length: FLY_DOT_COUNT }, (_, index) => (
         <group
           key={index}
           ref={(el) => {
@@ -1314,6 +1372,7 @@ function RoutePoiLayer({
   layout: ProjectedRouteLayout;
   route: RecommendRoute;
 }) {
+  const isAirRoute = route.label === "楚天翼连";
   const segments = useMemo(() => {
     const poi = poiData.find((entry) => entry.key === route.label);
     if (!poi) return [];
@@ -1340,7 +1399,10 @@ function RoutePoiLayer({
           <group key={segmentIndex}>
             <RouteSegment
               color={ROUTE_TYPE_COLORS[segment.type]}
+              planeSize={AIR_PLANE_SIZE / layout.fitScale}
               points={segment.positions}
+              showFlyDots={segment.type !== "airway"}
+              showPlane={isAirRoute && segment.type === "airway"}
             />
 
             {segment.points.map((point, pointIndex) => {
@@ -1356,7 +1418,9 @@ function RoutePoiLayer({
                 >
                   <PoiMarkerWrap>
                     <PoiNode $isWuhan={point.name === "武汉"} />
-                    <PoiLabel>{point.name}</PoiLabel>
+                    <PoiLabel $isAirRoute={isAirRoute}>
+                      {point.name}
+                    </PoiLabel>
                   </PoiMarkerWrap>
                 </Html>
               );
