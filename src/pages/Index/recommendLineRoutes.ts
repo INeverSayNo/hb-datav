@@ -9,7 +9,7 @@ export const ALL_RECOMMEND_PROVINCE_IDS = [
   "guangdong",
   "guangxi",
   "guizhou",
-  "hainan",
+  // "hainan",
   "hebei",
   "heilongjiang",
   "henan",

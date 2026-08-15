@@ -32,7 +32,7 @@ import gansuData from "@/assets/recommendLine/gansu.json";
 import guangdongData from "@/assets/recommendLine/guangdong.json";
 import guangxiData from "@/assets/recommendLine/guangxi.json";
 import guizhouData from "@/assets/recommendLine/guizhou.json";
-import hainanData from "@/assets/recommendLine/hainan.json";
+// import hainanData from "@/assets/recommendLine/hainan.json";
 import hebeiData from "@/assets/recommendLine/hebei.json";
 import heilongjiangData from "@/assets/recommendLine/heilongjiang.json";
 import henanData from "@/assets/recommendLine/henan.json";
@@ -64,7 +64,7 @@ import gansuTexture from "@/assets/recommendLine/gansu.png";
 import guangdongTexture from "@/assets/recommendLine/guangdong.png";
 import guangxiTexture from "@/assets/recommendLine/guangxi.png";
 import guizhouTexture from "@/assets/recommendLine/guizhou.png";
-import hainanTexture from "@/assets/recommendLine/hainan.png";
+// import hainanTexture from "@/assets/recommendLine/hainan.png";
 import hebeiTexture from "@/assets/recommendLine/hebei.png";
 import heilongjiangTexture from "@/assets/recommendLine/heilongjiang.png";
 import henanTexture from "@/assets/recommendLine/henan.png";
@@ -100,7 +100,6 @@ import {
   SceneReady,
   TerrainSideMaterial,
   TerrainTopMaterial,
-  WorldBase,
   useControlSpeed,
 } from "./threeShared";
 
@@ -179,7 +178,7 @@ const provinceSourceById: Record<ProvinceId, ProvinceSource> = {
   guangdong: { id: "guangdong", data: asAdministrativeData(guangdongData), texture: guangdongTexture },
   guangxi: { id: "guangxi", data: asAdministrativeData(guangxiData), texture: guangxiTexture },
   guizhou: { id: "guizhou", data: asAdministrativeData(guizhouData), texture: guizhouTexture },
-  hainan: { id: "hainan", data: asAdministrativeData(hainanData), texture: hainanTexture },
+  // hainan: { id: "hainan", data: asAdministrativeData(hainanData), texture: hainanTexture },
   hebei: { id: "hebei", data: asAdministrativeData(hebeiData), texture: hebeiTexture },
   heilongjiang: { id: "heilongjiang", data: asAdministrativeData(heilongjiangData), texture: heilongjiangTexture },
   henan: { id: "henan", data: asAdministrativeData(henanData), texture: henanTexture },
@@ -506,7 +505,7 @@ function RecommendLineScene({
   return (
     <group scale={layout.fitScale}>
       <group position={[-layout.center.x, -layout.center.y, 0]}>
-        <WorldBase hubeiAnchor={layout.hubeiAnchor} />
+        {/* <WorldBase hubeiAnchor={layout.hubeiAnchor} /> */}
         {layout.provinces.map((province) => (
           <ProvinceMesh
             key={province.id}
