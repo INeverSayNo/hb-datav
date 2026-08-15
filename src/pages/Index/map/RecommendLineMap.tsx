@@ -833,6 +833,28 @@ function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
     });
   });
 
+  mainRegions.forEach((region) => {
+    if (region.id === "sansha") return;
+    const adjustment = route.visualAdjustments?.[region.id];
+    if (!adjustment) return;
+
+    const visualScale = adjustment.scale ?? 1;
+    const offsetPx = adjustment.offsetPx ?? [0, 0];
+    const localOffset = new Vector2(
+      ((offsetPx[0] / MAP_STAGE_WIDTH) * targetWidth) / fitScale,
+      (-(offsetPx[1] / MAP_STAGE_HEIGHT) * targetHeight) / fitScale,
+    );
+    const rawCenter = region.bbox.getCenter(new Vector2());
+    transformById.set(region.id, {
+      position: [
+        rawCenter.x * (1 - visualScale) + localOffset.x,
+        rawCenter.y * (1 - visualScale) + localOffset.y,
+        0,
+      ],
+      scale: visualScale,
+    });
+  });
+
   // 边界线段：out 区域按同样变换烘焙坐标，与网格组的 transform 保持一致
   const boundarySegments: [number, number, number][] = [];
   const chinaBoundarySegments: [number, number, number][] = [];
