@@ -31,12 +31,74 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 
 import hubeiHighwayData from "@/assets/hb-highway.json";
+import hubeiWaterwayData from "@/assets/hb-railway.json";
 import hubeiMapData from "@/assets/hb.json";
 import hubeiOutlineData from "@/assets/hb_outline.json";
 import hubeiDem from "@/assets/hb_dem.png";
 import worldTerrain from "@/assets/scene-transparent.png";
 import type { CityGeoJSON } from "@/types/map";
 import ShapeBox from "./shape";
+import MapWaterPort from "@/assets/map-waterway-port.png";
+import MapAirPort from "@/assets/map-airway.png";
+import MapRailwayStation from "@/assets/map-railway-station.png";
+import MapWarehouse from "@/assets/map-warehouse.png";
+
+const poiList = [
+  {
+    lat: "30.86",
+    lng: "110.96",
+    label: "秭归港",
+    icon: MapWaterPort,
+  },
+  {
+    lat: "30.31",
+    lng: "112.25",
+    label: "荆州港",
+    icon: MapWaterPort,
+  },
+  {
+    lat: "30.67",
+    lng: "114.57",
+    label: "阳逻港",
+    icon: MapWaterPort,
+  },
+  {
+    lat: "29.84",
+    lng: "113.55",
+    label: "洪湖港",
+    icon: MapWaterPort,
+  },
+  {
+    lat: "32.02",
+    lng: "112.17",
+    label: "襄阳南站",
+    icon: MapRailwayStation,
+  },
+  {
+    lat: "31.73",
+    lng: "113.42",
+    label: "随州站",
+    icon: MapRailwayStation,
+  },
+  {
+    lat: "30.92717865",
+    lng: "113.65160654",
+    label: "应城东站",
+    icon: MapRailwayStation,
+  },
+  {
+    lat: "30.27",
+    lng: "109.46",
+    label: "恩施仓库",
+    icon: MapWarehouse,
+  },
+  {
+    lat: "30.34",
+    lng: "115.05",
+    label: "花湖机场",
+    icon: MapAirPort,
+  },
+];
 
 /** 省份挤出厚度（墨卡托投影单位，湖北宽约 21） */
 const MAP_DEPTH = 0.66;
@@ -68,12 +130,42 @@ const MapRoot = styled.section`
 const CityLabel = styled.div`
   color: rgba(232, 250, 255, 0.9);
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
   pointer-events: none;
-  text-shadow: 0 2px 4px rgba(0, 18, 28, 0.95), 0 0 6px rgba(0, 18, 28, 0.9);
+  text-shadow:
+    0 2px 4px rgba(0, 18, 28, 0.95),
+    0 0 6px rgba(0, 18, 28, 0.9);
+`;
+
+const PoiMarker = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+
+  img {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0, 18, 28, 0.9));
+  }
+
+  span {
+    color: rgba(232, 250, 255, 0.95);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: 4px;
+    border: 1px solid rgba(32, 219, 219, 0.35);
+    background: #003a55c9;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 32px;
+  }
 `;
 
 /**
@@ -111,8 +203,8 @@ const TerrainTopMaterial = extend(
       vec3 color = mix(uDeep, uMid, smoothstep(0.0, 0.55, luma));
       color = mix(color, uHigh, smoothstep(0.55, 1.0, luma));
       gl_FragColor = vec4(color, uOpacity);
-    }`
-  )
+    }`,
+  ),
 );
 
 /**
@@ -150,8 +242,8 @@ const TerrainSideMaterial = extend(
       color = mix(color, uScan, scan * 0.55);
 
       gl_FragColor = vec4(color, mix(0.55, 0.95, h));
-    }`
-  )
+    }`,
+  ),
 );
 
 /**
@@ -185,8 +277,8 @@ const WorldBaseMaterial = extend(
       vec3 color = mix(uDeep, uHigh, smoothstep(0.05, 0.9, luma));
       float alpha = tex.a * (0.05 + luma * 0.3) * uOpacity;
       gl_FragColor = vec4(color, alpha);
-    }`
-  )
+    }`,
+  ),
 );
 
 type ProjectedCity = {
@@ -207,7 +299,7 @@ function useControlSpeed() {
     const update = () => {
       const scale = Math.min(
         window.innerWidth / 5600,
-        window.innerHeight / 2320
+        window.innerHeight / 2320,
       );
       setSpeed(Math.min(4, 1 / Math.max(scale, 0.2)));
     };
@@ -293,7 +385,7 @@ function MapMesh() {
               MAP_DEPTH + 0.022,
               current.x,
               current.y,
-              MAP_DEPTH + 0.022
+              MAP_DEPTH + 0.022,
             );
           }
         });
@@ -303,20 +395,19 @@ function MapMesh() {
     const cityBoundaryGeometry = new BufferGeometry();
     cityBoundaryGeometry.setAttribute(
       "position",
-      new Float32BufferAttribute(boundaryPositions, 3)
+      new Float32BufferAttribute(boundaryPositions, 3),
     );
 
     const highwayData = hubeiHighwayData as unknown as HighwayMultiLineString;
     const highwaySegmentCount = highwayData.coordinates.reduce(
       (total, coordinates) => total + Math.max(0, coordinates.length - 1),
-      0
+      0,
     );
     const highwayPositions = new Float32Array(highwaySegmentCount * 6);
     let highwayPositionOffset = 0;
 
     highwayData.coordinates.forEach((coordinates) => {
       if (coordinates.length < 2) return;
-
       let [previousX, previousY] = projection(coordinates[0])!;
       for (let index = 1; index < coordinates.length; index += 1) {
         const [currentX, currentY] = projection(coordinates[index])!;
@@ -342,10 +433,7 @@ function MapMesh() {
       opacity: 0.9,
       depthWrite: false,
     });
-    const highwayLine = new LineSegments2(
-      highwayGeometry,
-      highwayMaterial
-    );
+    const highwayLine = new LineSegments2(highwayGeometry, highwayMaterial);
     highwayLine.renderOrder = 14;
     highwayLine.raycast = () => {};
 
@@ -367,7 +455,7 @@ function MapMesh() {
               point.x,
               point.y,
               MAP_DEPTH + 0.03,
-            ])
+            ]),
           );
         });
     });
@@ -375,11 +463,20 @@ function MapMesh() {
     const center = bbox.getCenter(new Vector2());
     const cities: ProjectedCity[] = mapData.features.map((feature) => {
       const [x, y] = projection(
-        feature.properties.centroid ?? feature.properties.center
+        feature.properties.centroid ?? feature.properties.center,
       )!;
       return {
         name: feature.properties.name,
         center: new Vector3(x, -y, MAP_DEPTH + 0.12),
+      };
+    });
+
+    const pois = poiList.map((poi) => {
+      const [x, y] = projection([Number(poi.lng), Number(poi.lat)])!;
+      return {
+        label: poi.label,
+        icon: poi.icon,
+        position: new Vector3(x, -y, MAP_DEPTH + 0.2),
       };
     });
 
@@ -392,6 +489,7 @@ function MapMesh() {
       provinceEdgeGeometry,
       outlineRings,
       highwayLine,
+      pois,
     };
   }, []);
 
@@ -406,7 +504,7 @@ function MapMesh() {
       projected.highwayLine.geometry.dispose();
       projected.highwayLine.material.dispose();
     },
-    [projected]
+    [projected],
   );
 
   useFrame((_, delta) => {
@@ -422,7 +520,8 @@ function MapMesh() {
         args={[
           projected.shapes,
           { depth: MAP_DEPTH, bevelEnabled: false, curveSegments: 2 },
-        ]}>
+        ]}
+      >
         <TerrainTopMaterial attach="material-0" uMap={demTexture} />
         <TerrainSideMaterial
           attach="material-1"
@@ -433,7 +532,8 @@ function MapMesh() {
 
       <lineSegments
         geometry={projected.cityBoundaryGeometry}
-        raycast={() => null}>
+        raycast={() => null}
+      >
         <lineBasicMaterial
           color="#8fe9ff"
           transparent
@@ -445,7 +545,8 @@ function MapMesh() {
       <lineSegments
         geometry={projected.provinceEdgeGeometry}
         renderOrder={10}
-        raycast={() => null}>
+        raycast={() => null}
+      >
         <lineBasicMaterial color={GLOW_EMISSIVE_COLOR} toneMapped={false} />
       </lineSegments>
 
@@ -489,13 +590,29 @@ function MapMesh() {
         </group>
       ))}
 
+      {projected.pois.map((poi) => (
+        <Html
+          key={poi.label}
+          center
+          position={poi.position}
+          distanceFactor={18}
+          zIndexRange={[20, 0]}
+        >
+          <PoiMarker>
+            <img src={poi.icon} alt={poi.label} />
+            <span>{poi.label}</span>
+          </PoiMarker>
+        </Html>
+      ))}
+
       {projected.cities.map((city) => (
         <Html
           key={city.name}
           center
           position={city.center}
           distanceFactor={18}
-          zIndexRange={[20, 0]}>
+          zIndexRange={[20, 0]}
+        >
           <CityLabel>{city.name}</CityLabel>
         </Html>
       ))}
@@ -512,7 +629,8 @@ export default function ThreeHubeiMap() {
         dpr={[1, 1.5]}
         resize={{ offsetSize: true }}
         gl={{ alpha: true, antialias: true }}
-        camera={{ fov: 28.5, near: 0.1, far: 300, position: [0, 22.5, 18.5] }}>
+        camera={{ fov: 28.5, near: 0.1, far: 300, position: [0, 22.5, 18.5] }}
+      >
         <Suspense fallback={null}>
           {/* 地图数据位于 XY 平面，整体翻转到 XZ 地面上（+Y 朝上），便于 OrbitControls 交互 */}
           <group rotation={[-Math.PI / 2, 0, 0]}>
