@@ -29,21 +29,21 @@ import zhejiangData from "@/assets/recommendLine/zhejiang.json";
 import hubeiOutlineData from "@/assets/recommendLine/hubei_outline.json";
 import recommendLineOutlineData from "@/assets/recommendLine/outline.json";
 
-import anhuiTexture from "@/assets/recommendLine/optimized/anhui.png";
-import beijingTexture from "@/assets/recommendLine/optimized/beijing.png";
-import chongqingTexture from "@/assets/recommendLine/optimized/chongqing.png";
-import hebeiTexture from "@/assets/recommendLine/optimized/hebei.png";
-import henanTexture from "@/assets/recommendLine/optimized/henan.png";
-import hubeiTexture from "@/assets/recommendLine/optimized/hubei.png";
-import hunanTexture from "@/assets/recommendLine/optimized/hunan.png";
-import jiangsuTexture from "@/assets/recommendLine/optimized/jiangsu.png";
-import jiangxiTexture from "@/assets/recommendLine/optimized/jiangxi.png";
-import liaoningTexture from "@/assets/recommendLine/optimized/liaoning.png";
-import shandongTexture from "@/assets/recommendLine/optimized/shandong.png";
-import shanghaiTexture from "@/assets/recommendLine/optimized/shanghai.png";
-import sichuanTexture from "@/assets/recommendLine/optimized/sichuan.png";
-import tianjingTexture from "@/assets/recommendLine/optimized/tianjing.png";
-import zhejiangTexture from "@/assets/recommendLine/optimized/zhejiang.png";
+import anhuiTexture from "@/assets/recommendLine/anhui.png";
+import beijingTexture from "@/assets/recommendLine/beijing.png";
+import chongqingTexture from "@/assets/recommendLine/chongqing.png";
+import hebeiTexture from "@/assets/recommendLine/hebei.png";
+import henanTexture from "@/assets/recommendLine/henan.png";
+import hubeiTexture from "@/assets/recommendLine/hubei.png";
+import hunanTexture from "@/assets/recommendLine/hunan.png";
+import jiangsuTexture from "@/assets/recommendLine/jiangsu.png";
+import jiangxiTexture from "@/assets/recommendLine/jiangxi.png";
+import liaoningTexture from "@/assets/recommendLine/liaoning.png";
+import shandongTexture from "@/assets/recommendLine/shandong.png";
+import shanghaiTexture from "@/assets/recommendLine/shanghai.png";
+import sichuanTexture from "@/assets/recommendLine/sichuan.png";
+import tianjingTexture from "@/assets/recommendLine/tianjing.png";
+import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
 
 import ShapeBox from "./shape";
 import {
