@@ -26,7 +26,7 @@ import shanghaiData from "@/assets/recommendLine/shanghai.json";
 import sichuanData from "@/assets/recommendLine/sichuan.json";
 import tianjingData from "@/assets/recommendLine/tianjing.json";
 import zhejiangData from "@/assets/recommendLine/zhejiang.json";
-import hubeiOutlineData from "@/assets/hb_outline.json";
+import hubeiOutlineData from "@/assets/recommendLine/hubei_outline.json";
 import recommendLineOutlineData from "@/assets/recommendLine/outline.json";
 
 import anhuiTexture from "@/assets/recommendLine/optimized/anhui.png";
