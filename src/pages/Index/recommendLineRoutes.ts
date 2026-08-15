@@ -1,5 +1,3 @@
-import payload from "../../../payload.json";
-
 export const ALL_RECOMMEND_PROVINCE_IDS = [
   "anhui",
   "beijing",
@@ -36,6 +34,168 @@ export const ALL_RECOMMEND_PROVINCE_IDS = [
 
 export type ProvinceId = (typeof ALL_RECOMMEND_PROVINCE_IDS)[number];
 
+export const mapRelation = [
+  {
+    label: "北粮南运",
+    map: [
+      "sichuan",
+      "chongqing",
+      "hunan",
+      "jiangxi",
+      "zhejiang",
+      "shanghai",
+      "anhui",
+      "hubei",
+      "henan",
+      "jiangsu",
+      "shandong",
+      "hebei",
+      "tianjing",
+      "beijing",
+      "liaoning",
+    ],
+  },
+  {
+    label: "赶肉下江",
+    map: [
+      "sichuan",
+      "chongqing",
+      "hunan",
+      "jiangxi",
+      "zhejiang",
+      "shanghai",
+      "anhui",
+      "hubei",
+      "henan",
+      "jiangsu",
+      "shandong",
+      "shaanxi",
+      "shanxi",
+      "guizhou",
+      "guangxi",
+      "guangdong",
+      "fujian",
+      "out-br",
+    ],
+    out: ["out-br"],
+  },
+  {
+    label: "棉纺丝路",
+    map: [
+      "sichuan",
+      "chongqing",
+      "hunan",
+      "jiangxi",
+      "zhejiang",
+      "anhui",
+      "hubei",
+      "henan",
+      "jiangsu",
+      "shandong",
+      "shaanxi",
+      "shanxi",
+      "guizhou",
+      "guangxi",
+      "guangdong",
+      "fujian",
+      "xinjiang",
+      "xizang",
+      "qinghai",
+      "gansu",
+      "ningxia",
+    ],
+  },
+  {
+    label: "楚天翼连",
+    map: ["china", "out-it", "out-jp", "out-kz", "out-de", "out-fr"],
+  },
+  {
+    label: "疆煤入鄂",
+    map: ["china"],
+  },
+];
+
+export const brMeatToChinaLIne = {
+  赶肉下江: {
+    line1: [
+      {
+        name: "巴西",
+        value: [91, 21.1],
+      },
+      {
+        name: "太仓",
+        value: [121.41, 31.4],
+      },
+      {
+        name: "江阴",
+        value: [120.36, 32.01],
+      },
+      {
+        name: "南京",
+        value: [118.78, 32.06],
+      },
+      {
+        name: "芜湖",
+        value: [118.01, 31.33],
+      },
+      {
+        name: "九江",
+        value: [115.99, 29.71],
+      },
+    ],
+    line2: [
+      {
+        name: "武汉",
+        value: [114.31, 30.57],
+      },
+      {
+        name: "郑州",
+        value: [113.6254, 34.7466],
+      },
+    ],
+    line3: [
+      {
+        name: "武汉",
+        value: [114.31, 30.57],
+      },
+      {
+        name: "长沙",
+        value: [112.9388, 28.2282],
+      },
+    ],
+    line4: [
+      {
+        name: "武汉",
+        value: [114.31, 30.57],
+      },
+      {
+        name: "南昌",
+        value: [115.8582, 28.6829],
+      },
+    ],
+    line5: [
+      {
+        name: "武汉",
+        value: [114.31, 30.57],
+      },
+      {
+        name: "西安",
+        value: [108.9398, 34.3416],
+      },
+    ],
+    line6: [
+      {
+        name: "武汉",
+        value: [114.31, 30.57],
+      },
+      {
+        name: "成都",
+        value: [104.07, 30.67],
+      },
+    ],
+  },
+};
+
 export type RecommendRoute = {
   label: string;
   mapKey: string;
@@ -56,7 +216,7 @@ const ROUTE_BUTTON_ORDER = [
 ] as const;
 
 const provinceIdSet = new Set<string>(ALL_RECOMMEND_PROVINCE_IDS);
-const rawRoutes = payload as PayloadRoute[];
+const rawRoutes = mapRelation as PayloadRoute[];
 
 function resolveProvinceIds(route: PayloadRoute): readonly ProvinceId[] {
   if (route.map.length === 1 && route.map[0] === "all") {
