@@ -227,6 +227,15 @@ function findRegionAt(
   return bestRegion;
 }
 
+/** 返回指定经纬度所属的布局区域 id。 */
+export function getRegionIdAt(
+  layout: ProjectedRouteLayout,
+  lng: number,
+  lat: number,
+): MapRegionId | undefined {
+  return findRegionAt(layout, lng, lat)?.id;
+}
+
 /**
  * 将经纬度烘焙到中心组（position=[-center.x, -center.y]）局部坐标。
  * 优先选择包含该点的最小 bbox region 并应用其 transform，与 boundarySegments 的烘焙方式一致。

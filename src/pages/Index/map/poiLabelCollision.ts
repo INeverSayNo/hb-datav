@@ -1,5 +1,5 @@
 /**
- * POI 标签碰撞处理：标签重叠时向上堆叠，并用指向性线条连接节点。
+ * POI 标签碰撞处理：标签重叠时堆叠错开，并用指向性线条连接节点。
  * 由 three.tsx（湖北 POI）与 recommendLine（精品线路 POI）共用。
  *
  * DOM 约定：
@@ -15,6 +15,7 @@
  * - recommendLine：marker 为 0×0 定位容器 + 绝对定位子元素
  * 横向中心统一取 icon 中心；纵向基准用 label.offsetTop（不含 transform），
  * 因此重复调用不会因上一次设置的 translateY 产生反馈漂移。
+ * placement 默认为 above，Europe 小地图可显式传 below向节点下方堆叠。
  */
 export type LabelScreenRect = {
   bottom: number;
@@ -25,8 +26,13 @@ export type LabelScreenRect = {
 
 export const POI_LABEL_COLLISION_PADDING = 4;
 export const POI_LABEL_ABOVE_GAP = 28;
+export const POI_LABEL_BELOW_GAP = 18;
 export const POI_LABEL_STACK_GAP = 6;
 export const POI_LABEL_MAX_LEVELS = 12;
+
+export type PoiLabelCollisionOptions = {
+  placement?: "above" | "below";
+};
 
 function labelsOverlap(a: LabelScreenRect, b: LabelScreenRect) {
   return !(
@@ -39,6 +45,7 @@ function labelsOverlap(a: LabelScreenRect, b: LabelScreenRect) {
 
 export function resolvePoiLabelCollisions(
   markers: Array<HTMLDivElement | null>,
+  { placement = "above" }: PoiLabelCollisionOptions = {},
 ) {
   const accepted: LabelScreenRect[] = [];
 
@@ -85,10 +92,14 @@ export function resolvePoiLabelCollisions(
 
       for (let level = 0; level < POI_LABEL_MAX_LEVELS; level += 1) {
         const candidateTop =
-          iconTop -
-          height -
-          POI_LABEL_ABOVE_GAP * screenScale -
-          level * levelStep;
+          placement === "below"
+            ? iconRect.bottom +
+              POI_LABEL_BELOW_GAP * screenScale +
+              level * levelStep
+            : iconTop -
+              height -
+              POI_LABEL_ABOVE_GAP * screenScale -
+              level * levelStep;
         candidate = {
           bottom: candidateTop + height,
           left: iconCenterX - width / 2,
@@ -101,11 +112,21 @@ export function resolvePoiLabelCollisions(
     }
 
     marker.style.setProperty("--poi-label-offset-y", `${offsetY}px`);
-    if (offsetY < 0) {
-      const labelBottom = label.offsetTop + offsetY + label.offsetHeight;
-      const leaderHeight = Math.max(0, icon.offsetTop - labelBottom);
+    if (offsetY !== 0) {
+      const isBelow = placement === "below";
+      const labelEdge = isBelow
+        ? label.offsetTop + offsetY
+        : label.offsetTop + offsetY + label.offsetHeight;
+      const iconEdge = isBelow
+        ? icon.offsetTop + icon.offsetHeight
+        : icon.offsetTop;
+      const leaderTop = isBelow ? iconEdge : labelEdge;
+      const leaderHeight = Math.max(
+        0,
+        isBelow ? labelEdge - iconEdge : iconEdge - labelEdge,
+      );
       marker.style.setProperty("--poi-leader-display", "block");
-      marker.style.setProperty("--poi-leader-top", `${labelBottom}px`);
+      marker.style.setProperty("--poi-leader-top", `${leaderTop}px`);
       marker.style.setProperty("--poi-leader-height", `${leaderHeight}px`);
     } else {
       marker.style.setProperty("--poi-leader-display", "none");

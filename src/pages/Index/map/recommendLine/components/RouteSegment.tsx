@@ -18,7 +18,6 @@ import airPlaneIcon from "@/assets/air-plan.png";
 
 import {
   AIR_PLANE_SPEED,
-  AIR_PLANE_Z,
   FLY_DOT_COUNT,
   FLY_SPEED,
   MAX_CURVE_SAMPLES,
@@ -39,12 +38,14 @@ function RouteSegmentBase({
   points,
   showFlyDots,
   showPlane,
+  visualScale = 1,
 }: {
   color: string;
   planeSize: number;
   points: [number, number, number][];
   showFlyDots: boolean;
   showPlane: boolean;
+  visualScale?: number;
 }) {
   const size = useThree((state) => state.size);
   const viewport = useThree((state) => state.viewport);
@@ -87,7 +88,7 @@ function RouteSegmentBase({
       return;
     }
 
-      const pts = points.map(([x, y, z]) => new Vector3(x, y, z));
+    const pts = points.map(([x, y, z]) => new Vector3(x, y, z));
     const curve =
       pts.length === 2
         ? new LineCurve3(pts[0], pts[1])
@@ -115,8 +116,8 @@ function RouteSegmentBase({
         opacity: opts.opacity,
         depthWrite: false,
         dashed: opts.dashed,
-        dashSize: POI_DASH_SIZE,
-        gapSize: POI_GAP_SIZE,
+        dashSize: POI_DASH_SIZE * visualScale,
+        gapSize: POI_GAP_SIZE * visualScale,
       });
       const line = new Line2(geometry, material);
       line.renderOrder = opts.renderOrder;
@@ -126,13 +127,13 @@ function RouteSegmentBase({
 
     const backLine = buildLine({
       dashed: false,
-      linewidth: POI_LINE_BACK_WIDTH,
+      linewidth: POI_LINE_BACK_WIDTH * visualScale,
       opacity: 0.16,
       renderOrder: 5,
     });
     const mainLine = buildLine({
       dashed: true,
-      linewidth: POI_LINE_WIDTH,
+      linewidth: POI_LINE_WIDTH * visualScale,
       opacity: 0.95,
       renderOrder: 6,
     });
@@ -145,7 +146,7 @@ function RouteSegmentBase({
       mainLine.geometry.dispose();
       mainLine.material.dispose();
     };
-  }, [color, points]);
+  }, [color, points, visualScale]);
 
   const curve = lines?.curve ?? null;
   const backLine = lines?.backLine ?? null;
@@ -164,12 +165,15 @@ function RouteSegmentBase({
 
   useFrame((state, delta) => {
     if (!curve || !mainLine) return;
+    const elapsedTime = state.clock.elapsedTime;
+    // 路线切换中 Canvas 会短暂切换帧循环状态，忽略非有限的过渡帧。
+    if (!Number.isFinite(elapsedTime)) return;
     // 虚线沿路径流动
     mainLine.material.dashOffset -= delta * POI_FLOW_SPEED;
 
     // 飞线光点沿曲线前进
     if (showFlyDots) {
-      const t = (state.clock.elapsedTime * FLY_SPEED) % 1;
+      const t = (elapsedTime * FLY_SPEED) % 1;
       flyDotRefs.current.forEach((dot, index) => {
         if (!dot) return;
         const distance = (t + index / FLY_DOT_COUNT) % 1;
@@ -179,8 +183,8 @@ function RouteSegmentBase({
     }
 
     if (showPlane && planeRef.current) {
-      planeStartTimeRef.current ??= state.clock.elapsedTime;
-      const planeElapsed = state.clock.elapsedTime - planeStartTimeRef.current;
+      planeStartTimeRef.current ??= elapsedTime;
+      const planeElapsed = elapsedTime - planeStartTimeRef.current;
       const planeProgress = (planeElapsed * AIR_PLANE_SPEED) % 1;
       const position = curve.getPointAt(planeProgress);
       const tangent = curve.getTangentAt(planeProgress);
@@ -204,7 +208,11 @@ function RouteSegmentBase({
         <sprite
           ref={planeRef}
           position={[points[0][0], points[0][1], points[0][2] + 0.15]}
-          scale={[planeSize, planeSize, 1]}
+          scale={[
+            planeSize * visualScale,
+            planeSize * visualScale,
+            1,
+          ]}
           renderOrder={12}
         >
           <spriteMaterial
@@ -219,6 +227,7 @@ function RouteSegmentBase({
         Array.from({ length: FLY_DOT_COUNT }, (_, index) => (
           <group
             key={index}
+            scale={[visualScale, visualScale, visualScale]}
             ref={(el) => {
               flyDotRefs.current[index] = el;
             }}

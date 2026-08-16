@@ -47,6 +47,8 @@ export const POI_SEGMENT_COLORS = [
 
 /** 普通节点外环（蓝） */
 export const POI_RING_NORMAL = "#2f8cff";
+/** 中转节点外环（橙） */
+export const POI_RING_TRANSIT = "#ff8c42";
 /** 武汉节点外环（红） */
 export const POI_RING_WUHAN = "#ff4d4f";
 /** 节点白色内环 */

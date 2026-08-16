@@ -211,6 +211,8 @@ export const mapRelation = [
 export type RecommendPoiType = "waterway" | "highway" | "railway" | "airway";
 
 export type RecommendPoiPoint = {
+  /** 是否为航线中转节点。 */
+  isTransit?: boolean;
   name: string;
   /** 经纬度 [lng, lat] */
   value: [number, number];
@@ -289,6 +291,7 @@ export const poiData: RecommendPoiEntry[] = [
             value: [79.61, 48.62],
           },
           {
+            isTransit: true,
             name: "米兰国际机场",
             value: [8.7281, 45.6306],
           },
@@ -302,6 +305,7 @@ export const poiData: RecommendPoiEntry[] = [
             value: [13.405, 52.52],
           },
           {
+            isTransit: true,
             name: "米兰国际机场",
             value: [8.7281, 45.6306],
           },
@@ -315,6 +319,7 @@ export const poiData: RecommendPoiEntry[] = [
             value: [21.0122, 52.2297],
           },
           {
+            isTransit: true,
             name: "米兰国际机场",
             value: [8.7281, 45.6306],
           },
@@ -328,6 +333,7 @@ export const poiData: RecommendPoiEntry[] = [
             value: [-4.0249, 39.8577],
           },
           {
+            isTransit: true,
             name: "米兰国际机场",
             value: [8.7281, 45.6306],
           },
@@ -341,6 +347,7 @@ export const poiData: RecommendPoiEntry[] = [
             value: [2.2, 46.2],
           },
           {
+            isTransit: true,
             name: "米兰国际机场",
             value: [8.7281, 45.6306],
           },

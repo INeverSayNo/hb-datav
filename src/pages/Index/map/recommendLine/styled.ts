@@ -1,8 +1,9 @@
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
 import {
   POI_INNER_WHITE,
   POI_RING_NORMAL,
+  POI_RING_TRANSIT,
   POI_RING_WUHAN,
 } from "./constants";
 import type { MapTransitionPhase } from "./types";
@@ -30,15 +31,25 @@ export const MapCanvasLayer = styled.div<{
 `;
 
 /** 节点 + 标签的定位容器（中心对齐到 position）。 */
-export const PoiMarkerWrap = styled.div`
+export const PoiMarkerWrap = styled.div<{ $scale?: number }>`
   position: relative;
   width: 0;
   height: 0;
   pointer-events: none;
+
+  ${({ $scale }) =>
+    $scale !== undefined &&
+    css`
+      transform: scale(${$scale});
+      transform-origin: 0 0;
+    `}
 `;
 
 /** 节点图标：外环 3px（蓝/红）+ 白色内环 6px（约为外环 2 倍）。 */
-export const PoiNode = styled.div<{ $isWuhan?: boolean }>`
+export const PoiNode = styled.div<{
+  $isTransit?: boolean;
+  $isWuhan?: boolean;
+}>`
   position: absolute;
   left: -13px;
   top: -13px;
@@ -51,10 +62,19 @@ export const PoiNode = styled.div<{ $isWuhan?: boolean }>`
     inset: 0;
     border-radius: 50%;
     border: 3px solid
-      ${({ $isWuhan }) => ($isWuhan ? POI_RING_WUHAN : POI_RING_NORMAL)};
+      ${({ $isTransit, $isWuhan }) =>
+        $isWuhan
+          ? POI_RING_WUHAN
+          : $isTransit
+            ? POI_RING_TRANSIT
+            : POI_RING_NORMAL};
     box-shadow: 0 0 10px
-      ${({ $isWuhan }) =>
-        $isWuhan ? "rgba(255, 77, 79, 0.7)" : "rgba(47, 140, 255, 0.7)"};
+      ${({ $isTransit, $isWuhan }) =>
+        $isWuhan
+          ? "rgba(255, 77, 79, 0.7)"
+          : $isTransit
+            ? "rgba(255, 140, 66, 0.75)"
+            : "rgba(47, 140, 255, 0.7)"};
   }
 
   &::after {
@@ -97,6 +117,19 @@ export const PoiLeader = styled.i`
   }
 `;
 
+/** Europe 标签下移时使用的细导引线。 */
+export const EuropePoiLeader = styled(PoiLeader)`
+  width: 2px;
+  box-shadow: 0 0 4px rgba(32, 219, 219, 0.65);
+
+  &::after {
+    width: 6px;
+    height: 6px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+  }
+`;
+
 /** 节点名称：白底黑字，碰撞时向上堆叠。 */
 export const PoiLabel = styled.span<{ $isAirRoute?: boolean }>`
   position: absolute;
@@ -114,4 +147,24 @@ export const PoiLabel = styled.span<{ $isAirRoute?: boolean }>`
   white-space: nowrap;
   padding: ${({ $isAirRoute }) => ($isAirRoute ? "5px 7px" : "10px 12px")};
   border-radius: ${({ $isAirRoute }) => ($isAirRoute ? 5 : 10)}px;
+`;
+
+/** Europe 节点名称：视觉与 three.tsx 的 POI 标签一致。 */
+export const EuropePoiLabel = styled.span`
+  position: absolute;
+  left: 50%;
+  top: 17px;
+  z-index: 2;
+  color: rgba(232, 250, 255, 0.95);
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 24px;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid rgba(32, 219, 219, 0.35);
+  border-radius: 8px;
+  background: #003a55c9;
+  padding: 7px 10px;
+  transform: translateX(-50%) translateY(var(--poi-label-offset-y, 0px));
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 `;
