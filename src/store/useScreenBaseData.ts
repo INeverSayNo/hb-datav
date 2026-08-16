@@ -31,12 +31,75 @@ export interface ScreenBaseData {
     privateLine: number;
     shipCount: number;
   };
-  loading: boolean
+  loading: boolean;
   rightBottomPanel: { text1: string; text2: string }[];
+  xinjiangCoalRoutes: XinJiangCoalRoutes | null;
+}
+
+export interface XinJiangCoalRoutes {
+  lines: {
+    channelId: string;
+    pathName: string;
+    realtimeDatas: {
+      lineId: string;
+      price: number;
+      currency: string;
+      unit: string;
+      transitTime: number;
+      transitTimeUnit: string;
+      monthlyVolume: number;
+      mVolumeUnit: string;
+      enRouteVolume: number;
+      erVolumeUnit: string;
+      completionRate: number;
+      id: string;
+    }[];
+    paths: {
+      id: string;
+      lineId: string;
+      transportType: number;
+      origin: string;
+      originGeom: { lat: number; lng: number; locationSys: number };
+      dest: string;
+      destGeom: { lat: number; lng: number; locationSys: number };
+      sort: number;
+      geom: number[][];
+    }[];
+    lineId: string;
+    transportType: number;
+    customerScope: string;
+    fleetSize: number;
+    fleetSizeUnit: string;
+    transitTimeMin: number;
+    transitTimeMax: number;
+    transitTimeUnit: string;
+    priceMin: number;
+    priceMax: number;
+    priceUnit: string;
+    currency: string;
+    departureFrequency: number;
+    dfUnit: string;
+    lossRate: number;
+    id: string;
+  }[];
+  code: string;
+  name: string;
+  originAreas: string;
+  originAreaNames: string;
+  destAreas: string;
+  destAreaNames: string;
+  goodsCodes: string;
+  goodsNames: string;
+  description: string;
+  serviceProvider: string;
+  contact: string;
+  phone: object;
+  goods: { code: string; value: string; children: undefined[] }[];
+  id: string;
 }
 
 interface ScreenBaseDataStore extends ScreenBaseData {
-  loading: boolean;            // 请求状态
+  loading: boolean; // 请求状态
   updateStore: (payload: Partial<ScreenBaseData>) => void;
 }
 
@@ -69,6 +132,7 @@ export const useScreenBaseDataStore = create<ScreenBaseDataStore>()(
       shipCount: 0,
     },
     rightBottomPanel: [],
+    xinjiangCoalRoutes: null,
     loading: false,
     updateStore: (payload) => set(payload),
   })),

@@ -30,7 +30,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { GetScreenBaseData } from "@/api/modules/baseDataApi";
+import {
+  GetScreenBaseData,
+  GetXinjiangCoalRoutes,
+} from "@/api/modules/baseDataApi";
 
 // 默认使用 three.js 三维地图，可通过 ?map=echarts 回退到 ECharts 版本
 const HubeiMap =
@@ -297,13 +300,25 @@ export default function IndexDashboard() {
   useEffect(() => {
     let cancelled = false;
     updateStore({ loading: true });
+
+    const fetchXinjiangCoalRoutes = async () => {
+      const [_err, data] = await GetXinjiangCoalRoutes(
+        "3a2316ac-9705-cb56-100f-c88047615224",
+      );
+      if (data && data.result) {
+        updateStore({ xinjiangCoalRoutes: data.result });
+      }
+    };
     const fetchData = async () => {
       const [err, data] = await GetScreenBaseData();
       if (!err && data && Object.keys(data || {}).length && !cancelled) {
         updateStore(data);
       }
+
+      fetchXinjiangCoalRoutes();
       updateStore({ loading: false });
     };
+
     fetchData();
     return () => {
       cancelled = true;
@@ -360,20 +375,23 @@ export default function IndexDashboard() {
     [currentView, incomingView, isAnimating, isRouteTransitioning],
   );
 
-  const handleViewIntent = useCallback((nextView: DashboardMapView) => {
-    if (nextView === "wuhanChannel") {
-      void preloadWuhanChannel().catch(() => {
-        // 悬停预加载失败时仍可在点击后通过 img 正常重试。
-      });
-      return;
-    }
+  const handleViewIntent = useCallback(
+    (nextView: DashboardMapView) => {
+      if (nextView === "wuhanChannel") {
+        void preloadWuhanChannel().catch(() => {
+          // 悬停预加载失败时仍可在点击后通过 img 正常重试。
+        });
+        return;
+      }
 
-    if (nextView === "recommendLine") {
-      void preloadRecommendLineMap(activeRoute).catch(() => {
-        // 悬停预加载失败不影响用户点击后的正常加载。
-      });
-    }
-  }, [activeRoute]);
+      if (nextView === "recommendLine") {
+        void preloadRecommendLineMap(activeRoute).catch(() => {
+          // 悬停预加载失败不影响用户点击后的正常加载。
+        });
+      }
+    },
+    [activeRoute],
+  );
 
   const handleRouteIntent = useCallback((route: RecommendRoute) => {
     void preloadRecommendLineMap(route).catch(() => {
