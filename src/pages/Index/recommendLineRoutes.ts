@@ -86,6 +86,17 @@ export const mapRelation = [
       "beijing",
       "liaoning",
     ],
+    camera: {
+      position: [0, 33, 15],
+      fov: 26,
+      target: [0, 0, 0],
+      minDistance: 12,
+      maxDistance: 60,
+      minPolarAngle: 0.25,
+      maxPolarAngle: 1.2,
+      minAzimuthAngle: -0.8,
+      maxAzimuthAngle: 0.8,
+    },
   },
   {
     label: "赶肉下江",
@@ -139,6 +150,17 @@ export const mapRelation = [
       "gansu",
       "ningxia",
     ],
+     camera: {
+      position: [0, 32, 18],
+      fov: 25,
+      target: [0, 0, 0],
+      minDistance: 12,
+      maxDistance: 60,
+      minPolarAngle: 0.25,
+      maxPolarAngle: 1.2,
+      minAzimuthAngle: -0.8,
+      maxAzimuthAngle: 0.8,
+    },
   },
   {
     label: "楚天翼连",
@@ -172,6 +194,17 @@ export const mapRelation = [
       "anhui",
       "jiangxi",
     ],
+    camera: {
+      position: [0, 30, 18],
+      fov: 28,
+      target: [0, 0, 0],
+      minDistance: 12,
+      maxDistance: 60,
+      minPolarAngle: 0.25,
+      maxPolarAngle: 1.2,
+      minAzimuthAngle: -0.8,
+      maxAzimuthAngle: 0.8,
+    },
   },
 ];
 
@@ -191,6 +224,18 @@ export type RecommendPoiSegment = {
 export type RecommendPoiEntry = {
   key: string;
   poiInfo: RecommendPoiSegment[];
+};
+
+export type CameraPreset = {
+  position: [number, number, number];
+  fov: number;
+  target?: [number, number, number];
+  minDistance?: number;
+  maxDistance?: number;
+  minPolarAngle?: number;
+  maxPolarAngle?: number;
+  minAzimuthAngle?: number;
+  maxAzimuthAngle?: number;
 };
 
 export const poiData: RecommendPoiEntry[] = [
@@ -715,13 +760,14 @@ export function buildXinjiangCoalPoiEntry(
 }
 
 export type RecommendRoute = {
-  label: string;
+ label: string;
   mainMapIds?: readonly RecommendMapId[];
   mainPlacement?: MainMapPlacement;
   mapIds: readonly RecommendMapId[];
   mapKey: string;
   outPlacements?: Partial<Record<OutRecommendMapId, OutMapPlacement>>;
   visualAdjustments?: Partial<Record<RecommendMapId, MapVisualAdjustment>>;
+  camera?: CameraPreset;
 };
 
 type PayloadRoute = {
@@ -731,6 +777,7 @@ type PayloadRoute = {
   map: string[];
   outPlacements?: Partial<Record<OutRecommendMapId, OutMapPlacement>>;
   visualAdjustments?: Partial<Record<RecommendMapId, MapVisualAdjustment>>;
+  camera?: CameraPreset;
 };
 
 const ROUTE_BUTTON_ORDER = [
@@ -815,6 +862,7 @@ export const RECOMMEND_ROUTES: readonly RecommendRoute[] = orderedLabels.map(
       }),
       outPlacements: route.outPlacements,
       visualAdjustments: route.visualAdjustments,
+      camera: route.camera,
     };
   },
 );

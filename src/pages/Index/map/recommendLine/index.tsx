@@ -15,7 +15,11 @@ import {
   scheduleTextureRelease,
 } from "./resources";
 import { MapCanvasLayer } from "./styled";
-import type { MapTransitionPhase, PreparedRoute, ProjectedRouteLayout } from "./types";
+import type {
+  MapTransitionPhase,
+  PreparedRoute,
+  ProjectedRouteLayout,
+} from "./types";
 
 export type RecommendLineMapProps = {
   onReady?: () => void;
@@ -61,14 +65,22 @@ function RecommendLineMap({
   const applyCameraLayout = useCallback((layout: ProjectedRouteLayout) => {
     const camera = cameraRef.current;
     if (!camera) return;
+    const preset =
+      route.camera ??
+      (layout.viewMode === "world"
+        ? {
+            position: [0, 31, 9],
+            fov: 32,
+            target: [0, 0, 0],
+          }
+        : {
+            position: [0, 31, 25.5],
+            fov: 28.5,
+            target: [0, 0, 0],
+          });
 
-    if (layout.viewMode === "world") {
-      camera.position.set(0, 31, 9);
-      camera.fov = 32;
-    } else {
-      camera.position.set(0, 31, 25.5);
-      camera.fov = 28.5;
-    }
+    camera.position.set(...preset.position);
+    camera.fov = preset.fov;
     camera.up.set(0, 1, 0);
     camera.updateProjectionMatrix();
 
@@ -80,7 +92,7 @@ function RecommendLineMap({
     } else {
       camera.lookAt(0, 0, 0);
     }
-  }, []);
+  }, [route.camera]);
 
   useEffect(() => {
     // 重新挂载：取消上一次卸载时排定的贴图释放。
@@ -161,6 +173,26 @@ function RecommendLineMap({
     }, durations.enter);
   }, [clearTransitionTimer, onReady, onRouteTransitionEnd, setPhase]);
 
+  const cameraBounds =
+    route.camera ??
+    (prepared?.layout.viewMode === "world"
+      ? {
+          minDistance: 20,
+          maxDistance: 100,
+          minPolarAngle: 0.08,
+          maxPolarAngle: 1.05,
+          minAzimuthAngle: -1.2,
+          maxAzimuthAngle: 1.2,
+        }
+      : {
+          minDistance: 14,
+          maxDistance: 70,
+          minPolarAngle: 0.3,
+          maxPolarAngle: 1.35,
+          minAzimuthAngle: -0.9,
+          maxAzimuthAngle: 0.9,
+        });
+
   return (
     <MapRoot role="img" aria-label="精品线路覆盖省份三维地形地图">
       <MapCanvasLayer
@@ -184,6 +216,9 @@ function RecommendLineMap({
           }}
           onCreated={({ camera }) => {
             cameraRef.current = camera as PerspectiveCamera;
+            if (prepared) {
+              applyCameraLayout(prepared.layout);
+            }
           }}
         >
           <Suspense fallback={null}>
@@ -207,14 +242,12 @@ function RecommendLineMap({
             rotateSpeed={controlSpeed}
             panSpeed={controlSpeed}
             zoomSpeed={0.9}
-            minDistance={prepared?.layout.viewMode === "world" ? 20 : 14}
-            maxDistance={prepared?.layout.viewMode === "world" ? 100 : 70}
-            minPolarAngle={prepared?.layout.viewMode === "world" ? 0.08 : 0.3}
-            maxPolarAngle={prepared?.layout.viewMode === "world" ? 1.05 : 1.35}
-            minAzimuthAngle={
-              prepared?.layout.viewMode === "world" ? -1.2 : -0.9
-            }
-            maxAzimuthAngle={prepared?.layout.viewMode === "world" ? 1.2 : 0.9}
+             minDistance={cameraBounds.minDistance}
+  maxDistance={cameraBounds.maxDistance}
+  minPolarAngle={cameraBounds.minPolarAngle}
+  maxPolarAngle={cameraBounds.maxPolarAngle}
+  minAzimuthAngle={cameraBounds.minAzimuthAngle}
+  maxAzimuthAngle={cameraBounds.maxAzimuthAngle}
             screenSpacePanning={false}
             zoomToCursor
             mouseButtons={{
