@@ -20,9 +20,10 @@ export function GetScreenBaseData() {
   return baseApi.get<ScreenBaseData>("/api/resource/screen/hb/panel");
 }
 
-export function GetXinjiangCoalRoutes(channelId: string) {
-  return baseApi.get<Rsp8<XinJiangCoalRoutes>>("/api/solution/premium-channels/channel-base/line-list", {
-    channelId
-  });
+export function GetXinjiangCoalRoutes(params: {
+  channelId: string,
+  thinOut: boolean
+}) {
+  return baseApi.get<Rsp8<XinJiangCoalRoutes>>("/api/solution/premium-channels/channel-base/line-list", params);
 }
 

@@ -6,7 +6,7 @@ import styled from "styled-components";
 import Chart from "@/components/chart";
 import hubeiMapData from "@/assets/hb.json";
 import hubeiOutlineData from "@/assets/hb_outline.json";
-import hubeiDem from "@/assets/hb_dem.png";
+import hubeiDem from "@/assets/hb_dem.webp";
 
 const HUBEI_MAP_NAME = "hubei-city-map";
 const HUBEI_OUTLINE_NAME = "hubei-province-outline";
@@ -81,6 +81,8 @@ function createStackLayer(index: number): echarts.EChartsCoreOption {
 
 export type HubeiMapProps = {
   onReady?: () => void;
+  /** 与 three.js 版本保持一致的接口；ECharts 版本无渲染循环，忽略该参数。 */
+  paused?: boolean;
 };
 
 export default function HubeiMap({ onReady }: HubeiMapProps) {

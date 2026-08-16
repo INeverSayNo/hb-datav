@@ -30,12 +30,13 @@ import hubeiWaterwayData from "@/assets/hb-waterway.json";
 
 import hubeiMapData from "@/assets/hb.json";
 import hubeiOutlineData from "@/assets/hb_outline.json";
-import hubeiDem from "@/assets/hb_dem.png";
+import hubeiDem from "@/assets/hb_dem.webp";
 import type { CityGeoJSON } from "@/types/map";
-import ShapeBox from "./shape";
+import ShapeBox, { type ShapeProps } from "./shape";
 import {
   GLOW_EMISSIVE_COLOR,
   MAP_DEPTH,
+  MAP_EXTRUDE_OPTIONS,
   MapLabel,
   MapRoot,
   OutlineGlow,
@@ -628,15 +629,15 @@ function MapMesh() {
     lastCanvasSizeRef.current[1] = state.size.height;
   });
 
+  // 稳定 args 引用，避免 R3F 每次 render 重建 ExtrudeGeometry。
+  const extrudeArgs = useMemo<ShapeProps["args"]>(
+    () => [projected.shapes, MAP_EXTRUDE_OPTIONS],
+    [projected.shapes],
+  );
+
   return (
     <group position={[-projected.center.x, -projected.center.y, 0]}>
-      <ShapeBox
-        bbox={projected.bbox}
-        args={[
-          projected.shapes,
-          { depth: MAP_DEPTH, bevelEnabled: false, curveSegments: 2 },
-        ]}
-      >
+      <ShapeBox bbox={projected.bbox} args={extrudeArgs}>
         <TerrainTopMaterial attach="material-0" uMap={demTexture} />
         <TerrainSideMaterial
           attach="material-1"
@@ -718,9 +719,14 @@ function MapMesh() {
 
 export type ThreeHubeiMapProps = {
   onReady?: () => void;
+  /** 上层交叉淡入时标记为淡出层，冻结渲染循环。 */
+  paused?: boolean;
 };
 
-export default function ThreeHubeiMap({ onReady }: ThreeHubeiMapProps) {
+export default function ThreeHubeiMap({
+  onReady,
+  paused = false,
+}: ThreeHubeiMapProps) {
   const controlSpeed = useControlSpeed();
 
   return (
@@ -728,6 +734,8 @@ export default function ThreeHubeiMap({ onReady }: ThreeHubeiMapProps) {
       <Canvas
         dpr={[1, 1.5]}
         resize={{ offsetSize: true }}
+        // 被上层标记为淡出时冻结渲染循环，避免交叉淡入期间两个 WebGL 场景同时满帧。
+        frameloop={paused ? "demand" : "always"}
         gl={{ alpha: true, antialias: true }}
         camera={{ fov: 30.5, near: 0.1, far: 300, position: [0, 22.5, 18.5] }}
       >

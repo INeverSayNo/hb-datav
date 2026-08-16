@@ -1,8 +1,8 @@
 import styled from "styled-components";
 
 import AutoFit from "@/components/autoFit";
-import dashboardBackground from "@/assets/datav-bg.png";
-import wuhanChannelImage from "@/assets/wh-channel.png";
+import dashboardBackground from "@/assets/datav-bg.webp";
+import wuhanChannelImage from "@/assets/wh-channel.webp";
 import BottomNavigation, {
   type DashboardMapView,
 } from "./components/BottomNavigation";
@@ -13,8 +13,6 @@ import MapLegend from "./components/MapLegend";
 import RouteButtons from "./components/RouteButton";
 import MatrixRain from "./components/MatrixRain";
 import RightPanels from "./components/RightPanels";
-import EChartsHubeiMap from "./map";
-import ThreeHubeiMap from "./map/three";
 import {
   DEFAULT_RECOMMEND_ROUTE,
   getRecommendRoute,
@@ -35,12 +33,14 @@ import {
   GetXinjiangCoalRoutes,
 } from "@/api/modules/baseDataApi";
 
-// 默认使用 three.js 三维地图，可通过 ?map=echarts 回退到 ECharts 版本
-const HubeiMap =
-  new URLSearchParams(window.location.search).get("map") === "echarts"
-    ? EChartsHubeiMap
-    : ThreeHubeiMap;
-const loadRecommendLineMap = () => import("./map/RecommendLineMap");
+// 默认使用 three.js 三维地图，可通过 ?map=echarts 回退到 ECharts 版本。
+// 两者都用 lazy 加载：静态导入会把 three.js 和 echarts 一起拖进主 chunk。
+const useEChartsMap =
+  new URLSearchParams(window.location.search).get("map") === "echarts";
+const HubeiMap = lazy(() =>
+  useEChartsMap ? import("./map") : import("./map/three"),
+);
+const loadRecommendLineMap = () => import("./map/recommendLine");
 const RecommendLineMap = lazy(loadRecommendLineMap);
 let wuhanChannelPreloadPromise: Promise<void> | null = null;
 
@@ -247,12 +247,14 @@ function DashboardMap({
   onReady,
   onRouteTransitionEnd,
   onRouteTransitionError,
+  paused = false,
   route,
   view,
 }: {
   onReady?: () => void;
   onRouteTransitionEnd: (route: RecommendRoute) => void;
   onRouteTransitionError: (route: RecommendRoute) => void;
+  paused?: boolean;
   route: RecommendRoute;
   view: DashboardMapView;
 }) {
@@ -261,7 +263,11 @@ function DashboardMap({
   }
 
   if (view === "province") {
-    return <HubeiMap onReady={onReady} />;
+    return (
+      <Suspense fallback={null}>
+        <HubeiMap onReady={onReady} paused={paused} />
+      </Suspense>
+    );
   }
 
   return (
@@ -269,6 +275,7 @@ function DashboardMap({
       <RecommendLineMap
         route={route}
         onReady={onReady}
+        paused={paused}
         onRouteTransitionEnd={onRouteTransitionEnd}
         onRouteTransitionError={onRouteTransitionError}
       />
@@ -303,17 +310,12 @@ export default function IndexDashboard() {
 
     const fetchXinjiangCoalRoutes = async () => {
       const [_err, data] = await GetXinjiangCoalRoutes(
-        "3a2316ac-9705-cb56-100f-c88047615224",
+        {
+          channelId:"3a2316ac-9705-cb56-100f-c88047615224",
+          thinOut: true
+        }
       );
-      if (data && data.result) {
-
-        data.result.lines.forEach(e=> {
-          e.paths = e.paths.map((v, i)=> {
-            v.geom = v.geom.slice(i, i + 100)
-            return v
-          })
-        })
-        console.log(data.result);
+      if (data && data.result && !cancelled) {
         updateStore({ xinjiangCoalRoutes: data.result });
       }
     };
@@ -466,6 +468,7 @@ export default function IndexDashboard() {
             <DashboardMap
               view={currentView}
               route={activeRoute}
+              paused={isAnimating}
               onRouteTransitionEnd={handleRouteTransitionEnd}
               onRouteTransitionError={handleRouteTransitionError}
             />

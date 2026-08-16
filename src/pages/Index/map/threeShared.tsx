@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Line, shaderMaterial, useTexture } from "@react-three/drei";
 import { extend, useFrame } from "@react-three/fiber";
 import styled from "styled-components";
@@ -13,12 +13,22 @@ import {
   Vector3,
 } from "three";
 
-import worldTerrain from "@/assets/scene-transparent.png";
+import worldTerrain from "@/assets/scene-transparent.webp";
 
 /** 地图挤出厚度（地图整体宽度约 21 个投影单位）。 */
 export const MAP_DEPTH = 0.66;
 export const MAP_GLOW_COLOR = "#20dbdb";
 export const OUTLINE_WIDTH = 2;
+
+/**
+ * 共享的挤出参数。必须是稳定引用：R3F 对 `args` 做浅比较，
+ * 传对象字面量会让 ExtrudeGeometry 每次 render 重新三角化。
+ */
+export const MAP_EXTRUDE_OPTIONS = {
+  depth: MAP_DEPTH,
+  bevelEnabled: false,
+  curveSegments: 2,
+};
 
 const SOFT_GLOW_COLOR = MAP_GLOW_COLOR;
 const GLOW_EMISSIVE_COLOR = new Color(MAP_GLOW_COLOR).multiplyScalar(2.6);
@@ -280,18 +290,27 @@ export function OutlineGlow({
   );
 }
 
+/** 只在未就绪时挂载，触发后由父组件卸载以退订 useFrame。 */
+function FirstFrameProbe({ onFrame }: { onFrame: () => void }) {
+  useFrame(onFrame);
+  return null;
+}
+
 /** 在当前 Suspense 场景的资源全部就绪并完成首帧后通知外层。 */
 export function SceneReady({ onReady }: { onReady?: () => void }) {
+  const [signalled, setSignalled] = useState(false);
   const hasSignalled = useRef(false);
 
-  useFrame(() => {
-    if (!hasSignalled.current) {
-      hasSignalled.current = true;
-      onReady?.();
-    }
-  });
+  const handleFrame = useCallback(() => {
+    if (hasSignalled.current) return;
+    hasSignalled.current = true;
+    onReady?.();
+    // 卸载探针，避免此后每帧空转一次布尔判断。
+    setSignalled(true);
+  }, [onReady]);
 
-  return null;
+  if (signalled) return null;
+  return <FirstFrameProbe onFrame={handleFrame} />;
 }
 
 export { GLOW_EMISSIVE_COLOR };

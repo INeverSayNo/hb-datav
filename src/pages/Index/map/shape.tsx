@@ -13,6 +13,8 @@ export default function ShapeBox(props: ShapeProps) {
   const meshRef = useRef<Mesh>(null!);
 
   useImperativeHandle(ref, () => meshRef.current);
+  // 依赖 bbox/args：只有几何体或包围盒变化时才重算 UV。
+  // 缺少依赖数组会导致每次 render 都全量遍历顶点并重建 attribute。
   useLayoutEffect(() => {
     const { geometry } = meshRef.current;
 
@@ -20,21 +22,15 @@ export default function ShapeBox(props: ShapeProps) {
     const width = bbox.max.x - bbox.min.x;
     const height = bbox.max.y - bbox.min.y;
 
-    const uv: number[] = [];
-    let x = 0,
-      y = 0,
-      u = 0,
-      v = 0;
+    const uv = new Float32Array(pos.count * 2);
     for (let i = 0; i < pos.count; i++) {
-      x = pos.getX(i);
-      y = pos.getY(i);
-      u = (x - bbox.min.x) / width;
-      v = (y - bbox.min.y) / height;
-      uv.push(u, v);
+      uv[i * 2] = (pos.getX(i) - bbox.min.x) / width;
+      uv[i * 2 + 1] = (pos.getY(i) - bbox.min.y) / height;
     }
 
+    geometry.deleteAttribute("uv");
     geometry.setAttribute("uv", new Float32BufferAttribute(uv, 2));
-  });
+  }, [bbox, args]);
 
   return (
     <mesh ref={meshRef} {...meshProps}>
