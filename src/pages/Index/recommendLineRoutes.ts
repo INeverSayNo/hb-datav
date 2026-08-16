@@ -1,3 +1,5 @@
+import type { XinJiangCoalRoutes } from "@/store/useScreenBaseData";
+
 export const ALL_RECOMMEND_PROVINCE_IDS = [
   "anhui",
   "beijing",
@@ -158,7 +160,18 @@ export const mapRelation = [
   },
   {
     label: "疆煤入鄂",
-    map: ["china"],
+    map: [
+      "xinjiang",
+      "qinghai",
+      "gansu",
+      "sichuan",
+      "chongqing",
+      "shaanxi",
+      "hubei",
+      "hunan",
+      "anhui",
+      "jiangxi",
+    ],
   },
 ];
 
@@ -192,7 +205,7 @@ export const poiData: RecommendPoiEntry[] = [
           },
           {
             name: "",
-            value: [125.47,39.88],
+            value: [125.47, 39.88],
           },
           {
             name: "成田国际机场",
@@ -210,7 +223,7 @@ export const poiData: RecommendPoiEntry[] = [
           },
           {
             name: "",
-            value: [100.53,42.12],
+            value: [100.53, 42.12],
           },
           {
             name: "图尔克斯坦机场",
@@ -228,7 +241,7 @@ export const poiData: RecommendPoiEntry[] = [
           },
           {
             name: "",
-            value: [79.61,48.62],
+            value: [79.61, 48.62],
           },
           {
             name: "米兰国际机场",
@@ -655,6 +668,51 @@ export const poiData: RecommendPoiEntry[] = [
     ],
   },
 ];
+
+/**
+ * 疆煤入鄂 segment：额外携带所属 line 的索引，渲染时用于按 line 统一配色。
+ */
+export type XinjiangCoalPoiSegment = RecommendPoiSegment & {
+  lineIndex: number;
+};
+
+/**
+ * 将接口返回的疆煤入鄂线路数据重组为与 poiData 同构的结构。
+ * 每条 line 下的每条 path 生成一个 segment：
+ *   origin（带名称） → geom 途经点（name 置空，不渲染节点） → dest（带名称）
+ * transportType 映射未知，统一按 highway 渲染。
+ */
+export function buildXinjiangCoalPoiEntry(
+  data: XinJiangCoalRoutes | null | undefined,
+): { key: string; poiInfo: XinjiangCoalPoiSegment[] } | null {
+  if (!data || !Array.isArray(data.lines)) return null;
+
+  const poiInfo: XinjiangCoalPoiSegment[] = [];
+  data.lines.forEach((line, lineIndex) => {
+    if (!Array.isArray(line.paths)) return;
+    line.paths.forEach((path) => {
+      const routes: RecommendPoiPoint[] = [
+        {
+          name: path.origin,
+          value: [path.originGeom.lng, path.originGeom.lat],
+        },
+      ];
+      if (Array.isArray(path.geom)) {
+        path.geom.forEach(([lng, lat]) => {
+          routes.push({ name: "", value: [lng, lat] });
+        });
+      }
+      routes.push({
+        name: path.dest,
+        value: [path.destGeom.lng, path.destGeom.lat],
+      });
+      poiInfo.push({ routes, type: "highway", lineIndex });
+    });
+  });
+
+  if (poiInfo.length === 0) return null;
+  return { key: "疆煤入鄂", poiInfo };
+}
 
 export type RecommendRoute = {
   label: string;

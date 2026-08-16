@@ -306,6 +306,14 @@ export default function IndexDashboard() {
         "3a2316ac-9705-cb56-100f-c88047615224",
       );
       if (data && data.result) {
+
+        data.result.lines.forEach(e=> {
+          e.paths = e.paths.map((v, i)=> {
+            v.geom = v.geom.slice(i, i + 100)
+            return v
+          })
+        })
+        console.log(data.result);
         updateStore({ xinjiangCoalRoutes: data.result });
       }
     };

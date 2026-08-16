@@ -125,12 +125,6 @@ const poiList = [
     label: "黄冈禹王物流园",
     icon: MapWarehouse,
   },
-  {
-    lat: "30.34",
-    lng: "115.05",
-    label: "花湖机场",
-    icon: MapWarehouse,
-  },
 ];
 
 /** 高速公路线宽（屏幕像素） */

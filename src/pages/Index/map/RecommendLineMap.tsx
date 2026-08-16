@@ -103,15 +103,18 @@ import yunnanTexture from "@/assets/recommendLine/yunnan.png";
 import zhejiangTexture from "@/assets/recommendLine/zhejiang.png";
 import airPlaneIcon from "@/assets/air-plan.png";
 
+import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
+
 import {
   ALL_RECOMMEND_PROVINCE_IDS,
+  buildXinjiangCoalPoiEntry,
   poiData,
   type OutMapPlacement,
   type OutRecommendMapId,
   type ProvinceId,
   type RecommendMapId,
-  type RecommendPoiSegment,
   type RecommendRoute,
+  type XinjiangCoalPoiSegment,
 } from "../recommendLineRoutes";
 import ShapeBox from "./shape";
 import {
@@ -222,13 +225,24 @@ export const RECOMMEND_CHINA_THEME = {
   top: "#168f9f",
 } as const;
 
-/** 路线类型 → 虚线颜色（waterway 绿 / highway 蓝 / railway 红） */
-const ROUTE_TYPE_COLORS: Record<RecommendPoiSegment["type"], string> = {
-  waterway: "#2ecc71",
-  highway: "#2f8cff",
-  railway: "#ff4d4f",
-  airway: "#258bd6",
-};
+/**
+ * 逐条线路配色：同一线路内按 segment 索引循环取色，
+ * 使每条路径走向可用颜色区分。相邻色相差异大，深色地图背景上均清晰可辨。
+ */
+const POI_SEGMENT_COLORS = [
+  "#2f8cff", // 蓝
+  "#ff6b6b", // 红
+  "#2ecc71", // 绿
+  "#ffce4d", // 黄
+  "#c56cf0", // 紫
+  "#ff8c42", // 橙
+  "#1e90ff", // 亮蓝
+  "#ff69b4", // 粉
+  "#00e5a0", // 青绿
+  "#ff3d81", // 玫红
+  "#54a0ff", // 天蓝
+  "#f5cd79", // 米黄
+] as const;
 
 /** 普通节点外环（蓝） */
 const POI_RING_NORMAL = "#2f8cff";
@@ -1304,10 +1318,8 @@ function RouteSegment({
 
     if (showPlane && planeRef.current) {
       planeStartTimeRef.current ??= state.clock.elapsedTime;
-      const planeElapsed =
-        state.clock.elapsedTime - planeStartTimeRef.current;
-      const planeProgress =
-        (planeElapsed * AIR_PLANE_SPEED) % 1;
+      const planeElapsed = state.clock.elapsedTime - planeStartTimeRef.current;
+      const planeProgress = (planeElapsed * AIR_PLANE_SPEED) % 1;
       const position = curve.getPointAt(planeProgress);
       const tangent = curve.getTangentAt(planeProgress);
       planeRef.current.position.set(position.x, position.y, AIR_PLANE_Z);
@@ -1339,32 +1351,33 @@ function RouteSegment({
           />
         </sprite>
       )}
-      {showFlyDots && Array.from({ length: FLY_DOT_COUNT }, (_, index) => (
-        <group
-          key={index}
-          ref={(el) => {
-            flyDotRefs.current[index] = el;
-          }}
-        >
-          {/* 白色核心 */}
-          <mesh>
-            <sphereGeometry args={[0.085, 12, 12]} />
-            <meshBasicMaterial color="#ffffff" toneMapped={false} />
-          </mesh>
-          {/* 彩色光晕 */}
-          <mesh>
-            <sphereGeometry args={[0.22, 12, 12]} />
-            <meshBasicMaterial
-              color={color}
-              transparent
-              opacity={0.4}
-              blending={AdditiveBlending}
-              depthWrite={false}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-      ))}
+      {showFlyDots &&
+        Array.from({ length: FLY_DOT_COUNT }, (_, index) => (
+          <group
+            key={index}
+            ref={(el) => {
+              flyDotRefs.current[index] = el;
+            }}
+          >
+            {/* 白色核心 */}
+            <mesh>
+              <sphereGeometry args={[0.085, 12, 12]} />
+              <meshBasicMaterial color="#ffffff" toneMapped={false} />
+            </mesh>
+            {/* 彩色光晕 */}
+            <mesh>
+              <sphereGeometry args={[0.22, 12, 12]} />
+              <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={0.4}
+                blending={AdditiveBlending}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        ))}
     </group>
   );
 }
@@ -1378,22 +1391,38 @@ function RoutePoiLayer({
   route: RecommendRoute;
 }) {
   const isAirRoute = route.label === "楚天翼连";
+  const isXinjiangCoal = route.label === "疆煤入鄂";
+  // 疆煤入鄂使用接口动态数据（异步到达后自动重渲染），其余线路使用静态 poiData
+  const xinjiangCoalRoutes = useScreenBaseDataStore(
+    (s) => s.xinjiangCoalRoutes,
+  );
   const segments = useMemo(() => {
-    const poi = poiData.find((entry) => entry.key === route.label);
+    const poi =
+      route.label === "疆煤入鄂"
+        ? buildXinjiangCoalPoiEntry(xinjiangCoalRoutes)
+        : poiData.find((entry) => entry.key === route.label);
     if (!poi) return [];
 
-    return poi.poiInfo.map((segment) => {
+    return poi.poiInfo.map((segment, segmentIndex) => {
       const points = segment.routes.map((point) => ({
         name: point.name,
         position: bakePoiPoint(layout, point.value[0], point.value[1]),
       }));
       return {
         type: segment.type,
+        // 疆煤入鄂按 line 统一配色（同一 line 内所有 path 同色），
+        // 其余静态线路按 segment 依次取色，超出调色板后循环
+        color: isXinjiangCoal
+          ? POI_SEGMENT_COLORS[
+              (segment as XinjiangCoalPoiSegment).lineIndex %
+                POI_SEGMENT_COLORS.length
+            ]
+          : POI_SEGMENT_COLORS[segmentIndex % POI_SEGMENT_COLORS.length],
         points,
         positions: points.map((point) => point.position),
       };
     });
-  }, [layout, route.label]);
+  }, [isXinjiangCoal, layout, route.label, xinjiangCoalRoutes]);
 
   return (
     <>
@@ -1403,7 +1432,7 @@ function RoutePoiLayer({
         return (
           <group key={segmentIndex}>
             <RouteSegment
-              color={ROUTE_TYPE_COLORS[segment.type]}
+              color={segment.color}
               planeSize={AIR_PLANE_SIZE / layout.fitScale}
               points={segment.positions}
               showFlyDots={segment.type !== "airway"}
@@ -1425,9 +1454,7 @@ function RoutePoiLayer({
                 >
                   <PoiMarkerWrap>
                     <PoiNode $isWuhan={point.name === "武汉"} />
-                    <PoiLabel $isAirRoute={isAirRoute}>
-                      {point.name}
-                    </PoiLabel>
+                    <PoiLabel $isAirRoute={isAirRoute}>{point.name}</PoiLabel>
                   </PoiMarkerWrap>
                 </Html>
               );
