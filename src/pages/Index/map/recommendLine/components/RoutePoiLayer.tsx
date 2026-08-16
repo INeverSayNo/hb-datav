@@ -12,10 +12,11 @@ import {
 import { calculateMapHtmlPosition } from "../../threeShared";
 import {
   AIR_PLANE_SIZE,
+  POI_LINE_Z,
   POI_NODE_Z,
   POI_SEGMENT_COLORS,
 } from "../constants";
-import { bakePoiPoint } from "../routeLayout";
+import { bakePoiPoint, getRegionScaleAt } from "../routeLayout";
 import { PoiLabel, PoiMarkerWrap, PoiNode } from "../styled";
 import type { ProjectedRouteLayout } from "../types";
 import RouteSegment from "./RouteSegment";
@@ -34,7 +35,7 @@ function RoutePoiLayerBase({
   const xinjiangCoalRoutes = useScreenBaseDataStore(
     (s) => s.xinjiangCoalRoutes,
   );
-  const segments = useMemo(() => {
+    const segments = useMemo(() => {
     const poi =
       route.label === "疆煤入鄂"
         ? buildXinjiangCoalPoiEntry(xinjiangCoalRoutes)
@@ -42,9 +43,32 @@ function RoutePoiLayerBase({
     if (!poi) return [];
 
     return poi.poiInfo.map((segment, segmentIndex) => {
-      const points = segment.routes.map((point) => ({
+      // 先烘焙 xy 并记录各控制点所在区域 scale。
+      const bakedPoints = segment.routes.map((point) => {
+        const [x, y] = bakePoiPoint(layout, point.value[0], point.value[1]);
+        return {
+          name: point.name,
+          x,
+          y,
+          scale: getRegionScaleAt(layout, point.value[0], point.value[1]),
+        };
+      });
+      // 整条航线统一悬浮于所有途经区域顶面上方：线高/节点高都用最大
+      // scale 抬升，避免曲线在跨区域过渡段塌到高 scale 区域顶面之下
+      // （如楚天翼连中被放大 1.28 倍的中国地图，其顶面远高于周边小图）。
+      const lineScale = Math.max(...bakedPoints.map((point) => point.scale), 1);
+      const points = bakedPoints.map((point) => ({
         name: point.name,
-        position: bakePoiPoint(layout, point.value[0], point.value[1]),
+        position: [
+          point.x,
+          point.y,
+          POI_LINE_Z * lineScale,
+        ] as [number, number, number],
+        nodePosition: [
+          point.x,
+          point.y,
+          POI_NODE_Z * lineScale,
+        ] as [number, number, number],
       }));
       return {
         type: segment.type,
@@ -79,14 +103,14 @@ function RoutePoiLayerBase({
 
             {segment.points.map((point, pointIndex) => {
               if (!point.name) return null; // name 为空不显示节点图标
-              const [x, y] = point.position;
+              const [nodeX, nodeY, nodeZ] = point.nodePosition;
               return (
                 <Html
                   calculatePosition={calculateMapHtmlPosition}
                   key={`${point.name}-${pointIndex}`}
                   center
                   eps={0}
-                  position={[x, y, POI_NODE_Z]}
+                  position={[nodeX, nodeY, nodeZ]}
                   distanceFactor={22 / layout.fitScale}
                   zIndexRange={[30, 0]}
                 >

@@ -66,12 +66,45 @@ export const PoiNode = styled.div<{ $isWuhan?: boolean }>`
   }
 `;
 
-/** 节点名称：白底黑字。 */
+/** 标签上移后连接节点与标签的指向性线条（样式与 three.tsx 的 PoiLeader 一致）。 */
+export const PoiLeader = styled.i`
+  position: absolute;
+  top: var(--poi-leader-top, 0px);
+  left: 50%;
+  z-index: 1;
+  display: var(--poi-leader-display, none);
+  width: 4px;
+  height: var(--poi-leader-height, 0px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(143, 233, 255, 0.45),
+    rgba(85, 226, 255, 0.95)
+  );
+  box-shadow: 0 0 7px rgba(32, 219, 219, 0.75);
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -1px;
+    width: 9px;
+    height: 9px;
+    border-right: 3px solid #8fe9ff;
+    border-bottom: 3px solid #8fe9ff;
+    transform: translateX(-50%) rotate(45deg);
+  }
+`;
+
+/** 节点名称：白底黑字，碰撞时向上堆叠。 */
 export const PoiLabel = styled.span<{ $isAirRoute?: boolean }>`
   position: absolute;
   left: 50%;
   top: 17px;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(var(--poi-label-offset-y, 0px));
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
   background: #ffffff;
   color: #000000;
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;

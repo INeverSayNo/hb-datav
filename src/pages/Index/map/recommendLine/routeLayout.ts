@@ -200,11 +200,15 @@ export function getRouteLayout(route: RecommendRoute): ProjectedRouteLayout {
  * 将经纬度烘焙到中心组（position=[-center.x, -center.y]）局部坐标。
  * 优先选择包含该点的最小 bbox region 并应用其 transform，与 boundarySegments 的烘焙方式一致。
  */
-export function bakePoiPoint(
+/**
+ * 查找包含指定经纬度的最小 bbox 区域。
+ * 海面/无区域覆盖处返回 undefined，调用方按 scale=1 处理。
+ */
+function findRegionAt(
   layout: ProjectedRouteLayout,
   lng: number,
   lat: number,
-): [number, number] {
+): ProjectedMapRegion | undefined {
   const projection = getProjection();
   const [x, y] = projection([lng, lat])!;
   const point = new Vector2(x, -y);
@@ -220,11 +224,39 @@ export function bakePoiPoint(
       bestRegion = region;
     }
   });
+  return bestRegion;
+}
 
-  const transform = bestRegion?.transform;
+/**
+ * 将经纬度烘焙到中心组（position=[-center.x, -center.y]）局部坐标。
+ * 优先选择包含该点的最小 bbox region 并应用其 transform，与 boundarySegments 的烘焙方式一致。
+ */
+export function bakePoiPoint(
+  layout: ProjectedRouteLayout,
+  lng: number,
+  lat: number,
+): [number, number] {
+  const projection = getProjection();
+  const [x, y] = projection([lng, lat])!;
+  const point = new Vector2(x, -y);
+
+  const transform = findRegionAt(layout, lng, lat)?.transform;
   if (!transform) return [point.x, point.y];
   return [
     point.x * transform.scale + transform.position[0],
     point.y * transform.scale + transform.position[1],
   ];
+}
+
+/**
+ * 该经纬度所在区域的缩放比例（海面/无区域处按 1）。
+ * 区域 group 的 scale 会放大挤出体厚度（顶面 = MAP_DEPTH × scale），
+ * 飞线高度必须 ≥ 途经区域最大 scale 对应的顶面高度，才不会被遮盖。
+ */
+export function getRegionScaleAt(
+  layout: ProjectedRouteLayout,
+  lng: number,
+  lat: number,
+): number {
+  return findRegionAt(layout, lng, lat)?.transform?.scale ?? 1;
 }

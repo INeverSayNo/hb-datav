@@ -42,7 +42,7 @@ function RouteSegmentBase({
 }: {
   color: string;
   planeSize: number;
-  points: [number, number][];
+  points: [number, number, number][];
   showFlyDots: boolean;
   showPlane: boolean;
 }) {
@@ -87,7 +87,7 @@ function RouteSegmentBase({
       return;
     }
 
-    const pts = points.map(([x, y]) => new Vector3(x, y, POI_LINE_Z));
+      const pts = points.map(([x, y, z]) => new Vector3(x, y, z));
     const curve =
       pts.length === 2
         ? new LineCurve3(pts[0], pts[1])
@@ -184,7 +184,9 @@ function RouteSegmentBase({
       const planeProgress = (planeElapsed * AIR_PLANE_SPEED) % 1;
       const position = curve.getPointAt(planeProgress);
       const tangent = curve.getTangentAt(planeProgress);
-      planeRef.current.position.set(position.x, position.y, AIR_PLANE_Z);
+      // 沿曲线 z 再抬高固定增量（原 AIR_PLANE_Z - POI_LINE_Z = 0.15），
+      // 保证飞机始终悬浮于虚线之上。
+      planeRef.current.position.set(position.x, position.y, position.z + 0.15);
 
       // 原图机头朝上（+Y），因此相对曲线切线角度减去 90°。
       planeRef.current.material.rotation =
@@ -201,7 +203,7 @@ function RouteSegmentBase({
       {showPlane && (
         <sprite
           ref={planeRef}
-          position={[points[0][0], points[0][1], AIR_PLANE_Z]}
+          position={[points[0][0], points[0][1], points[0][2] + 0.15]}
           scale={[planeSize, planeSize, 1]}
           renderOrder={12}
         >
