@@ -12,6 +12,8 @@ export interface RuntimeRequestOptions {
   tokenPrefix: string;
   crypto: boolean;
   cryptoType: RuntimeCryptoType;
+  userName: string;
+  password: string
 }
 
 export interface RuntimeConfigFile {
@@ -55,6 +57,8 @@ const defaultRequestOptions: RuntimeRequestOptions = {
   tokenPrefix: "bearer ",
   crypto: false,
   cryptoType: "Ecdh",
+  userName: "13667184155",
+  password: "13667184155279"
 };
 
 const cryptoTypeValues = {

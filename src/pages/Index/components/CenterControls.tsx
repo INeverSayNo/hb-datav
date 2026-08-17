@@ -1,10 +1,11 @@
 import styled from "styled-components";
 
 import plannerImage from "@/assets/ai-solution-bg.png";
-import aiSolution from "@/assets/ai.png"
-import Modal from "@/components/modal"
+import aiSolution from "@/assets/ai.png";
+import Modal from "@/components/modal";
 import { useState } from "react";
-import { AI_SOLUTION_URL } from "@/axios-config/request";
+import { AI_SOLUTION_URL, runtimeConfig } from "@/axios-config/request";
+import { AccountLogin } from "@/api/modules/baseDataApi";
 
 const Center = styled.main`
   position: absolute;
@@ -79,7 +80,9 @@ const PlannerButton = styled.button`
   border: 0;
   background: transparent;
   cursor: pointer;
-  transition: filter 160ms ease, transform 160ms ease;
+  transition:
+    filter 160ms ease,
+    transform 160ms ease;
   display: flex;
   align-items: center;
   jusitify-content: cneter;
@@ -117,12 +120,49 @@ const PlannerAIText = styled.span`
   font-size: 36px;
   color: white;
   margin-left: 10px;
-`
+`;
 
+const ErrorTip = styled.div`
+  margin-top: 18px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 120, 120, 0.5);
+  background: rgba(120, 20, 35, 0.28);
+  color: #ffdfe5;
+  font-size: 24px;
+  line-height: 1.5;
+  border-radius: 8px;
+  text-align: center;
+`;
 
 export default function CenterControls() {
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiSolutionIframeUrl, setAiSolutionIframeUrl] = useState("");
+
+  let timer: any = null;
+  const openAiSolutionModal = async () => {
+    clearTimeout(timer);
+    setErrorMessage("");
+    setAiSolutionIframeUrl("");
+    const [err, data] = await AccountLogin({
+      username: runtimeConfig?.request.userName ?? "13667184155",
+      password: runtimeConfig?.request.password ?? "13667184155279",
+    });
+    if (!err && data && data.access_token) {
+      localStorage.setItem("JsToken", data.access_token);
+      setAiSolutionIframeUrl(AI_SOLUTION_URL + `?token=${data.access_token}`);
+      setAiModalOpen(true);
+    } else {
+      setErrorMessage(
+        "AI 物流规划师暂时无法打开，请稍后重试，或检查网络连接后再试。",
+      );
+      timer = setTimeout(() => {
+        setErrorMessage("");
+        clearTimeout(timer);
+      }, 2000);
+    }
+  };
 
   return (
     <Center>
@@ -135,17 +175,26 @@ export default function CenterControls() {
           />
           <SearchIcon src={searchIcon} alt="" />
         </SearchBox> */}
-        <PlannerButton type="button" aria-label="AI物流规划师" onClick={()=>setAiModalOpen(true)}>
+        <PlannerButton
+          type="button"
+          aria-label="AI物流规划师"
+          onClick={() => openAiSolutionModal()}
+        >
           <PlannerBackgroundImg src={plannerImage} alt="AI物流规划师" />
-          <PlannerAISolution src={aiSolution}/>
+          <PlannerAISolution src={aiSolution} />
           <PlannerAIText>AI 物流规划师</PlannerAIText>
         </PlannerButton>
       </Controls>
-      {aiModalOpen && (
-  <Modal open onClose={() => setAiModalOpen(false)}>
-    <iframe src={AI_SOLUTION_URL} title="AI物流规划师" style={{ width: "100%", height: "100%", border: 0 }} />
-  </Modal>
-)}
+      {errorMessage && <ErrorTip role="alert">{errorMessage}</ErrorTip>}
+      {aiModalOpen && aiSolutionIframeUrl && (
+        <Modal open onClose={() => setAiModalOpen(false)}>
+          <iframe
+            src={aiSolutionIframeUrl}
+            title="AI物流规划师"
+            style={{ width: "100%", height: "100%", border: 0 }}
+          />
+        </Modal>
+      )}
     </Center>
   );
 }

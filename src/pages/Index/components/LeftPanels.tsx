@@ -127,32 +127,6 @@ const FreightBadge = styled.img`
   margin-right: 38px;
 `;
 
-const TrendBadge = styled.div`
-  position: relative;
-  width: 146px;
-  height: 154px;
-  margin-right: 42px;
-  border: 5px solid rgba(39, 247, 237, 0.5);
-  clip-path: polygon(50% 0, 93% 24%, 93% 76%, 50% 100%, 7% 76%, 7% 24%);
-  background: radial-gradient(
-    circle,
-    rgba(0, 244, 226, 0.35),
-    rgba(4, 55, 62, 0.08)
-  );
-  box-shadow: inset 0 0 25px rgba(0, 255, 240, 0.3);
-
-  &::after {
-    content: "▥";
-    position: absolute;
-    inset: 26px 18px;
-    display: grid;
-    place-items: center;
-    color: #25fff1;
-    font-size: 78px;
-    line-height: 1;
-    text-shadow: 0 0 18px currentColor;
-  }
-`;
 
 const StatContent = styled.div`
   color: #d8e5ec;

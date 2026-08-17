@@ -141,7 +141,7 @@ const RAILWAY_WHITE = "#ffffff";
 /** 水运线宽（屏幕像素） */
 const WATERWAY_WIDTH = 12;
 /** 水运颜色 */
-const WATERWAY_COLOR = "#1e90ff";
+const WATERWAY_COLOR = "#0089f9";
 /** Drei Html 会在每个 POI 外创建独立 stacking context，两个区间必须互不重叠。 */
 const POI_LEADER_Z_INDEX_RANGE: [number, number] = [19, 0];
 const POI_LABEL_Z_INDEX_RANGE: [number, number] = [40, 20];

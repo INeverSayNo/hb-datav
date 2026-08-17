@@ -6,7 +6,9 @@
     "test": "https://zhwl.whisc.cn:60240"
   },
   "login_url": {
-    "development": "/login"
+    "development": "https://gateway.dczhiyun.com",
+    "production": "https://gateway.dczhiyun.com",
+    "test": "https://gateway.dczhiyun.com"
   },
   "file_url": {
     "development": ""
@@ -34,6 +36,8 @@
     "tokenKey": "JsToken",
     "tokenPrefix": "bearer ",
     "crypto": false,
-    "cryptoType": "Ecdh"
+    "cryptoType": "Ecdh",
+    "userName":"13667184155",
+    "password":"13667184155279"
   }
 }

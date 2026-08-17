@@ -62,15 +62,13 @@ function ConfigErrorScreen({ error }: { error: unknown }) {
   );
 }
 
+
+
+
+
 async function bootstrap() {
   try {
     await loadRuntimeConfig();
-
-    // const params = new URLSearchParams(window.location.search);
-    // const urlToken = params.get("token");
-    // if (urlToken) {
-    //   localStorage.setItem("JsToken", urlToken);
-    // }
 
     await BmapController.insertBMapEle();
     const { default: App } = await import("./App.tsx");
