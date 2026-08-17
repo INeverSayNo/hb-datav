@@ -10,6 +10,7 @@ import monitorHeaderBackground from "@/assets/monitor-header.png";
 interface DashboardHeaderProps {
   type: "monitor" | "home";
   title: string;
+  onBack?: () => void;
 }
 
 const iconName = new Map([
@@ -162,13 +163,26 @@ const Weather = styled.div`
   gap: 22px;
 `;
 
-const BackWrap = styled.div`
+const BackWrap = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
   position: absolute;
   top: 60px;
   left: 200px;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+
+  &:focus-visible {
+    outline: 3px solid rgba(111, 255, 210, 0.8);
+    outline-offset: 10px;
+  }
+
   span {
     font-size: 48px;
   }
@@ -197,6 +211,7 @@ function formatTime(date: Date) {
 export default function DashboardHeader({
   type = "home",
   title = "武汉多式联运服务中心",
+  onBack,
 }: DashboardHeaderProps) {
   const [now, setNow] = useState(() => new Date());
 
@@ -224,7 +239,7 @@ export default function DashboardHeader({
     const target = district || cityName;
     let cancelled = false;
     const fetchWeather = async () => {
-      const [_err, data] = await GetWeather(target);
+      const [, data] = await GetWeather(target);
       if (!cancelled && data && data.result) {
         setWeather(data.result);
       }
@@ -243,8 +258,8 @@ export default function DashboardHeader({
           运行稳定
         </Status>
       ) : (
-        <BackWrap>
-          <BackIcon src={BackHomeIcon} />
+        <BackWrap type="button" onClick={onBack} aria-label="返回首页">
+          <BackIcon src={BackHomeIcon} alt="" />
           <span>返回</span>
         </BackWrap>
       )}
