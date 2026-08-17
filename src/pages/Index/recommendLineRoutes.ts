@@ -620,6 +620,10 @@ export const poiData: RecommendPoiEntry[] = [
             value: [86.1459, 41.764],
           },
           {
+            name: "",
+            value: [102.29,33.37],
+          },
+          {
             name: "荆州",
             value: [112.2397, 30.3352],
           },
@@ -631,6 +635,10 @@ export const poiData: RecommendPoiEntry[] = [
           {
             name: "新疆",
             value: [86.1459, 41.764],
+          },
+          {
+            name: "",
+            value: [103.31,36.86],
           },
           {
             name: "安阳",
@@ -657,6 +665,22 @@ export const poiData: RecommendPoiEntry[] = [
           {
             name: "新疆",
             value: [86.1459, 41.764],
+          },
+          {
+            name: "",
+            value: [102.78,37.98],
+          },
+           {
+            name: "",
+            value: [104.16,37.28],
+          },
+          {
+            name: "",
+            value: [106.09,37.52],
+          },
+          {
+            name: "",
+            value: [114.21,37.40],
           },
           {
             name: "青岛",
@@ -709,6 +733,22 @@ export const poiData: RecommendPoiEntry[] = [
           {
             name: "新疆",
             value: [86.1459, 41.764],
+          },
+          {
+            name: "",
+            value: [97.54,36.72],
+          },
+          {
+            name: "",
+            value: [105.27,31.61],
+          },
+          {
+            name: "",
+            value: [108.12,30.45],
+          },
+          {
+            name: "",
+            value: [111.48,27.95],
           },
           {
             name: "佛山",

@@ -504,7 +504,7 @@ export default function IndexDashboard() {
             onRouteIntent={handleRouteIntent}
           />
         )}
-        <DashboardHeader />
+        <DashboardHeader type="home"/>
         <LeftPanels />
         <CenterControls />
         <RightPanels />

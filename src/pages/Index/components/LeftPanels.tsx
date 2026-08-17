@@ -13,6 +13,7 @@ import cyanRing from "@/assets/born-cyan-blue.png";
 import blueRing from "@/assets/horn-blue.png";
 import goldRing from "@/assets/horn-orage.png";
 import freightIcon from "@/assets/intermodal-statistics-volume.png";
+import countIcon from "@/assets/intermodal-statistics-count.png"
 import tooltipBg from "@/assets/intermodal-statistics-echart-num-bg.png";
 import riseArrow from "@/assets/intermodal-statistics-rise-arrow.png";
 import chartHeaderTitleIcon from "@/assets/intermodal-statistics-title-arrow.png";
@@ -21,7 +22,7 @@ import watewayIntermodalTransportUnCheck from "@/assets/wateway-intermodal-trans
 
 import { overviewMetrics, type OverviewMetric } from "../data";
 import SectionTitle from "./SectionTitle";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
 import { formatNumber } from "@/utils/num";
 
@@ -339,7 +340,7 @@ const ringByTone: Record<OverviewMetric["tone"], string> = {
   gold: goldRing,
 };
 
-function FreightChart({
+const FreightChart = memo(function FreightChart({
   items,
 }: {
   items: Array<{ month: string; teu: number }>;
@@ -422,7 +423,7 @@ function FreightChart({
       }}
     />
   );
-}
+})
 
 export default function LeftPanels() {
   const [activeTab, setActiveTab] = useState(0);
@@ -489,7 +490,8 @@ export default function LeftPanels() {
             </StatContent>
           </StatCard>
           <StatCard>
-            <TrendBadge aria-hidden="true" />
+            {/* <TrendBadge aria-hidden="true" /> */}
+            <FreightBadge src={countIcon} alt="" />
             <StatContent>
               <StatLabel>当期同比</StatLabel>
               <RisingWrap>

@@ -4,6 +4,12 @@ import AliIcon from "@/components/aliIcon";
 import { GetWeather } from "@/api/modules/baseDataApi";
 import { useConfigStore } from "@/store/useLocationStore";
 import type { WeatherInfo } from "@/types/weather";
+import BackHomeIcon from "@/assets/monitor-back.png";
+import monitorHeaderBackground from "@/assets/monitor-header.png"
+
+interface DashboardHeaderProps {
+  type: "monitor" | "home";
+}
 
 const iconName = new Map([
   [["晴"], "lieri"],
@@ -76,6 +82,33 @@ const StatusDot = styled.span`
   background: #31d372;
   border: 7px solid rgba(22, 118, 73, 0.82);
   box-shadow: 0 0 18px rgba(54, 255, 132, 0.72);
+  animation: breathe 1.8s ease-in-out infinite;
+  transform-origin: center;
+
+  @keyframes breathe {
+    0% {
+      transform: scale(0.96);
+      box-shadow:
+        0 0 10px rgba(54, 255, 132, 0.5),
+        0 0 18px rgba(54, 255, 132, 0.72);
+      opacity: 0.9;
+    }
+    50% {
+      transform: scale(1.12);
+      box-shadow:
+        0 0 16px rgba(54, 255, 132, 0.75),
+        0 0 28px rgba(54, 255, 132, 0.9),
+        0 0 42px rgba(54, 255, 132, 0.5);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(0.96);
+      box-shadow:
+        0 0 10px rgba(54, 255, 132, 0.5),
+        0 0 18px rgba(54, 255, 132, 0.72);
+      opacity: 0.9;
+    }
+  }
 `;
 
 const MainTitle = styled.h1`
@@ -126,6 +159,31 @@ const Weather = styled.div`
   gap: 22px;
 `;
 
+const BackWrap = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 60px;
+  left: 200px;
+  span {
+    font-size: 48px;
+  }
+`;
+
+const HeaderBg = styled.img`
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100%;
+  width: 100%
+`
+
+const BackIcon = styled.img`
+  width: 42px;
+  height: 42px;
+`;
+
 function formatTime(date: Date) {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
@@ -133,7 +191,9 @@ function formatTime(date: Date) {
   )} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function DashboardHeader() {
+export default function DashboardHeader({
+  type = "home",
+}: DashboardHeaderProps) {
   const [now, setNow] = useState(() => new Date());
 
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
@@ -173,10 +233,20 @@ export default function DashboardHeader() {
 
   return (
     <Header>
-      <Status>
-        <StatusDot />
-        运行稳定
-      </Status>
+      {type === "home" ? (
+        <Status>
+          <StatusDot />
+          运行稳定
+        </Status>
+      ) : (
+        <BackWrap>
+          <BackIcon src={BackHomeIcon} />
+          <span>返回</span>
+        </BackWrap>
+      )}
+      {
+        type === 'monitor' && <HeaderBg src={monitorHeaderBackground} />
+      }
       <MainTitle>武汉多式联运服务中心</MainTitle>
       <Environment>
         <time dateTime={now.toISOString()}>{formatTime(now)}</time>
