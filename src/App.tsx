@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 
 const Index = lazy(() => import("./pages/Index/index"));
 const Gallery = lazy(() => import("./pages/Gallery"));
+const DataMonitory = lazy(()=>import("./pages/DataMonitor"))
 
 function App() {
   const location = useLocation();
@@ -37,6 +38,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/gallery" element={<Gallery />} />
+        <Route path="/data-monitor" element={<DataMonitory />} />
       </Routes>
     </div>
   );
