@@ -5,10 +5,11 @@ import { GetWeather } from "@/api/modules/baseDataApi";
 import { useConfigStore } from "@/store/useLocationStore";
 import type { WeatherInfo } from "@/types/weather";
 import BackHomeIcon from "@/assets/monitor-back.png";
-import monitorHeaderBackground from "@/assets/monitor-header.png"
+import monitorHeaderBackground from "@/assets/monitor-header.png";
 
 interface DashboardHeaderProps {
   type: "monitor" | "home";
+  title: string;
 }
 
 const iconName = new Map([
@@ -111,11 +112,9 @@ const StatusDot = styled.span`
   }
 `;
 
-const MainTitle = styled.h1`
+const MainTitle = styled.h1<{ $type: DashboardHeaderProps["type"] }>`
   position: absolute;
-  left: 2033px;
   top: 62px;
-  width: 1534px;
   height: 118px;
   margin: 0;
   display: flex;
@@ -128,9 +127,14 @@ const MainTitle = styled.h1`
   letter-spacing: 18px;
   white-space: nowrap;
 
+  ${(props) => ({
+    left: props.$type === "monitor" ? "1887px" : "2033px",
+    width: props.$type === "monitor" ? "1834px" : "1534px",
+  })}
+
   color: rgba(255, 254, 254, 0);
-text-shadow: 0px 7px 0px rgba(0,0,0,0.19);
-background: linear-gradient(0deg, rgba(169,222,254,0.93) 0%, rgba(241,249,255,0.93) 38.7939453125%, rgba(255,251,251,0.93) 100%);
+// text-shadow: 0px 7px 0px rgba(0,0,0,0.19);
+background: linear-gradient(0deg, rgba(169,222,254,0.93) 0%, #ffffff 38.7939453125%, rgba(255,251,251,0.93) 100%);
 -webkit-background-clip: text;
 -webkit-text-fill-color: transparent;
 历史版本
@@ -175,8 +179,8 @@ const HeaderBg = styled.img`
   left: 0;
   right: 0;
   height: 100%;
-  width: 100%
-`
+  width: 100%;
+`;
 
 const BackIcon = styled.img`
   width: 42px;
@@ -192,6 +196,7 @@ function formatTime(date: Date) {
 
 export default function DashboardHeader({
   type = "home",
+  title = "武汉多式联运服务中心",
 }: DashboardHeaderProps) {
   const [now, setNow] = useState(() => new Date());
 
@@ -243,10 +248,8 @@ export default function DashboardHeader({
           <span>返回</span>
         </BackWrap>
       )}
-      {
-        type === 'monitor' && <HeaderBg src={monitorHeaderBackground} />
-      }
-      <MainTitle>武汉多式联运服务中心</MainTitle>
+      {type === "monitor" && <HeaderBg src={monitorHeaderBackground} />}
+      <MainTitle $type={type}>{title}</MainTitle>
       <Environment>
         <time dateTime={now.toISOString()}>{formatTime(now)}</time>
         <Weather>

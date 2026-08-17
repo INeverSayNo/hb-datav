@@ -32,8 +32,8 @@ const Title = styled.h3`
 const Grid = styled.div`
   margin-top: 24px;
   display: grid;
-      grid-template-columns: repeat(4, 1fr);
-    column-gap: 30px;
+  grid-template-columns: repeat(4, 1fr);
+  column-gap: 30px;
   row-gap: 24px;
   align-items: center;
 `;
@@ -45,13 +45,21 @@ const Item = styled.div`
   min-height: 48px;
 `;
 
-const ColorSwatch = styled.i<{ $color: string }>`
+const ColorSwatch = styled.i<{ $color: string; $length: number }>`
   flex: none;
+  display: inline-block;
   width: 34px;
-  height: 34px;
+  width: ${({ $length }) => ($length > 1 ? "17px" : "34px")};
+  height: 8px;
   border-radius: 3px;
   background: ${({ $color }) => $color};
 `;
+
+const ColorSwatchWrap = styled.p`
+  width: 34px;
+  height: 6px;
+  display: flex;
+`
 
 const PinIcon = styled.img`
   flex: none;
@@ -67,10 +75,10 @@ const Label = styled.span`
 `;
 
 const NETWORK_ITEMS = [
-  { label: "公路网", color: "#ffce4d" },
-  { label: "铁路网", color: "#d81e06" },
-  { label: "水运网", color: "#1e90ff" },
-  { label: "航空", color: "#e11ef2" },
+  { label: "公路网", color: ["#ffce4d"] },
+  { label: "铁路网", color: ["#848484", "#ffffff"] },
+  { label: "水运网", color: ["#0074d3", "#ffffff"] },
+  { label: "航空", color: ["#e11ef2"] },
 ];
 
 const NODE_ITEMS = [
@@ -87,7 +95,13 @@ export default function MapLegend() {
       <Grid>
         {NETWORK_ITEMS.map(({ label, color }) => (
           <Item key={label}>
-            <ColorSwatch $color={color} />
+            <ColorSwatchWrap>
+              {color.map((v, idx) => {
+                return (
+                  <ColorSwatch $color={v} $length={color.length} key={idx} />
+                );
+              })}
+            </ColorSwatchWrap>
             <Label>{label}</Label>
           </Item>
         ))}

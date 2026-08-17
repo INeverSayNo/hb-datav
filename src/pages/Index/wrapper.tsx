@@ -504,7 +504,7 @@ export default function IndexDashboard() {
             onRouteIntent={handleRouteIntent}
           />
         )}
-        <DashboardHeader type="home"/>
+        <DashboardHeader type="home" title="武汉多式联运服务中心"/>
         <LeftPanels />
         <CenterControls />
         <RightPanels />

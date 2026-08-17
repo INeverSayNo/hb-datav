@@ -188,7 +188,7 @@ const WATERWAY_EDGE_COLOR = "#0074d3";
 const WATERWAY_CENTER_COLOR = "#00b0d4";
 /** 中心虚线：demo 采样 #80c8e9 = 主线色上叠 50% 白，故用白色 + 0.5 透明度 */
 const WATERWAY_DASH_COLOR = "#ffffff";
-const WATERWAY_DASH_OPACITY = 0.5;
+const WATERWAY_DASH_OPACITY = 0.8;
 /**
  * 中心虚线的实线段 / 间隔长度（世界单位）。demo 中实线段约 0.7 倍、间隔约 1.0 倍
  * 主线粗细，按默认相机距离（约 102 px/世界单位）换算得到下面两个值。
