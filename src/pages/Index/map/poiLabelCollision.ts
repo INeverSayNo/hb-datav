@@ -9,6 +9,7 @@
  *   --poi-label-offset-y     标签向上平移量（marker 局部 CSS px）
  *   --poi-leader-display     none / block
  *   --poi-leader-top / --poi-leader-height  导引线位置与高度
+ * - 当 leaderMarkers 存在时，同步把导引线变量写入独立的低层级 marker
  *
  * 同时兼容两种布局：
  * - three.tsx：marker 为真实尺寸的流式 flex 布局
@@ -31,6 +32,7 @@ export const POI_LABEL_STACK_GAP = 6;
 export const POI_LABEL_MAX_LEVELS = 12;
 
 export type PoiLabelCollisionOptions = {
+  leaderMarkers?: Array<HTMLDivElement | null>;
   placement?: "above" | "below";
 };
 
@@ -45,12 +47,20 @@ function labelsOverlap(a: LabelScreenRect, b: LabelScreenRect) {
 
 export function resolvePoiLabelCollisions(
   markers: Array<HTMLDivElement | null>,
-  { placement = "above" }: PoiLabelCollisionOptions = {},
+  {
+    leaderMarkers,
+    placement = "above",
+  }: PoiLabelCollisionOptions = {},
 ) {
   const accepted: LabelScreenRect[] = [];
 
-  markers.forEach((marker) => {
+  markers.forEach((marker, markerIndex) => {
     if (!marker) return;
+
+    const setMarkerProperty = (property: string, value: string) => {
+      marker.style.setProperty(property, value);
+      leaderMarkers?.[markerIndex]?.style.setProperty(property, value);
+    };
 
     const icon = marker.querySelector<HTMLElement>("[data-poi-icon]");
     const label = marker.querySelector<HTMLElement>("[data-poi-label]");
@@ -111,7 +121,7 @@ export function resolvePoiLabelCollisions(
       }
     }
 
-    marker.style.setProperty("--poi-label-offset-y", `${offsetY}px`);
+    setMarkerProperty("--poi-label-offset-y", `${offsetY}px`);
     if (offsetY !== 0) {
       const isBelow = placement === "below";
       const labelEdge = isBelow
@@ -125,11 +135,11 @@ export function resolvePoiLabelCollisions(
         0,
         isBelow ? labelEdge - iconEdge : iconEdge - labelEdge,
       );
-      marker.style.setProperty("--poi-leader-display", "block");
-      marker.style.setProperty("--poi-leader-top", `${leaderTop}px`);
-      marker.style.setProperty("--poi-leader-height", `${leaderHeight}px`);
+      setMarkerProperty("--poi-leader-display", "block");
+      setMarkerProperty("--poi-leader-top", `${leaderTop}px`);
+      setMarkerProperty("--poi-leader-height", `${leaderHeight}px`);
     } else {
-      marker.style.setProperty("--poi-leader-display", "none");
+      setMarkerProperty("--poi-leader-display", "none");
     }
 
     accepted.push(candidate);

@@ -51,6 +51,7 @@ import MapWaterPort from "@/assets/map-waterway-port.png";
 import MapAirPort from "@/assets/map-airway.png";
 import MapRailwayStation from "@/assets/map-railway-station.png";
 import MapWarehouse from "@/assets/map-warehouse.png";
+import { resolvePoiLabelCollisions } from "./poiLabelCollision";
 
 const poiList = [
   {
@@ -141,10 +142,9 @@ const RAILWAY_WHITE = "#ffffff";
 const WATERWAY_WIDTH = 12;
 /** 水运颜色 */
 const WATERWAY_COLOR = "#1e90ff";
-const POI_LABEL_COLLISION_PADDING = 4;
-const POI_LABEL_ABOVE_GAP = 28;
-const POI_LABEL_STACK_GAP = 6;
-const POI_LABEL_MAX_LEVELS = 12;
+/** Drei Html 会在每个 POI 外创建独立 stacking context，两个区间必须互不重叠。 */
+const POI_LEADER_Z_INDEX_RANGE: [number, number] = [19, 0];
+const POI_LABEL_Z_INDEX_RANGE: [number, number] = [40, 20];
 
 const PoiMarker = styled.div`
   position: relative;
@@ -211,86 +211,16 @@ const PoiLeader = styled.i`
   }
 `;
 
-type LabelScreenRect = {
-  bottom: number;
-  left: number;
-  right: number;
-  top: number;
-};
-
-function labelsOverlap(a: LabelScreenRect, b: LabelScreenRect) {
-  return !(
-    a.right + POI_LABEL_COLLISION_PADDING <= b.left ||
-    a.left >= b.right + POI_LABEL_COLLISION_PADDING ||
-    a.bottom + POI_LABEL_COLLISION_PADDING <= b.top ||
-    a.top >= b.bottom + POI_LABEL_COLLISION_PADDING
-  );
-}
-
-function resolvePoiLabelCollisions(markers: Array<HTMLDivElement | null>) {
-  const accepted: LabelScreenRect[] = [];
-
-  markers.forEach((marker) => {
-    if (!marker || marker.offsetWidth === 0) return;
-
-    const icon = marker.querySelector<HTMLElement>("[data-poi-icon]");
-    const label = marker.querySelector<HTMLElement>("[data-poi-label]");
-    if (!icon || !label) return;
-
-    const markerRect = marker.getBoundingClientRect();
-    const screenScale = markerRect.width / marker.offsetWidth;
-    if (!Number.isFinite(screenScale) || screenScale <= 0) return;
-
-    const baseLeft = markerRect.left + label.offsetLeft * screenScale;
-    const baseTop = markerRect.top + label.offsetTop * screenScale;
-    const width = label.offsetWidth * screenScale;
-    const height = label.offsetHeight * screenScale;
-    let candidate: LabelScreenRect = {
-      bottom: baseTop + height,
-      left: baseLeft,
-      right: baseLeft + width,
-      top: baseTop,
-    };
-    let offsetY = 0;
-
-    if (accepted.some((other) => labelsOverlap(candidate, other))) {
-      const iconTop = markerRect.top + icon.offsetTop * screenScale;
-      const levelStep =
-        height +
-        POI_LABEL_COLLISION_PADDING +
-        POI_LABEL_STACK_GAP * screenScale;
-
-      for (let level = 0; level < POI_LABEL_MAX_LEVELS; level += 1) {
-        const candidateTop =
-          iconTop -
-          height -
-          POI_LABEL_ABOVE_GAP * screenScale -
-          level * levelStep;
-        candidate = {
-          bottom: candidateTop + height,
-          left: baseLeft,
-          right: baseLeft + width,
-          top: candidateTop,
-        };
-        offsetY = (candidateTop - baseTop) / screenScale;
-        if (!accepted.some((other) => labelsOverlap(candidate, other))) break;
-      }
-    }
-
-    marker.style.setProperty("--poi-label-offset-y", `${offsetY}px`);
-    if (offsetY < 0) {
-      const labelBottom = label.offsetTop + offsetY + label.offsetHeight;
-      const leaderHeight = Math.max(0, icon.offsetTop - labelBottom);
-      marker.style.setProperty("--poi-leader-display", "block");
-      marker.style.setProperty("--poi-leader-top", `${labelBottom}px`);
-      marker.style.setProperty("--poi-leader-height", `${leaderHeight}px`);
-    } else {
-      marker.style.setProperty("--poi-leader-display", "none");
-    }
-
-    accepted.push(candidate);
-  });
-}
+/**
+ * 连接线使用与可见 marker 完全相同的尺寸，确保两个 Html 根节点的 center
+ * 锚点一致；图标和文字只作为布局占位，不参与显示。
+ */
+const PoiLeaderMarker = styled(PoiMarker)`
+  > img,
+  > span {
+    visibility: hidden;
+  }
+`;
 
 type ProjectedCity = {
   name: string;
@@ -330,6 +260,7 @@ function MapMesh() {
   const demTexture = useTexture(hubeiDem);
   const sideMaterialRef = useRef<ThreeShaderMaterial>(null!);
   const poiMarkerRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const poiLeaderMarkerRefs = useRef<Array<HTMLDivElement | null>>([]);
   const collisionFramesRef = useRef(3);
   const lastCameraPositionRef = useRef(new Vector3());
   const lastCameraQuaternionRef = useRef<Quaternion | null>(null);
@@ -610,13 +541,17 @@ function MapMesh() {
       lastCanvasSizeRef.current[1] !== state.size.height;
     const markersReady =
       poiMarkerRefs.current.length === projected.pois.length &&
-      poiMarkerRefs.current.every(Boolean);
+      poiMarkerRefs.current.every(Boolean) &&
+      poiLeaderMarkerRefs.current.length === projected.pois.length &&
+      poiLeaderMarkerRefs.current.every(Boolean);
 
     if (cameraMoved || canvasResized) collisionFramesRef.current = 2;
     if (!markersReady) collisionFramesRef.current = 3;
 
     if (markersReady && collisionFramesRef.current > 0) {
-      resolvePoiLabelCollisions(poiMarkerRefs.current);
+      resolvePoiLabelCollisions(poiMarkerRefs.current, {
+        leaderMarkers: poiLeaderMarkerRefs.current,
+      });
       collisionFramesRef.current -= 1;
     }
 
@@ -676,12 +611,36 @@ function MapMesh() {
       {projected.pois.map((poi, poiIndex) => (
         <Html
           calculatePosition={calculateMapHtmlPosition}
-          key={`${poi.label}-${poiIndex}`}
+          key={`${poi.label}-${poiIndex}-leader`}
           center
           position={poi.position}
           distanceFactor={18}
           eps={0}
-          zIndexRange={[20, 0]}
+          zIndexRange={POI_LEADER_Z_INDEX_RANGE}
+        >
+          <PoiLeaderMarker
+            ref={(element) => {
+              poiLeaderMarkerRefs.current[poiIndex] = element;
+              collisionFramesRef.current = 3;
+            }}
+            aria-hidden="true"
+          >
+            <PoiLeader aria-hidden="true" />
+            <img src={poi.icon} alt="" />
+            <PoiTextLabel>{poi.label}</PoiTextLabel>
+          </PoiLeaderMarker>
+        </Html>
+      ))}
+
+      {projected.pois.map((poi, poiIndex) => (
+        <Html
+          calculatePosition={calculateMapHtmlPosition}
+          key={`${poi.label}-${poiIndex}-label`}
+          center
+          position={poi.position}
+          distanceFactor={18}
+          eps={0}
+          zIndexRange={POI_LABEL_Z_INDEX_RANGE}
         >
           <PoiMarker
             ref={(element) => {
@@ -689,12 +648,7 @@ function MapMesh() {
               collisionFramesRef.current = 3;
             }}
           >
-            <PoiLeader aria-hidden="true" />
-            <img
-              data-poi-icon
-              src={poi.icon}
-              alt={poi.label}
-            />
+            <img data-poi-icon src={poi.icon} alt={poi.label} />
             <PoiTextLabel data-poi-label>{poi.label}</PoiTextLabel>
           </PoiMarker>
         </Html>
@@ -708,7 +662,7 @@ function MapMesh() {
           position={city.center}
           distanceFactor={18}
           eps={0}
-          zIndexRange={[20, 0]}
+          zIndexRange={POI_LABEL_Z_INDEX_RANGE}
         >
           <MapLabel>{city.name}</MapLabel>
         </Html>
