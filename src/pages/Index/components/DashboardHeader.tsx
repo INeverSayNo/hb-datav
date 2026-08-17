@@ -127,16 +127,15 @@ const MainTitle = styled.h1`
   line-height: 1;
   letter-spacing: 18px;
   white-space: nowrap;
+
   color: rgba(255, 254, 254, 0);
-  text-shadow: 0px 7px 0px rgba(0, 0, 0, 0.19);
-  background: linear-gradient(
-    0deg,
-    rgba(169, 222, 254, 0.93) 0%,
-    rgba(241, 249, 255, 0.93) 38.7939453125%,
-    rgba(255, 251, 251, 0.93) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+text-shadow: 0px 7px 0px rgba(0,0,0,0.19);
+background: linear-gradient(0deg, rgba(169,222,254,0.93) 0%, rgba(241,249,255,0.93) 38.7939453125%, rgba(255,251,251,0.93) 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+历史版本
+全部
+
 `;
 
 const Environment = styled.div`

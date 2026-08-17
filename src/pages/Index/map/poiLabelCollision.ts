@@ -17,6 +17,8 @@
  * 横向中心统一取 icon 中心；纵向基准用 label.offsetTop（不含 transform），
  * 因此重复调用不会因上一次设置的 translateY 产生反馈漂移。
  * placement 默认为 above，Europe 小地图可显式传 below向节点下方堆叠。
+ * 传入 bounds 时改为「图外栏位」模式：标签一律排到地图轮廓之外，重叠则继续向外堆叠；
+ * 方向朝该 POI 横向区间上最近的那条轮廓边缘（也可用 placements 逐个覆盖）。
  */
 export type LabelScreenRect = {
   bottom: number;
@@ -30,10 +32,37 @@ export const POI_LABEL_ABOVE_GAP = 28;
 export const POI_LABEL_BELOW_GAP = 18;
 export const POI_LABEL_STACK_GAP = 6;
 export const POI_LABEL_MAX_LEVELS = 12;
+/** 图外栏位模式下，标签与地图外接框之间的留白（布局 px） */
+export const POI_LABEL_BOUNDS_GAP = 10;
+
+export type PoiLabelPlacement = "above" | "below";
+
+/**
+ * client 坐标系（getBoundingClientRect 同系）下的边界。
+ * map* 是地图整体的上下界，只用于 edgeAt 无解时兜底；view* 是画布，标签不得溢出。
+ */
+export type PoiLabelBounds = {
+  mapBottom: number;
+  mapTop: number;
+  viewBottom: number;
+  viewTop: number;
+  /**
+   * 查询横向区间 [left, right] 内地图轮廓的上下边界。
+   * 标签按自己那一段的本地边界出图，避免统一排到全局最高/最低点导致连线过长。
+   * 区间完全落在地图之外时返回 undefined。
+   */
+  edgeAt?: (
+    left: number,
+    right: number,
+  ) => { bottom: number; top: number } | undefined;
+};
 
 export type PoiLabelCollisionOptions = {
   leaderMarkers?: Array<HTMLDivElement | null>;
-  placement?: "above" | "below";
+  placement?: PoiLabelPlacement;
+  /** 逐 POI 指定方向；缺省项按 bounds 自动判定，无 bounds 时回落到 placement */
+  placements?: Array<PoiLabelPlacement | undefined>;
+  bounds?: PoiLabelBounds;
 };
 
 function labelsOverlap(a: LabelScreenRect, b: LabelScreenRect) {
@@ -50,6 +79,8 @@ export function resolvePoiLabelCollisions(
   {
     leaderMarkers,
     placement = "above",
+    placements,
+    bounds,
   }: PoiLabelCollisionOptions = {},
 ) {
   const accepted: LabelScreenRect[] = [];
@@ -60,6 +91,10 @@ export function resolvePoiLabelCollisions(
     const setMarkerProperty = (property: string, value: string) => {
       marker.style.setProperty(property, value);
       leaderMarkers?.[markerIndex]?.style.setProperty(property, value);
+    };
+    const setMarkerAttribute = (attribute: string, value: string) => {
+      marker.setAttribute(attribute, value);
+      leaderMarkers?.[markerIndex]?.setAttribute(attribute, value);
     };
 
     const icon = marker.querySelector<HTMLElement>("[data-poi-icon]");
@@ -86,44 +121,66 @@ export function resolvePoiLabelCollisions(
     const height = label.offsetHeight * screenScale;
     const baseLeft = iconCenterX - width / 2;
 
-    let candidate: LabelScreenRect = {
-      bottom: baseTop + height,
+    // 出图基准：优先用标签自己那一段的本地轮廓边界（连线最短），
+    // 该区间不覆盖地图时才退回全局上下界
+    const localEdge = bounds?.edgeAt?.(baseLeft, baseLeft + width);
+    const edgeTop = localEdge?.top ?? bounds?.mapTop ?? 0;
+    const edgeBottom = localEdge?.bottom ?? bounds?.mapBottom ?? 0;
+
+    // 方向：手动指定优先，其次朝最近的那条边出图
+    const iconCenterY = iconRect.top + iconRect.height / 2;
+    const autoPlacement: PoiLabelPlacement | undefined = bounds
+      ? edgeBottom - iconCenterY <= iconCenterY - edgeTop
+        ? "below"
+        : "above"
+      : undefined;
+    const markerPlacement =
+      placements?.[markerIndex] ?? autoPlacement ?? placement;
+    const isBelow = markerPlacement === "below";
+
+    const rectAt = (top: number): LabelScreenRect => ({
+      bottom: top + height,
       left: baseLeft,
       right: baseLeft + width,
-      top: baseTop,
+      top,
+    });
+    const levelStep =
+      height + POI_LABEL_COLLISION_PADDING + POI_LABEL_STACK_GAP * screenScale;
+    /** 第 level 级候选位置的 top，level 越大离节点/地图越远 */
+    const candidateTopAt = (level: number) => {
+      if (bounds) {
+        const gutter = POI_LABEL_BOUNDS_GAP * screenScale;
+        return isBelow
+          ? edgeBottom + gutter + level * levelStep
+          : edgeTop - gutter - height - level * levelStep;
+      }
+      return isBelow
+        ? iconRect.bottom + POI_LABEL_BELOW_GAP * screenScale + level * levelStep
+        : iconTop - height - POI_LABEL_ABOVE_GAP * screenScale - level * levelStep;
     };
+
+    let candidate = rectAt(baseTop);
     let offsetY = 0;
 
-    if (accepted.some((other) => labelsOverlap(candidate, other))) {
-      const levelStep =
-        height +
-        POI_LABEL_COLLISION_PADDING +
-        POI_LABEL_STACK_GAP * screenScale;
-
+    // 图外栏位模式下无论是否重叠都要挪出地图，否则沿用「原位不重叠就不动」
+    if (bounds || accepted.some((other) => labelsOverlap(candidate, other))) {
       for (let level = 0; level < POI_LABEL_MAX_LEVELS; level += 1) {
-        const candidateTop =
-          placement === "below"
-            ? iconRect.bottom +
-              POI_LABEL_BELOW_GAP * screenScale +
-              level * levelStep
-            : iconTop -
-              height -
-              POI_LABEL_ABOVE_GAP * screenScale -
-              level * levelStep;
-        candidate = {
-          bottom: candidateTop + height,
-          left: iconCenterX - width / 2,
-          right: iconCenterX + width / 2,
-          top: candidateTop,
-        };
+        const candidateTop = candidateTopAt(level);
+        const next = rectAt(candidateTop);
+        const insideView =
+          !bounds ||
+          (next.top >= bounds.viewTop && next.bottom <= bounds.viewBottom);
+        // 再往外就溢出画布了，退回上一级：宁可重叠也不要跑到屏幕外
+        if (!insideView && level > 0) break;
+        candidate = next;
         offsetY = (candidateTop - baseTop) / screenScale;
         if (!accepted.some((other) => labelsOverlap(candidate, other))) break;
       }
     }
 
+    setMarkerAttribute("data-poi-direction", isBelow ? "bottom" : "top");
     setMarkerProperty("--poi-label-offset-y", `${offsetY}px`);
     if (offsetY !== 0) {
-      const isBelow = placement === "below";
       const labelEdge = isBelow
         ? label.offsetTop + offsetY
         : label.offsetTop + offsetY + label.offsetHeight;

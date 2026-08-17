@@ -1,4 +1,4 @@
-import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
+import { Suspense, useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { Html, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { geoMercator } from "d3-geo";
@@ -6,9 +6,12 @@ import styled from "styled-components";
 import {
   Box2,
   BufferGeometry,
+  Color,
   EdgesGeometry,
   ExtrudeGeometry,
   Float32BufferAttribute,
+  InstancedInterleavedBuffer,
+  InterleavedBufferAttribute,
   MOUSE,
   Path,
   Quaternion,
@@ -18,6 +21,8 @@ import {
   TOUCH,
   Vector2,
   Vector3,
+  type Camera,
+  type Group,
   type ShaderMaterial as ThreeShaderMaterial,
 } from "three";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
@@ -52,13 +57,36 @@ import MapAirPort from "@/assets/map-airway.png";
 import MapRailwayStation from "@/assets/map-railway-station.png";
 import MapWarehouse from "@/assets/map-warehouse.png";
 import { resolvePoiLabelCollisions } from "./poiLabelCollision";
+import type {
+  PoiLabelBounds,
+  PoiLabelPlacement,
+} from "./poiLabelCollision";
 
-const poiList = [
+/** 标注连线方向：top 向上连接、bottom 向下连接 */
+type PoiDirection = "top" | "bottom";
+
+type PoiListItem = {
+  lat: string;
+  lng: string;
+  label: string;
+  icon: string;
+  /** 手动指定连线方向；缺省时朝距离该 POI 最近的那条地图边缘出图 */
+  direction?: PoiDirection;
+};
+
+const POI_PLACEMENT_BY_DIRECTION = {
+  top: "above",
+  bottom: "below",
+} as const satisfies Record<PoiDirection, PoiLabelPlacement>;
+
+const poiList: PoiListItem[] = [
   {
     lat: "30.2274",
     lng: "115.1620",
     label: "棋盘洲港区",
     icon: MapWaterPort,
+    direction: "bottom"
+
   },
   {
     lat: "30.4175",
@@ -83,6 +111,8 @@ const poiList = [
     lng: "114.8275",
     label: "唐家渡港区",
     icon: MapWaterPort,
+    direction: "bottom"
+
   },
   {
     lat: "30.6447",
@@ -114,12 +144,15 @@ const poiList = [
     lng: "115.05",
     label: "花湖机场",
     icon: MapAirPort,
+    direction: "bottom"
   },
   {
     lat: "30.6341",
     lng: "114.1172",
     label: "武汉传化公路港",
     icon: MapWarehouse,
+    direction: "bottom"
+
   },
   {
     lat: "30.5221",
@@ -132,19 +165,41 @@ const poiList = [
 /** 高速公路线宽（屏幕像素） */
 const HIGHWAY_WIDTH = 4;
 /** 铁路线宽（屏幕像素） */
-const RAILWAY_WIDTH = 12;
-/** 铁路红白交替的线段数量（每 8 个线段交替一次颜色） */
-const RAILWAY_SEGMENT_LENGTH = 2;
+const RAILWAY_WIDTH = 8;
+/**
+ * 铁路红白色块长度（世界单位，与投影后的坐标同尺度）。
+ * 按弧长而非源数据线段数切分，源数据点疏密不影响色块长度。
+ * 参考换算：相机距离 10~48 对应约 198~41 px/世界单位，
+ * 0.2 即最远约 8px、最近约 40px，需明显大于 RAILWAY_WIDTH 才不会被端帽糊住。
+ */
+const RAILWAY_DASH_LENGTH = 0.2;
 /** 铁路红/白两色 */
-const RAILWAY_RED = "#d81e06";
+const RAILWAY_RED = "#848484";
 const RAILWAY_WHITE = "#ffffff";
-/** 水运线宽（屏幕像素） */
+/** 水运主线宽（屏幕像素） */
 const WATERWAY_WIDTH = 12;
-/** 水运颜色 */
-const WATERWAY_COLOR = "#0089f9";
+/**
+ * 水运中心虚线宽（屏幕像素）。demo-line.png 实测虚线约为主线粗细的 1/5，
+ * 但本图主线只有 WATERWAY_WIDTH 像素，按 1/5 会细到走样，故取约 1/3。
+ */
+const WATERWAY_DASH_WIDTH = 4;
+/** 水运主线沿线渐变：两端 EDGE、中点 CENTER，对应 demo 的 #0074d3 → #00b0d4 → #0074d3 */
+const WATERWAY_EDGE_COLOR = "#0074d3";
+const WATERWAY_CENTER_COLOR = "#00b0d4";
+/** 中心虚线：demo 采样 #80c8e9 = 主线色上叠 50% 白，故用白色 + 0.5 透明度 */
+const WATERWAY_DASH_COLOR = "#ffffff";
+const WATERWAY_DASH_OPACITY = 0.5;
+/**
+ * 中心虚线的实线段 / 间隔长度（世界单位）。demo 中实线段约 0.7 倍、间隔约 1.0 倍
+ * 主线粗细，按默认相机距离（约 102 px/世界单位）换算得到下面两个值。
+ */
+const WATERWAY_DASH_LENGTH = 0.08;
+const WATERWAY_GAP_LENGTH = 0.12;
 /** Drei Html 会在每个 POI 外创建独立 stacking context，两个区间必须互不重叠。 */
 const POI_LEADER_Z_INDEX_RANGE: [number, number] = [19, 0];
 const POI_LABEL_Z_INDEX_RANGE: [number, number] = [40, 20];
+/** 地图轮廓采样点预算：省界外环 2000+ 点按此抽稀，够标签定位精度即可 */
+const MAP_SILHOUETTE_POINT_BUDGET = 600;
 
 const PoiMarker = styled.div`
   position: relative;
@@ -209,6 +264,21 @@ const PoiLeader = styled.i`
     border-bottom: 3px solid #8fe9ff;
     transform: translateX(-50%) rotate(45deg);
   }
+
+  /* 向下连接时整条线上下翻转：渐变亮端与箭头都要贴着节点那一侧 */
+  [data-poi-direction="bottom"] & {
+    background: linear-gradient(
+      to top,
+      rgba(143, 233, 255, 0.45),
+      rgba(85, 226, 255, 0.95)
+    );
+
+    &::after {
+      top: -1px;
+      bottom: auto;
+      transform: translateX(-50%) rotate(225deg);
+    }
+  }
 `;
 
 /**
@@ -232,33 +302,13 @@ type HighwayMultiLineString = {
   coordinates: [number, number][][];
 };
 
-/** 将一组线段顶点（6 个数 = 2 点 × 3 分量）构建为带像素线宽的 Line2 线对象 */
-function createLine(
-  positions: number[],
-  color: string,
-  width: number,
-  renderOrder: number,
-) {
-  const geometry = new LineSegmentsGeometry();
-  geometry.setPositions(positions);
-  const material = new LineMaterial({
-    color,
-    linewidth: width,
-    worldUnits: false,
-    toneMapped: false,
-    transparent: true,
-    opacity: 0.9,
-    depthWrite: false,
-  });
-  const line = new LineSegments2(geometry, material);
-  line.renderOrder = renderOrder;
-  line.raycast = () => {};
-  return line;
-}
+/** 投影地图轮廓点用的暂存向量，避免每帧分配 */
+const silhouetteProjection = new Vector3();
 
 function MapMesh() {
   const demTexture = useTexture(hubeiDem);
   const sideMaterialRef = useRef<ThreeShaderMaterial>(null!);
+  const mapGroupRef = useRef<Group>(null);
   const poiMarkerRefs = useRef<Array<HTMLDivElement | null>>([]);
   const poiLeaderMarkerRefs = useRef<Array<HTMLDivElement | null>>([]);
   const collisionFramesRef = useRef(3);
@@ -363,67 +413,131 @@ function MapMesh() {
     highwayLine.renderOrder = 14;
     highwayLine.raycast = () => {};
 
-    // 铁路线：红/白每 RAILWAY_SEGMENT_LENGTH（8）个线段交替渲染，色块等长
+    // 铁路线：沿弧长每 RAILWAY_DASH_LENGTH 切换红/白，色块严格等长。
+    // 红白必须合并进同一个对象、用顶点色区分：LineMaterial 会为每段线沿线方向
+    // 外扩 linewidth/2 画端帽，若拆成两个对象则后画的那色总是啃掉先画的那色，
+    // 缩得越小啃得越狠（色块屏幕长度接近线宽时直接被盖没）。合并后重叠只发生在
+    // 沿线相邻色块之间，红白对称各让一半，任何缩放下都保持 50/50。
     const railwayData = hubeiRailwayData as unknown as HighwayMultiLineString;
-    const railwayRedPositions: number[] = [];
-    const railwayWhitePositions: number[] = [];
+    const railwayPositions: number[] = [];
+    const railwayColors: number[] = [];
     const railwayZ = MAP_DEPTH + 0.085;
+    const railwayRedColor = new Color(RAILWAY_RED);
+    const railwayWhiteColor = new Color(RAILWAY_WHITE);
+    /** 浮点容差：避免切点恰好落在源数据顶点上时产生零长度线段 */
+    const EPSILON = 1e-9;
 
-    const railwaySegments: number[] = [];
     railwayData.coordinates.forEach((coordinates) => {
       if (coordinates.length < 2) return;
       let previous = project(coordinates[0]);
+      // 每条折线独立从红色色块起始
+      let isRed = true;
+      let dashRemaining = RAILWAY_DASH_LENGTH;
+
       for (let index = 1; index < coordinates.length; index += 1) {
         const current = project(coordinates[index]);
-        railwaySegments.push(
-          previous.x,
-          previous.y,
-          railwayZ,
-          current.x,
-          current.y,
-          railwayZ,
-        );
+        const segmentLength = previous.distanceTo(current);
+        if (segmentLength <= EPSILON) {
+          previous = current;
+          continue;
+        }
+
+        // 在当前源线段内部按剩余色块长度反复切分
+        let consumed = 0;
+        while (consumed < segmentLength - EPSILON) {
+          const step = Math.min(dashRemaining, segmentLength - consumed);
+          const startRatio = consumed / segmentLength;
+          const endRatio = (consumed + step) / segmentLength;
+          railwayPositions.push(
+            previous.x + (current.x - previous.x) * startRatio,
+            previous.y + (current.y - previous.y) * startRatio,
+            railwayZ,
+            previous.x + (current.x - previous.x) * endRatio,
+            previous.y + (current.y - previous.y) * endRatio,
+            railwayZ,
+          );
+          const color = isRed ? railwayRedColor : railwayWhiteColor;
+          // 一段线的首尾各一个颜色，保持纯色不渐变
+          railwayColors.push(
+            color.r,
+            color.g,
+            color.b,
+            color.r,
+            color.g,
+            color.b,
+          );
+
+          consumed += step;
+          dashRemaining -= step;
+          if (dashRemaining <= EPSILON) {
+            dashRemaining = RAILWAY_DASH_LENGTH;
+            isRed = !isRed;
+          }
+        }
+
         previous = current;
       }
     });
 
-    for (let index = 0; index < railwaySegments.length; index += 6) {
-      const isRed =
-        (index / 6) % (RAILWAY_SEGMENT_LENGTH * 2) < RAILWAY_SEGMENT_LENGTH;
-      const target = isRed ? railwayRedPositions : railwayWhitePositions;
-      target.push(
-        railwaySegments[index],
-        railwaySegments[index + 1],
-        railwaySegments[index + 2],
-        railwaySegments[index + 3],
-        railwaySegments[index + 4],
-        railwaySegments[index + 5],
-      );
-    }
+    const railwayGeometry = new LineSegmentsGeometry();
+    railwayGeometry.setPositions(railwayPositions);
+    railwayGeometry.setColors(railwayColors);
+    const railwayMaterial = new LineMaterial({
+      vertexColors: true,
+      linewidth: RAILWAY_WIDTH,
+      worldUnits: false,
+      toneMapped: false,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+    });
+    const railwayLine = new LineSegments2(railwayGeometry, railwayMaterial);
+    railwayLine.renderOrder = 15;
+    railwayLine.raycast = () => {};
 
-    const railwayRedLine = createLine(
-      railwayRedPositions,
-      RAILWAY_RED,
-      RAILWAY_WIDTH,
-      15,
-    );
-    const railwayWhiteLine = createLine(
-      railwayWhitePositions,
-      RAILWAY_WHITE,
-      RAILWAY_WIDTH,
-      16,
-    );
-
-    // 水运线：单一蓝色线条
+    // 水运线：主线沿线做 #0074d3 → #00b0d4 → #0074d3 渐变，中心叠一条半透明白虚线。
+    // 这里不需要像铁路那样重采样切段：渐变按累计弧长归一化取色、由顶点色插值得到，
+    // 虚线交给 LineMaterial 的 USE_DASH 分支在片元里按 instanceDistance 裁切，
+    // 两者都只跟弧长有关，源数据分段长短完全不影响观感。
     const waterwayData = hubeiWaterwayData as unknown as HighwayMultiLineString;
     const waterwayPositions: number[] = [];
+    const waterwayColors: number[] = [];
+    /** 每段起止的累计弧长，供虚线着色器裁切使用 */
+    const waterwayDistances: number[] = [];
     const waterwayZ = MAP_DEPTH + 0.09;
+    const waterwayEdgeColor = new Color(WATERWAY_EDGE_COLOR);
+    const waterwayCenterColor = new Color(WATERWAY_CENTER_COLOR);
+    const waterwayGradientColor = new Color();
+
+    /** 取归一化位置 t∈[0,1] 处的渐变色写入颜色缓冲（t=0.5 最亮，两端最暗） */
+    const pushWaterwayColor = (t: number) => {
+      waterwayGradientColor
+        .copy(waterwayEdgeColor)
+        .lerp(waterwayCenterColor, 1 - Math.abs(t * 2 - 1));
+      waterwayColors.push(
+        waterwayGradientColor.r,
+        waterwayGradientColor.g,
+        waterwayGradientColor.b,
+      );
+    };
 
     waterwayData.coordinates.forEach((coordinates) => {
       if (coordinates.length < 2) return;
-      let previous = project(coordinates[0]);
-      for (let index = 1; index < coordinates.length; index += 1) {
-        const current = project(coordinates[index]);
+      const points = coordinates.map(project);
+
+      // 先量出整条线的累计弧长，渐变才能按长度而非顶点序号归一化
+      const cumulative = [0];
+      for (let index = 1; index < points.length; index += 1) {
+        cumulative.push(
+          cumulative[index - 1] + points[index - 1].distanceTo(points[index]),
+        );
+      }
+      const total = cumulative[points.length - 1];
+      if (total <= EPSILON) return;
+
+      for (let index = 1; index < points.length; index += 1) {
+        const previous = points[index - 1];
+        const current = points[index];
         waterwayPositions.push(
           previous.x,
           previous.y,
@@ -432,16 +546,66 @@ function MapMesh() {
           current.y,
           waterwayZ,
         );
-        previous = current;
+        pushWaterwayColor(cumulative[index - 1] / total);
+        pushWaterwayColor(cumulative[index] / total);
+        // 每条线独立从 0 起算，保证都从实线段开头
+        waterwayDistances.push(cumulative[index - 1], cumulative[index]);
       }
     });
 
-    const waterwayLine = createLine(
-      waterwayPositions,
-      WATERWAY_COLOR,
-      WATERWAY_WIDTH,
-      17,
+    const waterwayGeometry = new LineSegmentsGeometry();
+    waterwayGeometry.setPositions(waterwayPositions);
+    waterwayGeometry.setColors(waterwayColors);
+    const waterwayMaterial = new LineMaterial({
+      vertexColors: true,
+      linewidth: WATERWAY_WIDTH,
+      worldUnits: false,
+      toneMapped: false,
+      transparent: true,
+      // 主线不透明，渐变才等于给定的 #0074d3/#00b0d4；虚线的 50% 白叠上去
+      // 正好还原 demo 采样到的 #80c8e9。transparent 仍保留以走 renderOrder 排序。
+      opacity: 1,
+      depthWrite: false,
+    });
+    const waterwayLine = new LineSegments2(waterwayGeometry, waterwayMaterial);
+    waterwayLine.renderOrder = 17;
+    waterwayLine.raycast = () => {};
+
+    // 中心虚线与主线共用顶点，只是额外挂上累计弧长属性（LineSegments2.computeLineDistances
+    // 会把 53 条线首尾串成一条连续距离，这里改为手写以保证每条线各自从 0 开始）。
+    const waterwayDashGeometry = new LineSegmentsGeometry();
+    waterwayDashGeometry.setPositions(waterwayPositions);
+    const waterwayDistanceBuffer = new InstancedInterleavedBuffer(
+      new Float32Array(waterwayDistances),
+      2,
+      1,
     );
+    waterwayDashGeometry.setAttribute(
+      "instanceDistanceStart",
+      new InterleavedBufferAttribute(waterwayDistanceBuffer, 1, 0),
+    );
+    waterwayDashGeometry.setAttribute(
+      "instanceDistanceEnd",
+      new InterleavedBufferAttribute(waterwayDistanceBuffer, 1, 1),
+    );
+    const waterwayDashMaterial = new LineMaterial({
+      color: WATERWAY_DASH_COLOR,
+      linewidth: WATERWAY_DASH_WIDTH,
+      dashed: true,
+      dashSize: WATERWAY_DASH_LENGTH,
+      gapSize: WATERWAY_GAP_LENGTH,
+      worldUnits: false,
+      toneMapped: false,
+      transparent: true,
+      opacity: WATERWAY_DASH_OPACITY,
+      depthWrite: false,
+    });
+    const waterwayDashLine = new LineSegments2(
+      waterwayDashGeometry,
+      waterwayDashMaterial,
+    );
+    waterwayDashLine.renderOrder = 18;
+    waterwayDashLine.raycast = () => {};
 
     const extruded = new ExtrudeGeometry(shapes, {
       depth: MAP_DEPTH,
@@ -483,7 +647,27 @@ function MapMesh() {
         label: poi.label,
         icon: poi.icon,
         position: new Vector3(x, -y, MAP_DEPTH + 0.2),
+        placement: poi.direction
+          ? POI_PLACEMENT_BY_DIRECTION[poi.direction]
+          : undefined,
       };
+    });
+
+    // 地图轮廓采样点（省界外环，顶面 + 底面各一份，把挤出侧面也算进轮廓），
+    // 每次解算碰撞时投影到屏幕，供标签按本地区间就近出图。
+    // 外环有 2000+ 点，按预算抽稀：标签宽度上百像素，几像素的轮廓精度已足够。
+    const silhouettePoints = shapes.flatMap((shape) => shape.getPoints());
+    const silhouetteStride = Math.max(
+      1,
+      Math.ceil(silhouettePoints.length / MAP_SILHOUETTE_POINT_BUDGET),
+    );
+    const mapSilhouette: Vector3[] = [];
+    silhouettePoints.forEach((point, index) => {
+      if (index % silhouetteStride !== 0) return;
+      mapSilhouette.push(
+        new Vector3(point.x, point.y, MAP_DEPTH),
+        new Vector3(point.x, point.y, 0),
+      );
     });
 
     return {
@@ -494,10 +678,11 @@ function MapMesh() {
       cityBoundaryGeometry,
       provinceEdgeGeometry,
       outlineRings,
+      mapSilhouette,
       highwayLine,
-      railwayRedLine,
-      railwayWhiteLine,
+      railwayLine,
       waterwayLine,
+      waterwayDashLine,
       pois,
     };
   }, []);
@@ -512,14 +697,84 @@ function MapMesh() {
     () => () => {
       projected.highwayLine.geometry.dispose();
       projected.highwayLine.material.dispose();
-      projected.railwayRedLine.geometry.dispose();
-      projected.railwayRedLine.material.dispose();
-      projected.railwayWhiteLine.geometry.dispose();
-      projected.railwayWhiteLine.material.dispose();
+      projected.railwayLine.geometry.dispose();
+      projected.railwayLine.material.dispose();
       projected.waterwayLine.geometry.dispose();
       projected.waterwayLine.material.dispose();
+      projected.waterwayDashLine.geometry.dispose();
+      projected.waterwayDashLine.material.dispose();
     },
     [projected],
+  );
+
+  const poiPlacements = useMemo(
+    () => projected.pois.map((poi) => poi.placement),
+    [projected.pois],
+  );
+
+  /** 轮廓投影结果缓存（client 坐标），长度固定，避免每次解算都分配 */
+  const silhouetteScreen = useMemo(
+    () => ({
+      x: new Float64Array(projected.mapSilhouette.length),
+      y: new Float64Array(projected.mapSilhouette.length),
+    }),
+    [projected.mapSilhouette],
+  );
+
+  /**
+   * 把地图轮廓采样点投影到 client 坐标系，得到标签的出图基准。
+   * 用 canvas 的 getBoundingClientRect 换算，AutoFit 的整页 CSS 缩放自动被吃掉。
+   * 返回的 edgeAt 让每个标签只按自己那一段横向区间的轮廓出图，
+   * 否则右侧 POI 会被统一排到全局最低/最高点，连线白白拉很长。
+   */
+  const measureMapBounds = useCallback(
+    (camera: Camera, canvas: HTMLCanvasElement): PoiLabelBounds | undefined => {
+      const group = mapGroupRef.current;
+      if (!group) return undefined;
+
+      const canvasRect = canvas.getBoundingClientRect();
+      if (canvasRect.height === 0) return undefined;
+
+      const { x: screenX, y: screenY } = silhouetteScreen;
+      let mapTop = Infinity;
+      let mapBottom = -Infinity;
+      projected.mapSilhouette.forEach((point, index) => {
+        silhouetteProjection
+          .copy(point)
+          .applyMatrix4(group.matrixWorld)
+          .project(camera);
+        const clientX =
+          canvasRect.left +
+          (silhouetteProjection.x * 0.5 + 0.5) * canvasRect.width;
+        const clientY =
+          canvasRect.top +
+          (0.5 - silhouetteProjection.y * 0.5) * canvasRect.height;
+        screenX[index] = clientX;
+        screenY[index] = clientY;
+        if (clientY < mapTop) mapTop = clientY;
+        if (clientY > mapBottom) mapBottom = clientY;
+      });
+
+      return {
+        mapBottom,
+        mapTop,
+        viewBottom: canvasRect.bottom,
+        viewTop: canvasRect.top,
+        edgeAt: (left, right) => {
+          let top = Infinity;
+          let bottom = -Infinity;
+          for (let index = 0; index < screenX.length; index += 1) {
+            const x = screenX[index];
+            if (x < left || x > right) continue;
+            const y = screenY[index];
+            if (y < top) top = y;
+            if (y > bottom) bottom = y;
+          }
+          return top === Infinity ? undefined : { bottom, top };
+        },
+      };
+    },
+    [projected.mapSilhouette, silhouetteScreen],
   );
 
   useFrame((state, delta) => {
@@ -551,6 +806,8 @@ function MapMesh() {
     if (markersReady && collisionFramesRef.current > 0) {
       resolvePoiLabelCollisions(poiMarkerRefs.current, {
         leaderMarkers: poiLeaderMarkerRefs.current,
+        placements: poiPlacements,
+        bounds: measureMapBounds(state.camera, state.gl.domElement),
       });
       collisionFramesRef.current -= 1;
     }
@@ -571,7 +828,10 @@ function MapMesh() {
   );
 
   return (
-    <group position={[-projected.center.x, -projected.center.y, 0]}>
+    <group
+      ref={mapGroupRef}
+      position={[-projected.center.x, -projected.center.y, 0]}
+    >
       <ShapeBox bbox={projected.bbox} args={extrudeArgs}>
         <TerrainTopMaterial attach="material-0" uMap={demTexture} />
         <TerrainSideMaterial
@@ -602,9 +862,9 @@ function MapMesh() {
       </lineSegments>
 
       <primitive object={projected.highwayLine} />
-      <primitive object={projected.railwayRedLine} />
-      <primitive object={projected.railwayWhiteLine} />
+      <primitive object={projected.railwayLine} />
       <primitive object={projected.waterwayLine} />
+      <primitive object={projected.waterwayDashLine} />
 
       <OutlineGlow rings={projected.outlineRings} />
 
