@@ -39,6 +39,9 @@ interface MonitorDataStore extends MonitorTable {
   setSnapshot: (payload: MonitorTable) => void;
   applyEvent: (event: MonitorSseEvent) => void;
   updateStore: (payload: Partial<MonitorTable>) => void;
+  updateSummary: (
+    payload: Record<"provider" | "shipper" | "wayBill", number>,
+  ) => void;
 }
 
 export const useMonitorData = create<MonitorDataStore>()(
@@ -92,10 +95,7 @@ export const useMonitorData = create<MonitorDataStore>()(
           const shouldAdjustSummary =
             (operation === "created" && existingIndex === -1) ||
             operation === "deleted";
-          if (
-            shouldAdjustSummary &&
-            event.dataType in summaryKeyByDataType
-          ) {
+          if (shouldAdjustSummary && event.dataType in summaryKeyByDataType) {
             const summaryKey =
               summaryKeyByDataType[
                 event.dataType as keyof typeof summaryKeyByDataType
@@ -114,6 +114,15 @@ export const useMonitorData = create<MonitorDataStore>()(
         });
       },
       updateStore: (payload) => set(payload),
+      updateSummary: (
+        payload: Record<"provider" | "shipper" | "wayBill", number>,
+      ) => {
+        set({
+          summary: {
+            ...payload,
+          },
+        });
+      },
     };
   }),
 );

@@ -324,7 +324,7 @@ const waybillColumns: LoopingTableColumn<MonitorWaybill>[] = [
   { title: "运单号", dataIndex: "waybillNo", width: 1.35 },
   { title: "客户", dataIndex: "shipperName", width: 1.2 },
   {
-    title: "起讫点(OD)",
+    title: "起讫点",
     render: (item) => `${item.origin}→${item.dest}`,
     width: 1,
   },

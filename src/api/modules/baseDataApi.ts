@@ -21,7 +21,7 @@ export function GetWeather(district: string) {
 }
 
 export function GetScreenBaseData() {
-  return baseApi.get<ScreenBaseData>("/api/resource/screen/hb/panel");
+  return baseApi.get<ScreenBaseData>("/api/resource/wh_screen/hb/panel");
 }
 
 export function GetXinjiangCoalRoutes(params: {

@@ -25,6 +25,7 @@ import SectionTitle from "./SectionTitle";
 import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
 import { useMemo } from "react";
 import { formatNumber } from "@/utils/num";
+import { useNavigate } from "react-router";
 
 const RightRail = styled.aside`
   position: absolute;
@@ -71,6 +72,7 @@ const ServiceItem = styled.div`
   display: flex;
   align-items: center;
   min-width: 0;
+  cursor: pointer;
 `;
 
 const ServiceIcon = styled.img`
@@ -136,6 +138,7 @@ const NodeItem = styled.div`
   display: flex;
   align-items: center;
   min-width: 0;
+  cursor: pointer;
 `;
 
 const NodeImage = styled.img`
@@ -309,26 +312,28 @@ const routeBackgrounds = [routeBlue, routeGreen, routeGold];
 const ROUTES_PER_GROUP = 3;
 
 export default function RightPanels() {
+  const navigator = useNavigate();
+
   const rightTopPanel = useScreenBaseDataStore((s) => s.rightTopPanel);
   const rightMiddlePanel = useScreenBaseDataStore((s) => s.rightMiddlePanel);
   const rightBottomPanel = useScreenBaseDataStore((s) => s.rightBottomPanel);
 
   const topServiceMetrics = useMemo(
-      () =>
-        serviceMetrics.map((metric) => ({
-          ...metric,
-          value: formatNumber(rightTopPanel[metric.key]),
-        })),
-      [rightTopPanel],
-    );
+    () =>
+      serviceMetrics.map((metric) => ({
+        ...metric,
+        value: formatNumber(rightTopPanel[metric.key]),
+      })),
+    [rightTopPanel],
+  );
   const middleNodeMetrics = useMemo(
-      () =>
-        nodeMetrics.map((metric) => ({
-          ...metric,
-          value: formatNumber(rightMiddlePanel[metric.key]),
-        })),
-      [rightMiddlePanel],
-    );
+    () =>
+      nodeMetrics.map((metric) => ({
+        ...metric,
+        value: formatNumber(rightMiddlePanel[metric.key]),
+      })),
+    [rightMiddlePanel],
+  );
   const routeGroups = useMemo(
     () =>
       Array.from(
@@ -349,7 +354,10 @@ export default function RightPanels() {
         <SectionTitle align="right">多式联运服务</SectionTitle>
         <ServiceGrid>
           {topServiceMetrics.map((metric, index) => (
-            <ServiceItem key={metric.label}>
+            <ServiceItem
+              key={metric.label}
+              onClick={() => navigator("/data-monitor")}
+            >
               <ServiceIcon src={serviceIcons[index]} alt="" />
               <MetricContent>
                 <ServiceValue>
@@ -367,7 +375,10 @@ export default function RightPanels() {
         <SectionTitle align="right">平台节点服务数据</SectionTitle>
         <NodeGrid>
           {middleNodeMetrics.map((metric, index) => (
-            <NodeItem key={metric.label}>
+            <NodeItem
+              key={metric.label}
+              onClick={() => navigator("/data-monitor")}
+            >
               <NodeImage src={nodeImages[index]} alt="" />
               <MetricContent>
                 <NodeItemBackground src={nodeServiceCardBg} />

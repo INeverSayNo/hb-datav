@@ -57,10 +57,7 @@ import MapAirPort from "@/assets/map-airway.png";
 import MapRailwayStation from "@/assets/map-railway-station.png";
 import MapWarehouse from "@/assets/map-warehouse.png";
 import { resolvePoiLabelCollisions } from "./poiLabelCollision";
-import type {
-  PoiLabelBounds,
-  PoiLabelPlacement,
-} from "./poiLabelCollision";
+import type { PoiLabelBounds, PoiLabelPlacement } from "./poiLabelCollision";
 
 /** 标注连线方向：top 向上连接、bottom 向下连接 */
 type PoiDirection = "top" | "bottom";
@@ -72,6 +69,7 @@ type PoiListItem = {
   icon: string;
   /** 手动指定连线方向；缺省时朝距离该 POI 最近的那条地图边缘出图 */
   direction?: PoiDirection;
+  color?: string;
 };
 
 const POI_PLACEMENT_BY_DIRECTION = {
@@ -79,64 +77,76 @@ const POI_PLACEMENT_BY_DIRECTION = {
   bottom: "below",
 } as const satisfies Record<PoiDirection, PoiLabelPlacement>;
 
+const waterwayPoiColor = "#398ef5";
+const railwayPoiColor = "#e2981e";
+const warehousePoiColor = "#339701";
+const airwayPoiColor = "#835dff";
+
 const poiList: PoiListItem[] = [
   {
     lat: "30.2274",
     lng: "115.1620",
     label: "棋盘洲港区",
     icon: MapWaterPort,
-    direction: "bottom"
-
+    direction: "bottom",
+    color: waterwayPoiColor,
   },
   {
     lat: "30.4175",
     lng: "111.2461",
     label: "云池/白洋港区",
     icon: MapWaterPort,
+    color: waterwayPoiColor,
   },
   {
     lat: "30.6628",
     lng: "114.5637",
     label: "阳逻港区",
     icon: MapWaterPort,
+    color: waterwayPoiColor,
   },
   {
     lat: "30.3147",
     lng: "112.2813",
     label: "盐卡港区",
     icon: MapWaterPort,
+    color: waterwayPoiColor,
   },
   {
     lat: "30.4963",
     lng: "114.8275",
     label: "唐家渡港区",
     icon: MapWaterPort,
-    direction: "bottom"
-
+    direction: "bottom",
+    color: waterwayPoiColor,
   },
   {
     lat: "30.6447",
     lng: "114.120",
     label: "吴家山站",
     icon: MapRailwayStation,
+    color: railwayPoiColor,
   },
   {
     lat: "30.6681",
     lng: "114.5496",
     label: "香炉山站",
     icon: MapRailwayStation,
+    color: railwayPoiColor,
   },
   {
     lat: "32.2074",
     lng: "112.2782",
     label: "襄州北站",
     icon: MapRailwayStation,
+    color: railwayPoiColor,
   },
   {
     lat: "30.6837",
     lng: "111.3401",
     label: "宜昌东站货场",
     icon: MapRailwayStation,
+    color: railwayPoiColor,
   },
 
   {
@@ -144,21 +154,23 @@ const poiList: PoiListItem[] = [
     lng: "115.05",
     label: "花湖机场",
     icon: MapAirPort,
-    direction: "bottom"
+    direction: "bottom",
+    color: airwayPoiColor,
   },
   {
     lat: "30.6341",
     lng: "114.1172",
     label: "武汉传化公路港",
     icon: MapWarehouse,
-    direction: "bottom"
-
+    direction: "bottom",
+    color: warehousePoiColor,
   },
   {
     lat: "30.5221",
     lng: "114.8742",
     label: "黄冈禹王物流园",
     icon: MapWarehouse,
+    color: warehousePoiColor,
   },
 ];
 
@@ -219,24 +231,26 @@ const PoiMarker = styled.div`
   }
 `;
 
-const PoiTextLabel = styled.span`
+const PoiTextLabel = styled.span<{ $color: string | undefined }>`
   position: relative;
   z-index: 2;
-  color: rgba(232, 250, 255, 0.95);
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
   font-size: 32px;
   line-height: 1;
   white-space: nowrap;
   border: 1px solid rgba(32, 219, 219, 0.35);
   border-radius: 10px;
-  background: #003a55c9;
   padding: 10px 14px;
   transform: translateY(var(--poi-label-offset-y, 0px));
   transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
+
+  ${(props) => ({
+    color: props.$color || "rgba(232, 250, 255, 0.95)",
+  })}
 `;
 
-const PoiLeader = styled.i`
+const PoiLeader = styled.i<{ $color: string | undefined }>`
   position: absolute;
   top: var(--poi-leader-top, 0px);
   left: 50%;
@@ -246,39 +260,19 @@ const PoiLeader = styled.i`
   height: var(--poi-leader-height, 0px);
   transform: translateX(-50%);
   pointer-events: none;
-  background: linear-gradient(
+  box-shadow: 0 0 7px rgba(32, 219, 219, 0.75);
+
+
+  
+  ${(props) => ({
+    background:
+      props.$color ||
+      `linear-gradient(
     to bottom,
     rgba(143, 233, 255, 0.45),
     rgba(85, 226, 255, 0.95)
-  );
-  box-shadow: 0 0 7px rgba(32, 219, 219, 0.75);
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: -1px;
-    width: 9px;
-    height: 9px;
-    border-right: 3px solid #8fe9ff;
-    border-bottom: 3px solid #8fe9ff;
-    transform: translateX(-50%) rotate(45deg);
-  }
-
-  /* 向下连接时整条线上下翻转：渐变亮端与箭头都要贴着节点那一侧 */
-  [data-poi-direction="bottom"] & {
-    background: linear-gradient(
-      to top,
-      rgba(143, 233, 255, 0.45),
-      rgba(85, 226, 255, 0.95)
-    );
-
-    &::after {
-      top: -1px;
-      bottom: auto;
-      transform: translateX(-50%) rotate(225deg);
-    }
-  }
+  )`,
+  })};
 `;
 
 /**
@@ -650,6 +644,7 @@ function MapMesh() {
         placement: poi.direction
           ? POI_PLACEMENT_BY_DIRECTION[poi.direction]
           : undefined,
+        color: poi.color,
       };
     });
 
@@ -787,9 +782,7 @@ function MapMesh() {
       lastCameraPositionRef.current.distanceToSquared(state.camera.position) >
         0.000001 ||
       1 -
-          Math.abs(
-            lastCameraQuaternionRef.current.dot(state.camera.quaternion),
-          ) >
+        Math.abs(lastCameraQuaternionRef.current.dot(state.camera.quaternion)) >
         0.000001;
     const canvasResized =
       lastCanvasSizeRef.current[0] !== state.size.width ||
@@ -885,9 +878,9 @@ function MapMesh() {
             }}
             aria-hidden="true"
           >
-            <PoiLeader aria-hidden="true" />
+            <PoiLeader aria-hidden="true" $color={poi.color} />
             <img src={poi.icon} alt="" />
-            <PoiTextLabel>{poi.label}</PoiTextLabel>
+            <PoiTextLabel $color={poi.color}>{poi.label}</PoiTextLabel>
           </PoiLeaderMarker>
         </Html>
       ))}
@@ -909,7 +902,9 @@ function MapMesh() {
             }}
           >
             <img data-poi-icon src={poi.icon} alt={poi.label} />
-            <PoiTextLabel data-poi-label>{poi.label}</PoiTextLabel>
+            <PoiTextLabel data-poi-label $color={poi.color}>
+              {poi.label}
+            </PoiTextLabel>
           </PoiMarker>
         </Html>
       ))}

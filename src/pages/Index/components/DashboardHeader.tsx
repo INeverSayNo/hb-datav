@@ -165,7 +165,7 @@ const Weather = styled.div`
 
 const BackWrap = styled.button`
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   position: absolute;
   top: 60px;
@@ -185,6 +185,7 @@ const BackWrap = styled.button`
 
   span {
     font-size: 48px;
+    margin-left: 20px;
   }
 `;
 

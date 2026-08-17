@@ -1,6 +1,10 @@
 import type { MonitorTable } from "@/types/monitor";
-import { type Rsp8, baseApi } from "../baseApi";
+import { baseApi } from "../baseApi";
 
 export function GetMonitorTable() {
-  return baseApi.get<Rsp8<MonitorTable>>("/api/resource/screen/hb/panel2");
+  return baseApi.get<MonitorTable>("/api/resource/wh_screen/hb/panel2");
+}
+
+export function GetMonitorTableStatics() {
+  return baseApi.get<Record<"provider"|"shipper"|"wayBill", number>>("/api/resource/wh_screen/hb/panel2s");
 }

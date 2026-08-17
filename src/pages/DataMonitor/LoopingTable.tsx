@@ -54,11 +54,12 @@ const Row = styled.div<{ $height: number; $padding: string }>`
   display: flex;
   align-items: center;
   height: ${({ $height }) => $height}px;
-  padding: ${({ $padding }) => $padding};
-  border-bottom: 2px solid rgba(19, 117, 128, 0.58);
+  margin: ${({ $padding }) => $padding};
+  border-bottom: 4px solid rgba(19, 117, 128, 0.58);
   color: #afc3cc;
   font-size: 36px;
   letter-spacing: 1px;
+  will-change: transform;
 `;
 
 const Cell = styled.div<{

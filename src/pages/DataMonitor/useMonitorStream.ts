@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
-import { GetMonitorTable } from "@/api/modules/monitorApi";
+import {
+  GetMonitorTable,
+  GetMonitorTableStatics,
+} from "@/api/modules/monitorApi";
 import { GATEWAY_URL } from "@/axios-config/request";
 import { useMonitorData } from "@/store/useMonitorData";
 import type {
@@ -45,9 +48,55 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function toCamelCaseKey(key: string): string {
+  if (!key) return key;
+  if (/^[A-Z0-9_]+$/.test(key)) return key.toLowerCase();
+  return key.charAt(0).toLowerCase() + key.slice(1);
+}
+
+function toCamelCaseKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(toCamelCaseKeys);
+  }
+  if (isRecord(value)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value)) {
+      result[toCamelCaseKey(key)] = toCamelCaseKeys(val);
+    }
+    return result;
+  }
+  return value;
+}
+
 function parseMonitorEvent(raw: string): MonitorSseEvent | null {
   try {
-    const value: unknown = JSON.parse(raw);
+    const start = raw.indexOf("{");
+    if (start === -1) return null;
+    let depth = 0;
+    let end = -1;
+    for (let index = start; index < raw.length; index += 1) {
+      const char = raw[index];
+      if (char === "{") {
+        depth += 1;
+      } else if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          end = index;
+          break;
+        }
+      }
+    }
+    if (end === -1) return null;
+
+    const parseData: any = toCamelCaseKeys(
+      JSON.parse(raw.slice(start, end + 1)),
+    );
+
+
+    if (!parseData || !parseData?.data) return null;
+
+    const value = parseData.data;
+
     if (!isRecord(value) || !isRecord(value.data)) return null;
     if (
       typeof value.eventId !== "string" ||
@@ -80,6 +129,7 @@ export function useMonitorStream() {
   const setLoading = useMonitorData((state) => state.setLoading);
   const setSnapshot = useMonitorData((state) => state.setSnapshot);
   const applyEvent = useMonitorData((state) => state.applyEvent);
+  const updateSummary = useMonitorData((state) => state.updateSummary);
   const lastEventIdRef = useRef("");
 
   useEffect(() => {
@@ -102,7 +152,7 @@ export function useMonitorStream() {
     const connect = () => {
       if (disposed) return;
       const url = new URL(
-        `/api/resource/screen/subscribe/${encodeURIComponent(clientId)}`,
+        `/api/resource/wh_screen/subscribe/${encodeURIComponent(clientId)}`,
         GATEWAY_URL,
       );
       if (lastEventIdRef.current) {
@@ -113,7 +163,7 @@ export function useMonitorStream() {
       source.onopen = () => {
         reconnectAttempts = 0;
       };
-      source.onmessage = (message) => {
+      source.onmessage = async (message) => {
         const event = parseMonitorEvent(message.data);
         if (!event) {
           console.warn("Ignored malformed monitor SSE event", message.data);
@@ -121,6 +171,10 @@ export function useMonitorStream() {
         }
         applyEvent(event);
         lastEventIdRef.current = event.eventId;
+        const [staticsErr, staticsData] = await GetMonitorTableStatics();
+        if (!staticsErr && staticsData) {
+          updateSummary(staticsData);
+        }
       };
       source.onerror = () => {
         source?.close();
@@ -133,8 +187,8 @@ export function useMonitorStream() {
       setLoading(true);
       const [error, response] = await GetMonitorTable();
       if (!disposed) {
-        if (!error && response?.result) {
-          setSnapshot(response.result);
+        if (!error && response) {
+          setSnapshot(response);
         } else {
           setLoading(false);
           if (error) console.error("Failed to load monitor snapshot", error);

@@ -4,14 +4,11 @@ import airwayIcon from "@/assets/map-airway.png";
 import railwayStationIcon from "@/assets/map-railway-station.png";
 import warehouseIcon from "@/assets/map-warehouse.png";
 import waterwayPortIcon from "@/assets/map-waterway-port.png";
+import NoticeBar from "./NoticeBar";
 
 // 位置与尺寸按 demo.png 图例面板换算到 5600x2320 设计稿坐标
 const Panel = styled.section`
-  position: absolute;
-  left: 1780px;
-  top: 1875px;
   width: 668px;
-  z-index: 3;
   padding: 22px 30px 28px;
   box-sizing: border-box;
   border: 2px solid rgba(126, 165, 180, 0.45);
@@ -59,7 +56,7 @@ const ColorSwatchWrap = styled.p`
   width: 34px;
   height: 6px;
   display: flex;
-`
+`;
 
 const PinIcon = styled.img`
   flex: none;
@@ -88,30 +85,45 @@ const NODE_ITEMS = [
   { label: "机场", icon: airwayIcon },
 ];
 
+const LegendPanel = styled.section`
+  position: absolute;
+  left: 1780px;
+  top: 1875px;
+  z-index: 3;
+  display: flex;
+  align-items: stretch;
+  gap: 28px;
+  max-width: 3200px;
+  pointer-events: none;
+`;
+
 export default function MapLegend() {
   return (
-    <Panel aria-label="地图图例">
-      <Title>图例</Title>
-      <Grid>
-        {NETWORK_ITEMS.map(({ label, color }) => (
-          <Item key={label}>
-            <ColorSwatchWrap>
-              {color.map((v, idx) => {
-                return (
-                  <ColorSwatch $color={v} $length={color.length} key={idx} />
-                );
-              })}
-            </ColorSwatchWrap>
-            <Label>{label}</Label>
-          </Item>
-        ))}
-        {NODE_ITEMS.map(({ label, icon }) => (
-          <Item key={label}>
-            <PinIcon src={icon} alt="" />
-            <Label>{label}</Label>
-          </Item>
-        ))}
-      </Grid>
-    </Panel>
+    <LegendPanel>
+      <Panel aria-label="地图图例">
+        <Title>图例</Title>
+        <Grid>
+          {NETWORK_ITEMS.map(({ label, color }) => (
+            <Item key={label}>
+              <ColorSwatchWrap>
+                {color.map((v, idx) => {
+                  return (
+                    <ColorSwatch $color={v} $length={color.length} key={idx} />
+                  );
+                })}
+              </ColorSwatchWrap>
+              <Label>{label}</Label>
+            </Item>
+          ))}
+          {NODE_ITEMS.map(({ label, icon }) => (
+            <Item key={label}>
+              <PinIcon src={icon} alt="" />
+              <Label>{label}</Label>
+            </Item>
+          ))}
+        </Grid>
+      </Panel>
+      <NoticeBar />
+    </LegendPanel>
   );
 }
