@@ -301,15 +301,15 @@ function formatUnitPrice(value: number, unit: string) {
 }
 
 const shipperColumns: LoopingTableColumn<MonitorShipper>[] = [
-  { title: "名称", dataIndex: "name", width: 1.2 },
-  { title: "联系人", dataIndex: "contact", width: 0.9 },
+  { title: "名称", dataIndex: "name", width:1.8 },
+  { title: "联系人", dataIndex: "contact", width: 0.6 },
   { title: "联系电话", dataIndex: "phone", width: 1.15 },
   { title: "托运方式", dataIndex: "method", width: 0.8 },
 ];
 
 const providerColumns: LoopingTableColumn<MonitorProvider>[] = [
-  { title: "名称", dataIndex: "name", width: 1.2 },
-  { title: "联系人", dataIndex: "contact", width: 0.9 },
+  { title: "名称", dataIndex: "name", width:1.8 },
+  { title: "联系人", dataIndex: "contact", width: 0.6 },
   { title: "联系电话", dataIndex: "phone", width: 1.15 },
   { title: "服务能力", dataIndex: "type", width: 0.8 },
 ];
@@ -320,20 +320,31 @@ const waybillColumns: LoopingTableColumn<MonitorWaybill>[] = [
   {
     title: "起讫点",
     render: (item) => `${item.origin}→${item.dest}`,
-    width: 1,
+    width: 1.2,
   },
   { title: "品名", dataIndex: "goodsName", width: 0.65 },
-  { title: "运载方式", dataIndex: "carriageMethod", width: 0.9 },
+  { title: "运载方式", dataIndex: "carriageMethod", width: 0.7 },
   { title: "运输方式", dataIndex: "transportType", width: 0.9 },
-  { title: "运价", render: (item) => formatMoney(item.price), width: 0.72 },
+  { title: "运价", render: (item) => formatMoney(item.price), width: 0.62 },
 ];
 
 const nodeColumns: LoopingTableColumn<MonitorNodeFlow>[] = [
-  { dataIndex: "terminal", width: 1.05 },
-  { dataIndex: "facility", width: 0.95 },
-  { dataIndex: "remark", width: 0.95 },
-  { dataIndex: "address", width: 1.75 },
-  { dataIndex: "providerName", width: 1.5 },
+  { title: "节点名称", dataIndex: "terminal", width: 1.05 },
+  { title: "节点归属", dataIndex: "facility", width: 0.95 },
+  {
+    title: "货物吞吐量",
+    dataIndex: "remark",
+    width: 1,
+    render: (item) => `${item.remark ? item.remark + "万吨/年" : "--"}`,
+  },
+  {
+    title: "集装箱吞吐量",
+    dataIndex: "remark1",
+    width: 1.1,
+    render: (item) => `${item.remark1 ? item.remark1 + "万TEU/年" : "--"}`,
+  },
+  { title: "地址", dataIndex: "address", width: 1.35 },
+  { title: "运营单位", dataIndex: "providerName", width: 1.3 },
 ];
 
 const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
@@ -345,7 +356,7 @@ const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
         <EventRoute>{`${item.origin}至${item.dest}`}</EventRoute>
         <EventGoods>品名:{item.goodsName}</EventGoods>
         <EventPrice>{formatUnitPrice(item.price, item.unit)}</EventPrice>
-        <EventTransit>{`时效要求:${item.transitBegin}-${item.transitEnd}天`}</EventTransit>
+        <EventTransit>{`时效要求:${Number(item.transitBegin).toFixed(0)}-${Number(item.transitEnd).toFixed(0)}天`}</EventTransit>
       </RequestLine>
     ),
   },
@@ -395,9 +406,7 @@ const stopLimitColumns: LoopingTableColumn<MonitorStopLimitLoading>[] = [
     title: "停限原因",
     width: 1.8,
     align: "center",
-    render: (item) => (
-      <StopLimitRason>{item.stopReason}</StopLimitRason>
-    ),
+    render: (item) => <StopLimitRason>{item.stopReason}</StopLimitRason>,
   },
 ];
 
@@ -455,31 +464,27 @@ function MonitorDashboard() {
             </SummaryCard>
           </SummaryGrid>
 
-          <Panel $height={560} $marginTop={32}>
-            <SectionTitle >
-              物流托运人
-            </SectionTitle>
+          <Panel $height={926} $marginTop={32}>
+            <SectionTitle>物流托运人</SectionTitle>
             <TableBody>
               <LoopingTable
                 data={shipperList}
                 columns={shipperColumns}
-                visibleRows={4}
-                rowHeight={98}
+                visibleRows={7}
+                rowHeight={108}
                 startDelay={1200}
               />
             </TableBody>
           </Panel>
 
-          <Panel $height={926} $marginTop={32}>
-            <SectionTitle >
-              物流多式联运服务商
-            </SectionTitle>
+          <Panel $height={560} $marginTop={32}>
+            <SectionTitle>物流多式联运服务商</SectionTitle>
             <TableBody>
               <LoopingTable
                 data={providerList}
                 columns={providerColumns}
-                visibleRows={7}
-                rowHeight={108}
+                visibleRows={4}
+                rowHeight={98}
                 startDelay={1800}
               />
             </TableBody>
@@ -501,16 +506,13 @@ function MonitorDashboard() {
           </Panel>
 
           <Panel $height={905} $marginTop={35}>
-            <SectionTitle >
-              重要物流节点流向
-            </SectionTitle>
+            <SectionTitle>重要物流节点</SectionTitle>
             <TableBody>
               <LoopingTable
                 data={nodeFlowList}
                 columns={nodeColumns}
-                visibleRows={5}
-                rowHeight={165}
-                showHeader={false}
+                visibleRows={7}
+                rowHeight={105}
                 startDelay={2400}
               />
             </TableBody>
@@ -535,9 +537,7 @@ function MonitorDashboard() {
           </Panel>
 
           <Panel $height={425} $marginTop={35}>
-            <SectionTitle >
-              实时公路运力
-            </SectionTitle>
+            <SectionTitle>实时公路运力</SectionTitle>
             <TableBody>
               <LoopingTable
                 data={transportCapacityList}

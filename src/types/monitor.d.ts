@@ -48,6 +48,7 @@ export interface MonitorNodeFlow {
   address: string;
   providerName: string;
   remark: string;
+  remark1: string
 }
 
 export interface MonitorRequestEvent {
