@@ -33,7 +33,6 @@ import {
   GetScreenBaseData,
   GetXinjiangCoalRoutes,
 } from "@/api/modules/baseDataApi";
-import { isPointInHubei } from "@/utils/geo";
 
 // 默认使用 three.js 三维地图，可通过 ?map=echarts 回退到 ECharts 版本。
 // 两者都用 lazy 加载：静态导入会把 three.js 和 echarts 一起拖进主 chunk。

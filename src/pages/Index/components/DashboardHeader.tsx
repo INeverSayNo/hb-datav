@@ -132,14 +132,10 @@ const MainTitle = styled.h1<{ $type: DashboardHeaderProps["type"] }>`
     left: props.$type === "monitor" ? "1887px" : "2033px",
     width: props.$type === "monitor" ? "1834px" : "1534px",
   })}
-
   color: rgba(255, 254, 254, 0);
-// text-shadow: 0px 7px 0px rgba(0,0,0,0.19);
 background: linear-gradient(0deg, rgba(169,222,254,0.93) 0%, #ffffff 38.7939453125%, rgba(255,251,251,0.93) 100%);
 -webkit-background-clip: text;
 -webkit-text-fill-color: transparent;
-历史版本
-全部
 
 `;
 
