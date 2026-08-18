@@ -465,6 +465,7 @@ function MonitorDashboard() {
                 columns={shipperColumns}
                 visibleRows={4}
                 rowHeight={98}
+                startDelay={1200}
               />
             </TableBody>
           </Panel>
@@ -479,6 +480,7 @@ function MonitorDashboard() {
                 columns={providerColumns}
                 visibleRows={7}
                 rowHeight={108}
+                startDelay={1800}
               />
             </TableBody>
           </Panel>
@@ -493,6 +495,7 @@ function MonitorDashboard() {
                 columns={waybillColumns}
                 visibleRows={7}
                 rowHeight={97}
+                scrollDirection="down"
               />
             </TableBody>
           </Panel>
@@ -508,6 +511,7 @@ function MonitorDashboard() {
                 visibleRows={5}
                 rowHeight={165}
                 showHeader={false}
+                startDelay={2400}
               />
             </TableBody>
           </Panel>
@@ -524,6 +528,8 @@ function MonitorDashboard() {
                 rowHeight={110}
                 showHeader={false}
                 rowPadding="0 34px"
+                scrollDirection="down"
+                startDelay={600}
               />
             </TableBody>
           </Panel>
