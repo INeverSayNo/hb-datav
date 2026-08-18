@@ -6,6 +6,9 @@ import { resolve } from "node:path";
 export default defineConfig({
   plugins: [react()],
   base: "/hb-datav/",
+  // 预计算的路网二进制（scripts/precompute-hb-map.mjs 产出）不在 Vite 默认的
+  // 资源后缀表里，显式登记后才能被 `?url` 导入并带上内容哈希。
+  assetsInclude: ["**/*.bin"],
   resolve: {
     alias: {
       "@": resolve("src"),
@@ -26,6 +29,11 @@ export default defineConfig({
           }
           if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
             return "vendor-react";
+          }
+          // tie-tools 带着 axios + elliptic/bn.js，不单独分桶会被并进
+          // DashboardHeader 的页面 chunk（约 895KB）且不被 modulepreload。
+          if (/[\\/]node_modules[\\/](@dczy[\\/]tie-tools|axios|elliptic|bn\.js)[\\/]/.test(id)) {
+            return "vendor-http";
           }
         },
       },

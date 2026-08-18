@@ -10,7 +10,7 @@ import {
 } from "three";
 import { Instance, Instances, useTexture } from "@react-three/drei";
 
-import guangquan01 from "@/assets/guangquan01.png";
+import guangquan01 from "@/assets/guangquan01.webp";
 
 export interface ConesProps {
   color?: Color;

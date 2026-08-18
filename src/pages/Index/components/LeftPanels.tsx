@@ -9,16 +9,16 @@ import {
 import type { ComposeOption } from "echarts/core";
 
 import Chart from "@/components/chart";
-import cyanRing from "@/assets/born-cyan-blue.png";
-import blueRing from "@/assets/horn-blue.png";
-import goldRing from "@/assets/horn-orage.png";
-import freightIcon from "@/assets/intermodal-statistics-volume.png";
-import countIcon from "@/assets/intermodal-statistics-count.png"
-import tooltipBg from "@/assets/intermodal-statistics-echart-num-bg.png";
-import riseArrow from "@/assets/intermodal-statistics-rise-arrow.png";
-import chartHeaderTitleIcon from "@/assets/intermodal-statistics-title-arrow.png";
-import watewayIntermodalTransportChecked from "@/assets/wateway-intermodal-transport-checked.png";
-import watewayIntermodalTransportUnCheck from "@/assets/wateway-intermodal-transport-uncheck.png";
+import cyanRing from "@/assets/born-cyan-blue.webp";
+import blueRing from "@/assets/horn-blue.webp";
+import goldRing from "@/assets/horn-orage.webp";
+import freightIcon from "@/assets/intermodal-statistics-volume.webp";
+import countIcon from "@/assets/intermodal-statistics-count.webp"
+import tooltipBg from "@/assets/intermodal-statistics-echart-num-bg.webp";
+import riseArrow from "@/assets/intermodal-statistics-rise-arrow.webp";
+import chartHeaderTitleIcon from "@/assets/intermodal-statistics-title-arrow.webp";
+import watewayIntermodalTransportChecked from "@/assets/wateway-intermodal-transport-checked.webp";
+import watewayIntermodalTransportUnCheck from "@/assets/wateway-intermodal-transport-uncheck.webp";
 
 import { overviewMetrics, type OverviewMetric } from "../data";
 import SectionTitle from "./SectionTitle";

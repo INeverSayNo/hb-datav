@@ -1,11 +1,12 @@
 import styled from "styled-components";
 
-import plannerImage from "@/assets/ai-solution-bg.png";
-import aiSolution from "@/assets/ai.png";
+import plannerImage from "@/assets/ai-solution-bg.webp";
+import aiSolution from "@/assets/ai.webp";
 import Modal from "@/components/modal";
 import { useState } from "react";
 import { AI_SOLUTION_URL, runtimeConfig } from "@/axios-config/request";
 import { AccountLogin } from "@/api/modules/baseDataApi";
+import { createPortal } from "react-dom";
 
 const Center = styled.main`
   position: absolute;
@@ -133,16 +134,56 @@ const ErrorTip = styled.div`
   border-radius: 8px;
   text-align: center;
 `;
+const FullscreenLoadingOverlay = styled.div<{ $visible: boolean }>`
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(4, 20, 30, 0.5);
+  backdrop-filter: blur(3px);
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  pointer-events: ${({ $visible }) => ($visible ? "auto" : "none")};
+  transition: opacity 240ms ease;
+`;
+const LoadingSpinner = styled.div`
+  width: 36px;
+  height: 36px;
+  border: 2px solid rgba(32, 219, 219, 0.18);
+  border-top-color: #20dbdb;
+  border-radius: 50%;
+  animation: map-spin 0.9s linear infinite;
+  box-shadow: 0 0 28px rgba(32, 219, 219, 0.35);
+
+  @keyframes map-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const LoadingText = styled.div`
+  color: rgba(232, 250, 255, 0.92);
+  font-size: 12px;
+  letter-spacing: 6px;
+  text-shadow: 0 0 4px rgba(32, 219, 219, 0.65);
+`;
 
 export default function CenterControls() {
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [isLoading, setLoading] = useState(false);
 
   const [aiSolutionIframeUrl, setAiSolutionIframeUrl] = useState("");
 
   let timer: any = null;
   const openAiSolutionModal = async () => {
     clearTimeout(timer);
+    setLoading(true);
     setErrorMessage("");
     setAiSolutionIframeUrl("");
     const [err, data] = await AccountLogin({
@@ -162,6 +203,10 @@ export default function CenterControls() {
         clearTimeout(timer);
       }, 2000);
     }
+  };
+
+  const onLoadIframe = () => {
+    setLoading(false);
   };
 
   return (
@@ -192,8 +237,16 @@ export default function CenterControls() {
             src={aiSolutionIframeUrl}
             title="AI物流规划师"
             style={{ width: "100%", height: "100%", border: 0 }}
+            onLoad={onLoadIframe}
           />
         </Modal>
+      )}
+      {createPortal(
+        <FullscreenLoadingOverlay $visible={isLoading}>
+          <LoadingSpinner />
+          <LoadingText>功能启动中</LoadingText>
+        </FullscreenLoadingOverlay>,
+        document.body,
       )}
     </Center>
   );

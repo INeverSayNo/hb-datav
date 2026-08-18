@@ -1,8 +1,8 @@
 import styled from "styled-components";
 
-import leftButton from "@/assets/network-button-bg.png";
-import activeButton from "@/assets/province-logistic-network.png";
-import rightButton from "@/assets/network-button-bg.png";
+import leftButton from "@/assets/network-button-bg.webp";
+import activeButton from "@/assets/province-logistic-network.webp";
+import rightButton from "@/assets/network-button-bg.webp";
 
 const Navigation = styled.nav`
   position: absolute;

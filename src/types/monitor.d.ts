@@ -77,6 +77,15 @@ export interface MonitorExceptionWarning {
   exceptionStatus: ExceptionTypeName;
 }
 
+export interface MonitorStopLimitLoading {
+  id: string;
+  stopReason: string;
+  restrictedDepartureStation: string;
+  stopEndDate: string;
+  stopStartDate: string;
+  station: string
+}
+
 /** 武汉第二屏（物流大屏）首屏数据。 */
 export interface MonitorTable {
   summary: MonitorSummary;
@@ -87,6 +96,7 @@ export interface MonitorTable {
   requestEventList: MonitorRequestEvent[];
   transportCapacityList: MonitorTransportCapacity[];
   exceptionWarningList: MonitorExceptionWarning[];
+  stopLimitLoadingList: MonitorStopLimitLoading[]
 }
 
 export interface MonitorDataTypeMap {
@@ -97,6 +107,7 @@ export interface MonitorDataTypeMap {
   "wh-request-event": MonitorRequestEvent;
   "wh-transport-capacity": MonitorTransportCapacity;
   "wh-exception-warning": MonitorExceptionWarning;
+  "wh-stop-limit-loading": MonitorStopLimitLoading;
 }
 
 export type MonitorDataType = keyof MonitorDataTypeMap;

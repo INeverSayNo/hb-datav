@@ -291,7 +291,7 @@ export function OutlineGlow({
 }
 
 /** 只在未就绪时挂载，触发后由父组件卸载以退订 useFrame。 */
-function FirstFrameProbe({ onFrame }: { onFrame: () => void }) {
+export function FirstFrameProbe({ onFrame }: { onFrame: () => void }) {
   useFrame(onFrame);
   return null;
 }

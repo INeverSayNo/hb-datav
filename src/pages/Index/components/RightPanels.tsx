@@ -1,24 +1,24 @@
 import styled, { keyframes } from "styled-components";
 
-import serviceIcon1 from "@/assets/intermodal-manufacturing-enterprise.png";
-import serviceIcon2 from "@/assets/intermodal-logistic-enterprise.png";
-import serviceIcon3 from "@/assets/intermodal-demand-count.png";
-import serviceIcon4 from "@/assets/intermodal-order-count.png";
-import serviceIcon5 from "@/assets/intermodal-order-total-price.png";
-import serviceIcon6 from "@/assets/intermodal-boutique-line.png";
+import serviceIcon1 from "@/assets/intermodal-manufacturing-enterprise.webp";
+import serviceIcon2 from "@/assets/intermodal-logistic-enterprise.webp";
+import serviceIcon3 from "@/assets/intermodal-demand-count.webp";
+import serviceIcon4 from "@/assets/intermodal-order-count.webp";
+import serviceIcon5 from "@/assets/intermodal-order-total-price.webp";
+import serviceIcon6 from "@/assets/intermodal-boutique-line.webp";
 
-import nodeImage1 from "@/assets/platform-node-logistic-park.png";
-import nodeImage2 from "@/assets/platform-node-highway.png";
-import nodeImage3 from "@/assets/platform-node-railway-privateline.png";
-import nodeImage4 from "@/assets/platform-node-waterway-port.png";
-import nodeImage5 from "@/assets/platform-node-railway-station.png";
-import nodeImage6 from "@/assets/platform-node-waterway-ship.png";
+import nodeImage1 from "@/assets/platform-node-logistic-park.webp";
+import nodeImage2 from "@/assets/platform-node-highway.webp";
+import nodeImage3 from "@/assets/platform-node-railway-privateline.webp";
+import nodeImage4 from "@/assets/platform-node-waterway-port.webp";
+import nodeImage5 from "@/assets/platform-node-railway-station.webp";
+import nodeImage6 from "@/assets/platform-node-waterway-ship.webp";
 
-import routeBlue from "@/assets/line-service-blue-bg.png";
-import routeGreen from "@/assets/line-service-cyan-blue-bg.png";
-import routeGold from "@/assets/line-service-orange-bg.png";
-import routeArrow from "@/assets/translate.png";
-import nodeServiceCardBg from "@/assets/platform-node-service-card-bg.png";
+import routeBlue from "@/assets/line-service-blue-bg.webp";
+import routeGreen from "@/assets/line-service-cyan-blue-bg.webp";
+import routeGold from "@/assets/line-service-orange-bg.webp";
+import routeArrow from "@/assets/translate.webp";
+import nodeServiceCardBg from "@/assets/platform-node-service-card-bg.webp";
 
 import { nodeMetrics, serviceMetrics } from "../data";
 import SectionTitle from "./SectionTitle";

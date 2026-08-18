@@ -1,4 +1,12 @@
-import { Suspense, useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Html, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { geoMercator } from "d3-geo";
@@ -6,12 +14,9 @@ import styled from "styled-components";
 import {
   Box2,
   BufferGeometry,
-  Color,
   EdgesGeometry,
   ExtrudeGeometry,
   Float32BufferAttribute,
-  InstancedInterleavedBuffer,
-  InterleavedBufferAttribute,
   MOUSE,
   Path,
   Quaternion,
@@ -25,20 +30,10 @@ import {
   type Group,
   type ShaderMaterial as ThreeShaderMaterial,
 } from "three";
-import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
-import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
-import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 
-import hubeiHighwayData from "@/assets/hb-highway.json";
-import hubeiRailwayData from "@/assets/hb-railway.json";
-import hubeiWaterwayData from "@/assets/hb-waterway.json";
-
-import hubeiMapData from "@/assets/hb.json";
-import hubeiOutlineData from "@/assets/hb_outline.json";
-import hubeiDem from "@/assets/hb_dem.webp";
-import type { CityGeoJSON } from "@/types/map";
-import ShapeBox, { type ShapeProps } from "./shape";
+import ShapeBox from "./shape";
 import {
+  FirstFrameProbe,
   GLOW_EMISSIVE_COLOR,
   MAP_DEPTH,
   MAP_EXTRUDE_OPTIONS,
@@ -52,10 +47,18 @@ import {
   calculateMapHtmlPosition,
   useControlSpeed,
 } from "./threeShared";
-import MapWaterPort from "@/assets/map-waterway-port.png";
-import MapAirPort from "@/assets/map-airway.png";
-import MapRailwayStation from "@/assets/map-railway-station.png";
-import MapWarehouse from "@/assets/map-warehouse.png";
+import { HB_MAP_BBOX, HB_PROJECTION_CENTER } from "./hbProjection.generated";
+import {
+  hbDemLowUrl,
+  loadHubeiBaseGeo,
+  loadHubeiFullDem,
+  type HubeiBaseGeo,
+} from "./threeResources";
+import RoadNetwork from "./threeRoadNetwork";
+import MapWaterPort from "@/assets/map-waterway-port.webp";
+import MapAirPort from "@/assets/map-airway.webp";
+import MapRailwayStation from "@/assets/map-railway-station.webp";
+import MapWarehouse from "@/assets/map-warehouse.webp";
 import { resolvePoiLabelCollisions } from "./poiLabelCollision";
 import type { PoiLabelBounds, PoiLabelPlacement } from "./poiLabelCollision";
 
@@ -174,39 +177,6 @@ const poiList: PoiListItem[] = [
   },
 ];
 
-/** 高速公路线宽（屏幕像素） */
-const HIGHWAY_WIDTH = 4;
-/** 铁路线宽（屏幕像素） */
-const RAILWAY_WIDTH = 8;
-/**
- * 铁路红白色块长度（世界单位，与投影后的坐标同尺度）。
- * 按弧长而非源数据线段数切分，源数据点疏密不影响色块长度。
- * 参考换算：相机距离 10~48 对应约 198~41 px/世界单位，
- * 0.2 即最远约 8px、最近约 40px，需明显大于 RAILWAY_WIDTH 才不会被端帽糊住。
- */
-const RAILWAY_DASH_LENGTH = 0.2;
-/** 铁路红/白两色 */
-const RAILWAY_RED = "#848484";
-const RAILWAY_WHITE = "#ffffff";
-/** 水运主线宽（屏幕像素） */
-const WATERWAY_WIDTH = 12;
-/**
- * 水运中心虚线宽（屏幕像素）。demo-line.png 实测虚线约为主线粗细的 1/5，
- * 但本图主线只有 WATERWAY_WIDTH 像素，按 1/5 会细到走样，故取约 1/3。
- */
-const WATERWAY_DASH_WIDTH = 4;
-/** 水运主线沿线渐变：两端 EDGE、中点 CENTER，对应 demo 的 #0074d3 → #00b0d4 → #0074d3 */
-const WATERWAY_EDGE_COLOR = "#0074d3";
-const WATERWAY_CENTER_COLOR = "#00b0d4";
-/** 中心虚线：demo 采样 #80c8e9 = 主线色上叠 50% 白，故用白色 + 0.5 透明度 */
-const WATERWAY_DASH_COLOR = "#ffffff";
-const WATERWAY_DASH_OPACITY = 0.8;
-/**
- * 中心虚线的实线段 / 间隔长度（世界单位）。demo 中实线段约 0.7 倍、间隔约 1.0 倍
- * 主线粗细，按默认相机距离（约 102 px/世界单位）换算得到下面两个值。
- */
-const WATERWAY_DASH_LENGTH = 0.08;
-const WATERWAY_GAP_LENGTH = 0.12;
 /** Drei Html 会在每个 POI 外创建独立 stacking context，两个区间必须互不重叠。 */
 const POI_LEADER_Z_INDEX_RANGE: [number, number] = [19, 0];
 const POI_LABEL_Z_INDEX_RANGE: [number, number] = [40, 20];
@@ -291,16 +261,13 @@ type ProjectedCity = {
   center: Vector3;
 };
 
-type HighwayMultiLineString = {
-  type: "MultiLineString";
-  coordinates: [number, number][][];
-};
-
 /** 投影地图轮廓点用的暂存向量，避免每帧分配 */
 const silhouetteProjection = new Vector3();
 
-function MapMesh() {
-  const demTexture = useTexture(hubeiDem);
+function MapMesh({ baseGeo }: { baseGeo: HubeiBaseGeo }) {
+  // 低清 DEM（1414×904，约 147KB）先上屏；全清那张 2.6MB 在首帧之后命令式换入。
+  const demTexture = useTexture(hbDemLowUrl);
+  const topMaterialRef = useRef<ThreeShaderMaterial>(null!);
   const sideMaterialRef = useRef<ThreeShaderMaterial>(null!);
   const mapGroupRef = useRef<Group>(null);
   const poiMarkerRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -311,18 +278,23 @@ function MapMesh() {
   const lastCanvasSizeRef = useRef<[number, number]>([0, 0]);
 
   const projected = useMemo(() => {
-    const mapData = hubeiMapData as CityGeoJSON;
-    const outlineData = hubeiOutlineData as CityGeoJSON;
+    const mapData = baseGeo.cities;
+    const outlineData = baseGeo.outline;
     const projection = geoMercator()
-      .center(outlineData.features[0].properties.centroid)
+      .center(HB_PROJECTION_CENTER)
       .translate([0, 0]);
-    const bbox = new Box2();
+
+    // bbox 是构建期算好的常量（scripts/precompute-hb-map.mjs），不再由 project()
+    // 累积。原先铁路和水路也参与撑大 bbox，而 bbox 决定 DEM 贴图的 UV
+    // （shape.tsx），把它们延后加载就会让贴图先小后大跳一下。
+    const bbox = new Box2(
+      new Vector2(HB_MAP_BBOX.minX, HB_MAP_BBOX.minY),
+      new Vector2(HB_MAP_BBOX.maxX, HB_MAP_BBOX.maxY),
+    );
 
     const project = (coordinate: number[]) => {
       const [x, y] = projection(coordinate as [number, number])!;
-      const point = new Vector2(x, -y);
-      bbox.expandByPoint(point);
-      return point;
+      return new Vector2(x, -y);
     };
 
     const shapes: Shape[] = [];
@@ -368,250 +340,23 @@ function MapMesh() {
       new Float32BufferAttribute(boundaryPositions, 3),
     );
 
-    const highwayData = hubeiHighwayData as unknown as HighwayMultiLineString;
-    const highwaySegmentCount = highwayData.coordinates.reduce(
-      (total, coordinates) => total + Math.max(0, coordinates.length - 1),
-      0,
-    );
-    const highwayPositions = new Float32Array(highwaySegmentCount * 6);
-    let highwayPositionOffset = 0;
+    // 挤出体只建一份：省界侧面/顶面用它渲染，省界描边从它派生 EdgesGeometry。
+    // （原先这里另建了一份一次性的只为喂 EdgesGeometry。这些 Shape 全由多边形顶点
+    // 构造，都是 LineCurve，curveSegments 对直线段无作用，所以两份三角化结果本就
+    // 逐顶点相同 —— 纯属白算一遍。）
+    const provinceGeometry = new ExtrudeGeometry(shapes, MAP_EXTRUDE_OPTIONS);
+    const provinceEdgeGeometry = new EdgesGeometry(provinceGeometry, 18);
 
-    highwayData.coordinates.forEach((coordinates) => {
-      if (coordinates.length < 2) return;
-      let [previousX, previousY] = projection(coordinates[0])!;
-      for (let index = 1; index < coordinates.length; index += 1) {
-        const [currentX, currentY] = projection(coordinates[index])!;
-        highwayPositions[highwayPositionOffset++] = previousX;
-        highwayPositions[highwayPositionOffset++] = -previousY;
-        highwayPositions[highwayPositionOffset++] = MAP_DEPTH + 0.08;
-        highwayPositions[highwayPositionOffset++] = currentX;
-        highwayPositions[highwayPositionOffset++] = -currentY;
-        highwayPositions[highwayPositionOffset++] = MAP_DEPTH + 0.08;
-        previousX = currentX;
-        previousY = currentY;
-      }
-    });
-
-    const highwayGeometry = new LineSegmentsGeometry();
-    highwayGeometry.setPositions(highwayPositions);
-    const highwayMaterial = new LineMaterial({
-      color: "#ffce4d",
-      linewidth: HIGHWAY_WIDTH,
-      worldUnits: false,
-      toneMapped: false,
-      transparent: true,
-      opacity: 0.9,
-      depthWrite: false,
-    });
-    const highwayLine = new LineSegments2(highwayGeometry, highwayMaterial);
-    highwayLine.renderOrder = 14;
-    highwayLine.raycast = () => {};
-
-    // 铁路线：沿弧长每 RAILWAY_DASH_LENGTH 切换红/白，色块严格等长。
-    // 红白必须合并进同一个对象、用顶点色区分：LineMaterial 会为每段线沿线方向
-    // 外扩 linewidth/2 画端帽，若拆成两个对象则后画的那色总是啃掉先画的那色，
-    // 缩得越小啃得越狠（色块屏幕长度接近线宽时直接被盖没）。合并后重叠只发生在
-    // 沿线相邻色块之间，红白对称各让一半，任何缩放下都保持 50/50。
-    const railwayData = hubeiRailwayData as unknown as HighwayMultiLineString;
-    const railwayPositions: number[] = [];
-    const railwayColors: number[] = [];
-    const railwayZ = MAP_DEPTH + 0.085;
-    const railwayRedColor = new Color(RAILWAY_RED);
-    const railwayWhiteColor = new Color(RAILWAY_WHITE);
-    /** 浮点容差：避免切点恰好落在源数据顶点上时产生零长度线段 */
-    const EPSILON = 1e-9;
-
-    railwayData.coordinates.forEach((coordinates) => {
-      if (coordinates.length < 2) return;
-      let previous = project(coordinates[0]);
-      // 每条折线独立从红色色块起始
-      let isRed = true;
-      let dashRemaining = RAILWAY_DASH_LENGTH;
-
-      for (let index = 1; index < coordinates.length; index += 1) {
-        const current = project(coordinates[index]);
-        const segmentLength = previous.distanceTo(current);
-        if (segmentLength <= EPSILON) {
-          previous = current;
-          continue;
-        }
-
-        // 在当前源线段内部按剩余色块长度反复切分
-        let consumed = 0;
-        while (consumed < segmentLength - EPSILON) {
-          const step = Math.min(dashRemaining, segmentLength - consumed);
-          const startRatio = consumed / segmentLength;
-          const endRatio = (consumed + step) / segmentLength;
-          railwayPositions.push(
-            previous.x + (current.x - previous.x) * startRatio,
-            previous.y + (current.y - previous.y) * startRatio,
-            railwayZ,
-            previous.x + (current.x - previous.x) * endRatio,
-            previous.y + (current.y - previous.y) * endRatio,
-            railwayZ,
-          );
-          const color = isRed ? railwayRedColor : railwayWhiteColor;
-          // 一段线的首尾各一个颜色，保持纯色不渐变
-          railwayColors.push(
-            color.r,
-            color.g,
-            color.b,
-            color.r,
-            color.g,
-            color.b,
-          );
-
-          consumed += step;
-          dashRemaining -= step;
-          if (dashRemaining <= EPSILON) {
-            dashRemaining = RAILWAY_DASH_LENGTH;
-            isRed = !isRed;
-          }
-        }
-
-        previous = current;
-      }
-    });
-
-    const railwayGeometry = new LineSegmentsGeometry();
-    railwayGeometry.setPositions(railwayPositions);
-    railwayGeometry.setColors(railwayColors);
-    const railwayMaterial = new LineMaterial({
-      vertexColors: true,
-      linewidth: RAILWAY_WIDTH,
-      worldUnits: false,
-      toneMapped: false,
-      transparent: true,
-      opacity: 0.9,
-      depthWrite: false,
-    });
-    const railwayLine = new LineSegments2(railwayGeometry, railwayMaterial);
-    railwayLine.renderOrder = 15;
-    railwayLine.raycast = () => {};
-
-    // 水运线：主线沿线做 #0074d3 → #00b0d4 → #0074d3 渐变，中心叠一条半透明白虚线。
-    // 这里不需要像铁路那样重采样切段：渐变按累计弧长归一化取色、由顶点色插值得到，
-    // 虚线交给 LineMaterial 的 USE_DASH 分支在片元里按 instanceDistance 裁切，
-    // 两者都只跟弧长有关，源数据分段长短完全不影响观感。
-    const waterwayData = hubeiWaterwayData as unknown as HighwayMultiLineString;
-    const waterwayPositions: number[] = [];
-    const waterwayColors: number[] = [];
-    /** 每段起止的累计弧长，供虚线着色器裁切使用 */
-    const waterwayDistances: number[] = [];
-    const waterwayZ = MAP_DEPTH + 0.09;
-    const waterwayEdgeColor = new Color(WATERWAY_EDGE_COLOR);
-    const waterwayCenterColor = new Color(WATERWAY_CENTER_COLOR);
-    const waterwayGradientColor = new Color();
-
-    /** 取归一化位置 t∈[0,1] 处的渐变色写入颜色缓冲（t=0.5 最亮，两端最暗） */
-    const pushWaterwayColor = (t: number) => {
-      waterwayGradientColor
-        .copy(waterwayEdgeColor)
-        .lerp(waterwayCenterColor, 1 - Math.abs(t * 2 - 1));
-      waterwayColors.push(
-        waterwayGradientColor.r,
-        waterwayGradientColor.g,
-        waterwayGradientColor.b,
-      );
-    };
-
-    waterwayData.coordinates.forEach((coordinates) => {
-      if (coordinates.length < 2) return;
-      const points = coordinates.map(project);
-
-      // 先量出整条线的累计弧长，渐变才能按长度而非顶点序号归一化
-      const cumulative = [0];
-      for (let index = 1; index < points.length; index += 1) {
-        cumulative.push(
-          cumulative[index - 1] + points[index - 1].distanceTo(points[index]),
-        );
-      }
-      const total = cumulative[points.length - 1];
-      if (total <= EPSILON) return;
-
-      for (let index = 1; index < points.length; index += 1) {
-        const previous = points[index - 1];
-        const current = points[index];
-        waterwayPositions.push(
-          previous.x,
-          previous.y,
-          waterwayZ,
-          current.x,
-          current.y,
-          waterwayZ,
-        );
-        pushWaterwayColor(cumulative[index - 1] / total);
-        pushWaterwayColor(cumulative[index] / total);
-        // 每条线独立从 0 起算，保证都从实线段开头
-        waterwayDistances.push(cumulative[index - 1], cumulative[index]);
-      }
-    });
-
-    const waterwayGeometry = new LineSegmentsGeometry();
-    waterwayGeometry.setPositions(waterwayPositions);
-    waterwayGeometry.setColors(waterwayColors);
-    const waterwayMaterial = new LineMaterial({
-      vertexColors: true,
-      linewidth: WATERWAY_WIDTH,
-      worldUnits: false,
-      toneMapped: false,
-      transparent: true,
-      // 主线不透明，渐变才等于给定的 #0074d3/#00b0d4；虚线的 50% 白叠上去
-      // 正好还原 demo 采样到的 #80c8e9。transparent 仍保留以走 renderOrder 排序。
-      opacity: 1,
-      depthWrite: false,
-    });
-    const waterwayLine = new LineSegments2(waterwayGeometry, waterwayMaterial);
-    waterwayLine.renderOrder = 17;
-    waterwayLine.raycast = () => {};
-
-    // 中心虚线与主线共用顶点，只是额外挂上累计弧长属性（LineSegments2.computeLineDistances
-    // 会把 53 条线首尾串成一条连续距离，这里改为手写以保证每条线各自从 0 开始）。
-    const waterwayDashGeometry = new LineSegmentsGeometry();
-    waterwayDashGeometry.setPositions(waterwayPositions);
-    const waterwayDistanceBuffer = new InstancedInterleavedBuffer(
-      new Float32Array(waterwayDistances),
-      2,
-      1,
-    );
-    waterwayDashGeometry.setAttribute(
-      "instanceDistanceStart",
-      new InterleavedBufferAttribute(waterwayDistanceBuffer, 1, 0),
-    );
-    waterwayDashGeometry.setAttribute(
-      "instanceDistanceEnd",
-      new InterleavedBufferAttribute(waterwayDistanceBuffer, 1, 1),
-    );
-    const waterwayDashMaterial = new LineMaterial({
-      color: WATERWAY_DASH_COLOR,
-      linewidth: WATERWAY_DASH_WIDTH,
-      dashed: true,
-      dashSize: WATERWAY_DASH_LENGTH,
-      gapSize: WATERWAY_GAP_LENGTH,
-      worldUnits: false,
-      toneMapped: false,
-      transparent: true,
-      opacity: WATERWAY_DASH_OPACITY,
-      depthWrite: false,
-    });
-    const waterwayDashLine = new LineSegments2(
-      waterwayDashGeometry,
-      waterwayDashMaterial,
-    );
-    waterwayDashLine.renderOrder = 18;
-    waterwayDashLine.raycast = () => {};
-
-    const extruded = new ExtrudeGeometry(shapes, {
-      depth: MAP_DEPTH,
-      bevelEnabled: false,
-    });
-    const provinceEdgeGeometry = new EdgesGeometry(extruded, 18);
-    extruded.dispose();
-
-    // 省界顶部轮廓环（外环 + 内环），用于绘制加粗发光描边
+    // 省界顶部轮廓环（外环 + 内环），用于绘制加粗发光描边。
+    // getPoints() 的结果下面算剪影时还要用，这里一次算完复用（LineCurve 下返回值
+    // 是确定的，复用安全）。
+    const outerRingPoints = shapes.map((shape) => shape.getPoints());
     const outlineRings: [number, number, number][][] = [];
-    shapes.forEach((shape) => {
-      [shape.getPoints(), ...shape.holes.map((hole) => hole.getPoints())]
+    shapes.forEach((shape, shapeIndex) => {
+      [
+        outerRingPoints[shapeIndex],
+        ...shape.holes.map((hole) => hole.getPoints()),
+      ]
         .filter((ring) => ring.length > 1)
         .forEach((ring) => {
           outlineRings.push(
@@ -651,7 +396,7 @@ function MapMesh() {
     // 地图轮廓采样点（省界外环，顶面 + 底面各一份，把挤出侧面也算进轮廓），
     // 每次解算碰撞时投影到屏幕，供标签按本地区间就近出图。
     // 外环有 2000+ 点，按预算抽稀：标签宽度上百像素，几像素的轮廓精度已足够。
-    const silhouettePoints = shapes.flatMap((shape) => shape.getPoints());
+    const silhouettePoints = outerRingPoints.flat();
     const silhouetteStride = Math.max(
       1,
       Math.ceil(silhouettePoints.length / MAP_SILHOUETTE_POINT_BUDGET),
@@ -671,16 +416,13 @@ function MapMesh() {
       shapes,
       cities,
       cityBoundaryGeometry,
+      provinceGeometry,
       provinceEdgeGeometry,
       outlineRings,
       mapSilhouette,
-      highwayLine,
-      railwayLine,
-      waterwayLine,
-      waterwayDashLine,
       pois,
     };
-  }, []);
+  }, [baseGeo]);
 
   useLayoutEffect(() => {
     demTexture.colorSpace = SRGBColorSpace;
@@ -690,17 +432,38 @@ function MapMesh() {
 
   useLayoutEffect(
     () => () => {
-      projected.highwayLine.geometry.dispose();
-      projected.highwayLine.material.dispose();
-      projected.railwayLine.geometry.dispose();
-      projected.railwayLine.material.dispose();
-      projected.waterwayLine.geometry.dispose();
-      projected.waterwayLine.material.dispose();
-      projected.waterwayDashLine.geometry.dispose();
-      projected.waterwayDashLine.material.dispose();
+      projected.provinceGeometry.dispose();
+      projected.provinceEdgeGeometry.dispose();
+      projected.cityBoundaryGeometry.dispose();
     },
     [projected],
   );
+
+  // 首帧画出来之后再做两件事：换入全清 DEM、挂载路网图层。
+  // 用 useFrame 探针而不是 requestIdleCallback —— 与 SceneReady 同一套做法，
+  // 保证确实是「已经出图」而不是「浏览器空了一下」。
+  const [afterFirstFrame, setAfterFirstFrame] = useState(false);
+  const handleFirstFrame = useCallback(() => setAfterFirstFrame(true), []);
+
+  useEffect(() => {
+    if (!afterFirstFrame) return;
+    let cancelled = false;
+
+    void loadHubeiFullDem()
+      .then((fullDem) => {
+        // 命令式换 uniform，不能改 useTexture 的入参：那会重新 suspend，
+        // 整个场景会被卸载成白屏。
+        if (cancelled || !topMaterialRef.current) return;
+        topMaterialRef.current.uniforms.uMap.value = fullDem;
+      })
+      .catch((error: unknown) => {
+        console.error("[hb-map] 全清 DEM 加载失败，继续用低清图", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [afterFirstFrame]);
 
   const poiPlacements = useMemo(
     () => projected.pois.map((poi) => poi.placement),
@@ -814,19 +577,17 @@ function MapMesh() {
     lastCanvasSizeRef.current[1] = state.size.height;
   });
 
-  // 稳定 args 引用，避免 R3F 每次 render 重建 ExtrudeGeometry。
-  const extrudeArgs = useMemo<ShapeProps["args"]>(
-    () => [projected.shapes, MAP_EXTRUDE_OPTIONS],
-    [projected.shapes],
-  );
-
   return (
     <group
       ref={mapGroupRef}
       position={[-projected.center.x, -projected.center.y, 0]}
     >
-      <ShapeBox bbox={projected.bbox} args={extrudeArgs}>
-        <TerrainTopMaterial attach="material-0" uMap={demTexture} />
+      <ShapeBox bbox={projected.bbox} geometry={projected.provinceGeometry}>
+        <TerrainTopMaterial
+          attach="material-0"
+          ref={topMaterialRef}
+          uMap={demTexture}
+        />
         <TerrainSideMaterial
           attach="material-1"
           ref={sideMaterialRef}
@@ -854,10 +615,10 @@ function MapMesh() {
         <lineBasicMaterial color={GLOW_EMISSIVE_COLOR} toneMapped={false} />
       </lineSegments>
 
-      <primitive object={projected.highwayLine} />
-      <primitive object={projected.railwayLine} />
-      <primitive object={projected.waterwayLine} />
-      <primitive object={projected.waterwayDashLine} />
+      {/* 路网（高速/铁路/水运）延后到首帧之后：数据 1.03MB 二进制 + 142KB JSON，
+          放进首屏关键路径会把底图一起拖慢。 */}
+      {afterFirstFrame && <RoadNetwork />}
+      {!afterFirstFrame && <FirstFrameProbe onFrame={handleFirstFrame} />}
 
       <OutlineGlow rings={projected.outlineRings} />
 
@@ -937,6 +698,23 @@ export default function ThreeHubeiMap({
   paused = false,
 }: ThreeHubeiMapProps) {
   const controlSpeed = useControlSpeed();
+  const [baseGeo, setBaseGeo] = useState<HubeiBaseGeo | null>(null);
+
+  // 底图数据（市界 + 省界轮廓，约 360KB）改成运行时 fetch：静态 import 会被 Vite
+  // 编译成 JS 内联进 chunk，把贴图下载串行堵在后面。
+  useEffect(() => {
+    let cancelled = false;
+    void loadHubeiBaseGeo()
+      .then((geo) => {
+        if (!cancelled) setBaseGeo(geo);
+      })
+      .catch((error: unknown) => {
+        console.error("[hb-map] 底图数据加载失败", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <MapRoot role="img" aria-label="湖北省三维地形地图">
@@ -952,8 +730,14 @@ export default function ThreeHubeiMap({
           {/* 地图数据位于 XY 平面，整体翻转到 XZ 地面上（+Y 朝上），便于 OrbitControls 交互 */}
           <group rotation={[-Math.PI / 2, 0, 0]}>
             <WorldBase />
-            <MapMesh />
-            <SceneReady onReady={onReady} />
+            {/* SceneReady 与 MapMesh 同在一个 Suspense 内：等 MapMesh 的贴图就绪
+                且首帧画出来才通知外层。路网不在其中，所以 onReady 是「底图就绪」。 */}
+            {baseGeo && (
+              <>
+                <MapMesh baseGeo={baseGeo} />
+                <SceneReady onReady={onReady} />
+              </>
+            )}
           </group>
         </Suspense>
         <OrbitControls

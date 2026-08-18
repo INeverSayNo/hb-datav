@@ -310,12 +310,10 @@ export default function IndexDashboard() {
     updateStore({ loading: true });
 
     const fetchXinjiangCoalRoutes = async () => {
-      const [_err, data] = await GetXinjiangCoalRoutes(
-        {
-          channelId:"3a2316ac-9705-cb56-100f-c88047615224",
-          thinOut: true
-        }
-      );
+      const [_err, data] = await GetXinjiangCoalRoutes({
+        channelId: "3a2316ac-9705-cb56-100f-c88047615224",
+        thinOut: true,
+      });
       if (data && data.result && !cancelled) {
         updateStore({ xinjiangCoalRoutes: data.result });
       }
@@ -452,6 +450,25 @@ export default function IndexDashboard() {
     );
   }, [incomingView, isAnimating]);
 
+  /**
+   * 首次挂载的地图就绪信号。加载遮罩原本只在切换视图时显示
+   * （$visible={incomingView !== null}），首屏那几秒是纯白的 —— 而
+   * ScreenLoadingOverlay 跟着接口走、往往比地图先消失，中间露出空白。
+   */
+  const [initialMapReady, setInitialMapReady] = useState(false);
+  const handleCurrentReady = useCallback(() => {
+    setInitialMapReady(true);
+  }, []);
+
+  const [loadingMinElapsed, setLoadingMinElapsed] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLoadingMinElapsed(true), 600);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+    const initialLoadingVisible =
+    !loadingMinElapsed || screenLoading || !initialMapReady;
+
   const navigationView = incomingView ?? currentView;
 
   return (
@@ -470,6 +487,7 @@ export default function IndexDashboard() {
               view={currentView}
               route={activeRoute}
               paused={isAnimating}
+              onReady={initialMapReady ? undefined : handleCurrentReady}
               onRouteTransitionEnd={handleRouteTransitionEnd}
               onRouteTransitionError={handleRouteTransitionError}
             />
@@ -490,10 +508,18 @@ export default function IndexDashboard() {
             </MapLayer>
           )}
 
-          <MapLoadingOverlay $visible={incomingView !== null}>
+          {/* <MapLoadingOverlay
+            $visible={incomingView !== null || !initialMapReady}
+          >
             <LoadingSpinner />
             <LoadingText>地图加载中…</LoadingText>
-          </MapLoadingOverlay>
+          </MapLoadingOverlay> */}
+          <MapLoadingOverlay
+          $visible={initialMapReady && incomingView !== null}
+        >
+          <LoadingSpinner />
+          <LoadingText>地图加载中…</LoadingText>
+        </MapLoadingOverlay>
         </MapStage>
         {currentView === "province" && <MapLegend />}
         {currentView === "recommendLine" && (
@@ -505,7 +531,7 @@ export default function IndexDashboard() {
             onRouteIntent={handleRouteIntent}
           />
         )}
-        <DashboardHeader type="home" title="武汉多式联运服务中心"/>
+        <DashboardHeader type="home" title="武汉多式联运服务中心" />
         <LeftPanels />
         <CenterControls />
         <RightPanels />
@@ -516,9 +542,16 @@ export default function IndexDashboard() {
           onViewChange={handleViewChange}
         />
 
-        <ScreenLoadingOverlay $visible={screenLoading}>
+        {/* <ScreenLoadingOverlay $visible={screenLoading}>
           <LoadingSpinner />
           <LoadingText>数据加载中…</LoadingText>
+        </ScreenLoadingOverlay> */}
+
+        <ScreenLoadingOverlay $visible={initialLoadingVisible}>
+          <LoadingSpinner />
+          <LoadingText>
+            {screenLoading ? "数据加载中…" : "地图加载中…"}
+          </LoadingText>
         </ScreenLoadingOverlay>
       </Dashboard>
     </AutoFit>

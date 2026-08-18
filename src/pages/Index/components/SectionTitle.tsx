@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
-import leftRail from "@/assets/child-title-left-bg.png";
-import rightRail from "@/assets/child-title-right-bg.png";
+import leftRail from "@/assets/child-title-left-bg.webp";
+import rightRail from "@/assets/child-title-right-bg.webp";
 
 const Wrapper = styled.div<{ $align: "left" | "right" }>`
   position: relative;

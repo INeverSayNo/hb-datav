@@ -1,9 +1,9 @@
 import styled from "styled-components";
 
-import airwayIcon from "@/assets/map-airway.png";
-import railwayStationIcon from "@/assets/map-railway-station.png";
-import warehouseIcon from "@/assets/map-warehouse.png";
-import waterwayPortIcon from "@/assets/map-waterway-port.png";
+import airwayIcon from "@/assets/map-airway.webp";
+import railwayStationIcon from "@/assets/map-railway-station.webp";
+import warehouseIcon from "@/assets/map-warehouse.webp";
+import waterwayPortIcon from "@/assets/map-waterway-port.webp";
 import NoticeBar from "./NoticeBar";
 
 // 位置与尺寸按 demo.png 图例面板换算到 5600x2320 设计稿坐标

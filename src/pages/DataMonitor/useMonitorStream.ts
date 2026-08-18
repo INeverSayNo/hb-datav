@@ -20,6 +20,7 @@ const dataTypes = new Set<MonitorDataType>([
   "wh-request-event",
   "wh-transport-capacity",
   "wh-exception-warning",
+  "wh-stop-limit-loading"
 ]);
 const operations = new Set<MonitorEventOperation>([
   "created",

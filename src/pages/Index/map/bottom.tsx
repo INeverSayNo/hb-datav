@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import { AdditiveBlending, Mesh } from "three";
 
-import quan1 from "@/assets/quan1.png";
+import quan1 from "@/assets/quan1.webp";
 
 export default function Bottom() {
   const meshRef1 = useRef<Mesh>(null!);

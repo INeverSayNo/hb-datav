@@ -4,8 +4,8 @@ import AliIcon from "@/components/aliIcon";
 import { GetWeather } from "@/api/modules/baseDataApi";
 import { useConfigStore } from "@/store/useLocationStore";
 import type { WeatherInfo } from "@/types/weather";
-import BackHomeIcon from "@/assets/monitor-back.png";
-import monitorHeaderBackground from "@/assets/monitor-header.png";
+import BackHomeIcon from "@/assets/monitor-back.webp";
+import monitorHeaderBackground from "@/assets/monitor-header.webp";
 
 interface DashboardHeaderProps {
   type: "monitor" | "home";

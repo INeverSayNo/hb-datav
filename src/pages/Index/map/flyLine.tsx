@@ -9,7 +9,7 @@ import {
   Vector3,
 } from "three";
 
-import flyLine from "@/assets/fly_line.png";
+import flyLine from "@/assets/fly_line.webp";
 
 export interface FlyLineProps {
   data: {

@@ -14,6 +14,7 @@ const listKeyByDataType = {
   "wh-request-event": "requestEventList",
   "wh-transport-capacity": "transportCapacityList",
   "wh-exception-warning": "exceptionWarningList",
+  "wh-stop-limit-loading": "stopLimitLoadingList",
 } as const satisfies Record<MonitorDataType, keyof MonitorTable>;
 
 const summaryKeyByDataType = {
@@ -31,6 +32,7 @@ const initialData: MonitorTable = {
   requestEventList: [],
   transportCapacityList: [],
   exceptionWarningList: [],
+  stopLimitLoadingList: [],
 };
 
 interface MonitorDataStore extends MonitorTable {

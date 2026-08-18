@@ -4,7 +4,6 @@ import { HashRouter } from "react-router";
 
 import { loadRuntimeConfig } from "@/axios-config/request";
 import "./index.css";
-import { BmapController } from "./hooks/useBMap.ts";
 
 const rootElement = document.getElementById("root");
 
@@ -68,10 +67,11 @@ function ConfigErrorScreen({ error }: { error: unknown }) {
 
 async function bootstrap() {
   try {
-    await loadRuntimeConfig();
-
-    await BmapController.insertBMapEle();
-    const { default: App } = await import("./App.tsx");
+    // 两者互不依赖，并行发起：串行时 App chunk 要等 config.json 多走一个 RTT。
+    const [, { default: App }] = await Promise.all([
+      loadRuntimeConfig(),
+      import("./App.tsx"),
+    ]);
 
     root.render(
       <StrictMode>

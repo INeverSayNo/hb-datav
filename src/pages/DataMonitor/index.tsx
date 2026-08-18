@@ -1,17 +1,18 @@
 import AutoFit from "@/components/autoFit";
 import NumberAnimation from "@/components/numberAnimation";
-import monitorArrow from "@/assets/monitor-arrow.png";
-import monitorOrderIcon from "@/assets/monitor-order-count.png";
-import monitorShipperIcon from "@/assets/monitor-consignment-count.png";
-import monitorProviderIcon from "@/assets/monitor-service-count.png";
-import monitorWarningIcon from "@/assets/monitor-warnning.png";
+import monitorArrow from "@/assets/monitor-arrow.webp";
+import monitorOrderIcon from "@/assets/monitor-order-count.webp";
+import monitorShipperIcon from "@/assets/monitor-consignment-count.webp";
+import monitorProviderIcon from "@/assets/monitor-service-count.webp";
+// import monitorWarningIcon from "@/assets/monitor-warnning.webp";
 import { useMonitorData } from "@/store/useMonitorData";
 import type {
-  MonitorExceptionWarning,
+  // MonitorExceptionWarning,
   MonitorNodeFlow,
   MonitorProvider,
   MonitorRequestEvent,
   MonitorShipper,
+  MonitorStopLimitLoading,
   MonitorTransportCapacity,
   MonitorWaybill,
 } from "@/types/monitor";
@@ -228,24 +229,26 @@ const WarningType = styled.span`
   color: #b64d77;
 `;
 
-const WarningIcon = styled.img`
-  width: 43px;
-  height: 38px;
-  object-fit: contain;
-`;
+// const WarningIcon = styled.img`
+//   width: 43px;
+//   height: 38px;
+//   object-fit: contain;
+// `;
 
-const StatusBadge = styled.span<{ $status: string }>`
-  display: inline-block;
-  min-width: 112px;
-  padding: 9px 18px;
-  border-radius: 5px;
-  color: #ffe8ef;
-  background: ${({ $status }) =>
-    $status === "已关闭" ? "#485769" : "rgba(128, 24, 67, 0.9)"};
-  font-size: 31px;
-  line-height: 1.1;
-  text-align: center;
-`;
+// const StatusBadge = styled.span<{ $status: string }>`
+//   display: inline-block;
+//   min-width: 112px;
+//   padding: 9px 18px;
+//   border-radius: 5px;
+//   color: #ffe8ef;
+//   background: ${({ $status }) =>
+//     $status === "已关闭" ? "#485769" : "rgba(128, 24, 67, 0.9)"};
+//   font-size: 31px;
+//   line-height: 1.1;
+//   text-align: center;
+// `;
+
+const StopLimitRason = styled.div``;
 
 const Footer = styled.footer`
   position: absolute;
@@ -363,27 +366,50 @@ const capacityColumns: LoopingTableColumn<MonitorTransportCapacity>[] = [
   { dataIndex: "driverPhone", width: 1.05 },
 ];
 
-const warningColumns: LoopingTableColumn<MonitorExceptionWarning>[] = [
+// const warningColumns: LoopingTableColumn<MonitorExceptionWarning>[] = [
+//   {
+//     title: "预警类型",
+//     width: 1.05,
+//     render: (item) => (
+//       <WarningType>
+//         <WarningIcon src={monitorWarningIcon} alt="" />
+//         {item.exceptionType}
+//       </WarningType>
+//     ),
+//   },
+//   { title: "预警内容", dataIndex: "exceptionMsg", width: 1.8 },
+//   { title: "预警时间", dataIndex: "exceptionTime", width: 0.8 },
+//   {
+//     title: "状态",
+//     width: 0.72,
+//     align: "center",
+//     render: (item) => (
+//       <StatusBadge $status={item.exceptionStatus}>
+//         {item.exceptionStatus}
+//       </StatusBadge>
+//     ),
+//   },
+// ];
+
+const stopLimitColumns: LoopingTableColumn<MonitorStopLimitLoading>[] = [
   {
-    title: "预警类型",
-    width: 1.05,
+    title: "站点",
+    width: 0.7,
     render: (item) => (
       <WarningType>
-        <WarningIcon src={monitorWarningIcon} alt="" />
-        {item.exceptionType}
+        {item.station}
       </WarningType>
     ),
   },
-  { title: "预警内容", dataIndex: "exceptionMsg", width: 1.8 },
-  { title: "预警时间", dataIndex: "exceptionTime", width: 0.8 },
+  { title: "受限发站", dataIndex: "restrictedDepartureStation", width: 0.72 },
+  { title: "开始时间", dataIndex: "stopStartDate", width: 0.8 },
+  { title: "结束时间", dataIndex: "stopEndDate", width: 0.8 },
   {
-    title: "状态",
-    width: 0.72,
+    title: "停限原因",
+    width: 1.8,
     align: "center",
     render: (item) => (
-      <StatusBadge $status={item.exceptionStatus}>
-        {item.exceptionStatus}
-      </StatusBadge>
+      <StopLimitRason>{item.restrictedDepartureStation}</StopLimitRason>
     ),
   },
 ];
@@ -399,9 +425,11 @@ function MonitorDashboard() {
   const transportCapacityList = useMonitorData(
     (state) => state.transportCapacityList,
   );
-  const exceptionWarningList = useMonitorData(
-    (state) => state.exceptionWarningList,
-  );
+  // const exceptionWarningList = useMonitorData(
+  //   (state) => state.exceptionWarningList,
+  // );
+
+  const stopLimitLoadingList = useMonitorData((state)=>state.stopLimitLoadingList)
 
   useMonitorStream();
 
@@ -524,8 +552,8 @@ function MonitorDashboard() {
             <SectionTitle>异常预警</SectionTitle>
             <TableBody>
               <LoopingTable
-                data={exceptionWarningList}
-                columns={warningColumns}
+                data={stopLimitLoadingList}
+                columns={stopLimitColumns}
                 visibleRows={2}
                 rowHeight={136}
                 borderColor="rgba(117, 28, 65, 0.96)"
@@ -542,11 +570,7 @@ function MonitorDashboard() {
 
 export default function Index() {
   return (
-    <AutoFit
-      dw={5600}
-      dh={2320}
-      aria-label="武汉多式联运服务中心数据大屏"
-    >
+    <AutoFit dw={5600} dh={2320} aria-label="武汉多式联运服务中心数据大屏">
       <MonitorDashboard />
     </AutoFit>
   );

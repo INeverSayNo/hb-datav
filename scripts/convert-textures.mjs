@@ -21,15 +21,9 @@ const QUALITY = qIndex !== -1 ? Number(process.argv[qIndex + 1]) : 90;
 /** 目录下全部 PNG，或显式列出的单个文件。 */
 const TARGETS = [
   { dir: "src/assets/recommendLine" },
-  {
-    dir: "src/assets",
-    only: [
-      "hb_dem.png",
-      "datav-bg.png",
-      "wh-channel.png",
-      "scene-transparent.png",
-    ],
-  },
+  // src/assets 下的 UI 切图与大图全部转：这些 PNG 合计约 9.5MB，且基本都在
+  // Index 首屏，直接跟地图 chunk 抢带宽。WebP 后预计降到 2-3MB。
+  { dir: "src/assets" },
 ];
 
 function collect() {
