@@ -1,6 +1,13 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { MOUSE, TOUCH, type PerspectiveCamera } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
@@ -14,6 +21,8 @@ import {
   prepareRoute,
   scheduleTextureRelease,
 } from "./resources";
+import XinjiangColaLegend from "./components/XinjiangCoalLegend";
+
 import { MapCanvasLayer } from "./styled";
 import type {
   MapTransitionPhase,
@@ -62,37 +71,40 @@ function RecommendLineMap({
     }
   }, []);
 
-  const applyCameraLayout = useCallback((layout: ProjectedRouteLayout) => {
-    const camera = cameraRef.current;
-    if (!camera) return;
-    const preset =
-      route.camera ??
-      (layout.viewMode === "world"
-        ? {
-            position: [0, 31, 9],
-            fov: 32,
-            target: [0, 0, 0],
-          }
-        : {
-            position: [0, 31, 25.5],
-            fov: 28.5,
-            target: [0, 0, 0],
-          });
+  const applyCameraLayout = useCallback(
+    (layout: ProjectedRouteLayout) => {
+      const camera = cameraRef.current;
+      if (!camera) return;
+      const preset =
+        route.camera ??
+        (layout.viewMode === "world"
+          ? {
+              position: [0, 31, 9],
+              fov: 32,
+              target: [0, 0, 0],
+            }
+          : {
+              position: [0, 31, 25.5],
+              fov: 28.5,
+              target: [0, 0, 0],
+            });
 
-    camera.position.set(...preset.position);
-    camera.fov = preset.fov;
-    camera.up.set(0, 1, 0);
-    camera.updateProjectionMatrix();
+      camera.position.set(...preset.position);
+      camera.fov = preset.fov;
+      camera.up.set(0, 1, 0);
+      camera.updateProjectionMatrix();
 
-    const controls = controlsRef.current;
-    if (controls) {
-      controls.target.set(0, 0, 0);
-      controls.update();
-      controls.saveState();
-    } else {
-      camera.lookAt(0, 0, 0);
-    }
-  }, [route.camera]);
+      const controls = controlsRef.current;
+      if (controls) {
+        controls.target.set(0, 0, 0);
+        controls.update();
+        controls.saveState();
+      } else {
+        camera.lookAt(0, 0, 0);
+      }
+    },
+    [route.camera],
+  );
 
   useEffect(() => {
     // 重新挂载：取消上一次卸载时排定的贴图释放。
@@ -193,8 +205,13 @@ function RecommendLineMap({
           maxAzimuthAngle: 0.9,
         });
 
+  const showXinjiangCoalLegend = useMemo(
+    () => route.label === "疆煤入鄂",
+    [route],
+  );
   return (
     <MapRoot role="img" aria-label="精品线路覆盖省份三维地形地图">
+      {showXinjiangCoalLegend && <XinjiangColaLegend />}
       <MapCanvasLayer
         $duration={transitionDuration}
         $phase={phase}
@@ -203,9 +220,6 @@ function RecommendLineMap({
         <Canvas
           dpr={[1, 1.5]}
           resize={{ offsetSize: true }}
-          // 淡出期间冻结渲染循环：此时整层 opacity 正在归零，3D 内容无需继续走帧。
-          // 注意只能在 "exiting" 降级——"hidden" 阶段要靠 SceneReady 的 useFrame
-          // 触发 handleSceneReady 才能进入 "entering"，停帧会导致永久卡在空白。
           frameloop={paused || phase === "exiting" ? "demand" : "always"}
           gl={{ alpha: true, antialias: true }}
           camera={{
@@ -242,12 +256,12 @@ function RecommendLineMap({
             rotateSpeed={controlSpeed}
             panSpeed={controlSpeed}
             zoomSpeed={0.9}
-             minDistance={cameraBounds.minDistance}
-  maxDistance={cameraBounds.maxDistance}
-  minPolarAngle={cameraBounds.minPolarAngle}
-  maxPolarAngle={cameraBounds.maxPolarAngle}
-  minAzimuthAngle={cameraBounds.minAzimuthAngle}
-  maxAzimuthAngle={cameraBounds.maxAzimuthAngle}
+            minDistance={cameraBounds.minDistance}
+            maxDistance={cameraBounds.maxDistance}
+            minPolarAngle={cameraBounds.minPolarAngle}
+            maxPolarAngle={cameraBounds.maxPolarAngle}
+            minAzimuthAngle={cameraBounds.minAzimuthAngle}
+            maxAzimuthAngle={cameraBounds.maxAzimuthAngle}
             screenSpacePanning={false}
             zoomToCursor
             mouseButtons={{

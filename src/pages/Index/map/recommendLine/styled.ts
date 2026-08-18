@@ -131,7 +131,11 @@ export const EuropePoiLeader = styled(PoiLeader)`
 `;
 
 /** 节点名称：白底黑字，碰撞时向上堆叠。 */
-export const PoiLabel = styled.span<{ $isAirRoute?: boolean }>`
+export const PoiLabel = styled.span<{
+  $isAirRoute?: boolean;
+  $isXinjiangCoal?: boolean;
+  $isHbPoi?: boolean;
+}>`
   position: absolute;
   left: 50%;
   top: 17px;
@@ -141,12 +145,20 @@ export const PoiLabel = styled.span<{ $isAirRoute?: boolean }>`
   background: #ffffff;
   color: #000000;
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  font-size: ${({ $isAirRoute }) => ($isAirRoute ? 16 : 38)}px;
+  font-size: ${({ $isAirRoute, $isXinjiangCoal, $isHbPoi }) =>
+    $isAirRoute ? 16 : $isXinjiangCoal ? ($isHbPoi ? 38 : "24") : 38}px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
   padding: ${({ $isAirRoute }) => ($isAirRoute ? "5px 7px" : "10px 12px")};
   border-radius: ${({ $isAirRoute }) => ($isAirRoute ? 5 : 10)}px;
+
+  ${(props) => ({
+    background:
+      props.$isXinjiangCoal && !props.$isHbPoi ? "#ffffff1f" : "#ffffff",
+    boxShadow:
+      props.$isXinjiangCoal && !props.$isHbPoi ? "0px 0px 5px 0px #7ec3ff" : "",
+  })}
 `;
 
 /** Europe 节点名称：视觉与 three.tsx 的 POI 标签一致。 */

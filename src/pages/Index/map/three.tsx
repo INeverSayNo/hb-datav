@@ -138,7 +138,7 @@ const poiList: PoiListItem[] = [
     color: railwayPoiColor,
   },
   {
-    lat: "32.2074",
+    lat: "32.0074",
     lng: "112.2782",
     label: "襄州北站",
     icon: MapRailwayStation,

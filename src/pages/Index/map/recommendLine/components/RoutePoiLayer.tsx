@@ -19,11 +19,7 @@ import {
   POI_NODE_Z,
   POI_SEGMENT_COLORS,
 } from "../constants";
-import {
-  bakePoiPoint,
-  getRegionIdAt,
-  getRegionScaleAt,
-} from "../routeLayout";
+import { bakePoiPoint, getRegionIdAt, getRegionScaleAt } from "../routeLayout";
 import {
   EuropePoiLabel,
   EuropePoiLeader,
@@ -33,6 +29,7 @@ import {
 } from "../styled";
 import type { ProjectedRouteLayout } from "../types";
 import RouteSegment from "./RouteSegment";
+import { isPointInHubei } from "@/utils/geo";
 
 const EUROPE_REGION_ID = "out-europe";
 const EUROPE_VISUAL_SCALE = 0.6;
@@ -64,13 +61,11 @@ function RoutePoiLayerBase({
       // 先烘焙 xy 并记录各控制点所在区域 scale。
       const bakedPoints = segment.routes.map((point) => {
         const [x, y] = bakePoiPoint(layout, point.value[0], point.value[1]);
-        const regionId = getRegionIdAt(
-          layout,
-          point.value[0],
-          point.value[1],
-        );
+        const regionId = getRegionIdAt(layout, point.value[0], point.value[1]);
         return {
           isEurope: isAirRoute && regionId === EUROPE_REGION_ID,
+          isXinjiangCoalAndHbPoint:
+            isXinjiangCoal && isPointInHubei(point.value[0], point.value[1]),
           isTransit: point.isTransit === true,
           name: point.name,
           regionId,
@@ -102,18 +97,19 @@ function RoutePoiLayerBase({
             point.isEurope && showMarker ? europeMarkerIndex++ : undefined,
           isEurope: point.isEurope,
           isTransit: point.isTransit,
+          isXinjiangCoalAndHbPoint: point.isXinjiangCoalAndHbPoint,
           name: point.name,
           showMarker,
-          position: [
-            point.x,
-            point.y,
-            POI_LINE_Z * lineScale,
-          ] as [number, number, number],
-          nodePosition: [
-            point.x,
-            point.y,
-            POI_NODE_Z * lineScale,
-          ] as [number, number, number],
+          position: [point.x, point.y, POI_LINE_Z * lineScale] as [
+            number,
+            number,
+            number,
+          ],
+          nodePosition: [point.x, point.y, POI_NODE_Z * lineScale] as [
+            number,
+            number,
+            number,
+          ],
         };
       });
       return {
@@ -157,9 +153,7 @@ function RoutePoiLayerBase({
         0.000001 ||
       lastCameraQuaternionRef.current === null ||
       1 -
-          Math.abs(
-            lastCameraQuaternionRef.current.dot(state.camera.quaternion),
-          ) >
+        Math.abs(lastCameraQuaternionRef.current.dot(state.camera.quaternion)) >
         0.000001;
     const canvasResized =
       lastCanvasSizeRef.current[0] !== state.size.width ||
@@ -221,9 +215,7 @@ function RoutePoiLayerBase({
                   zIndexRange={[30, 0]}
                 >
                   <PoiMarkerWrap
-                    $scale={
-                      point.isEurope ? EUROPE_VISUAL_SCALE : undefined
-                    }
+                    $scale={point.isEurope ? EUROPE_VISUAL_SCALE : undefined}
                     ref={
                       collisionIndex === undefined
                         ? undefined
@@ -244,7 +236,9 @@ function RoutePoiLayerBase({
                         {point.name}
                       </EuropePoiLabel>
                     ) : (
-                      <PoiLabel $isAirRoute={isAirRoute}>{point.name}</PoiLabel>
+
+                        (!isXinjiangCoal || !point.isXinjiangCoalAndHbPoint) && <PoiLabel $isAirRoute={isAirRoute} $isXinjiangCoal={isXinjiangCoal} $isHbPoi={point.isXinjiangCoalAndHbPoint}>{point.name}</PoiLabel>
+
                     )}
                   </PoiMarkerWrap>
                 </Html>

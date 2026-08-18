@@ -389,14 +389,14 @@ const stopLimitColumns: LoopingTableColumn<MonitorStopLimitLoading>[] = [
     render: (item) => <WarningType>{item.station}</WarningType>,
   },
   { title: "受限发站", dataIndex: "restrictedDepartureStation", width: 0.72 },
-  { title: "开始时间", dataIndex: "stopStartDate", width: 0.8 },
-  { title: "结束时间", dataIndex: "stopEndDate", width: 0.8 },
+  { title: "开始时间", dataIndex: "stopStartDate", width: 1 },
+  { title: "结束时间", dataIndex: "stopEndDate", width: 1 },
   {
     title: "停限原因",
     width: 1.8,
     align: "center",
     render: (item) => (
-      <StopLimitRason>{item.restrictedDepartureStation}</StopLimitRason>
+      <StopLimitRason>{item.stopReason}</StopLimitRason>
     ),
   },
 ];
