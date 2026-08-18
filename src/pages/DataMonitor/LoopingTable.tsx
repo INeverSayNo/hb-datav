@@ -59,7 +59,7 @@ const Row = styled.div<{ $height: number; $padding: string }>`
   align-items: center;
   height: ${({ $height }) => $height}px;
   margin: ${({ $padding }) => $padding};
-  border-bottom: 4px solid rgba(19, 117, 128, 0.58);
+  // border-bottom: 4px solid rgba(19, 117, 128, 0.58);
   color: #afc3cc;
   font-size: 36px;
   letter-spacing: 1px;
