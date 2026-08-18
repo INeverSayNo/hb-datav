@@ -45,6 +45,73 @@ export const PoiMarkerWrap = styled.div<{ $scale?: number }>`
     `}
 `;
 
+/** 疆煤入鄂专用呼吸灯：武汉与港区共用，通过 size/color 区分层级。 */
+export const XinjiangCoalPulseNode = styled.div<{
+  $color: string;
+  $size: number;
+}>`
+  position: absolute;
+  left: ${({ $size }) => -$size / 2}px;
+  top: ${({ $size }) => -$size / 2}px;
+  width: ${({ $size }) => $size}px;
+  height: ${({ $size }) => $size}px;
+  box-sizing: border-box;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  background: ${({ $color }) => $color};
+  box-shadow:
+    0 0 10px ${({ $color }) => `${$color}cc`},
+    0 0 22px ${({ $color }) => `${$color}88`};
+  transform-origin: center;
+  animation: xinjiang-coal-breathe 1.8s ease-in-out infinite;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -45%;
+    border: 2px solid ${({ $color }) => $color};
+    border-radius: 50%;
+    opacity: 0;
+    animation: xinjiang-coal-ripple 1.8s ease-out infinite;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 28%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+  }
+
+  @keyframes xinjiang-coal-breathe {
+    0%,
+    100% {
+      transform: scale(0.92);
+      opacity: 0.88;
+    }
+    50% {
+      transform: scale(1.12);
+      opacity: 1;
+      box-shadow:
+        0 0 16px ${({ $color }) => `${$color}ee`},
+        0 0 34px ${({ $color }) => `${$color}aa`};
+    }
+  }
+
+  @keyframes xinjiang-coal-ripple {
+    0% {
+      transform: scale(0.55);
+      opacity: 0.8;
+    }
+    75%,
+    100% {
+      transform: scale(1.25);
+      opacity: 0;
+    }
+  }
+`;
+
 /** 节点图标：外环 3px（蓝/红）+ 白色内环 6px（约为外环 2 倍）。 */
 export const PoiNode = styled.div<{
   $isTransit?: boolean;

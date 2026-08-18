@@ -21,7 +21,7 @@ import {
   prepareRoute,
   scheduleTextureRelease,
 } from "./resources";
-import XinjiangColaLegend from "./components/XinjiangCoalLegend";
+import XinjiangCoalLegend from "./components/XinjiangCoalLegend";
 
 import { MapCanvasLayer } from "./styled";
 import type {
@@ -211,7 +211,7 @@ function RecommendLineMap({
   );
   return (
     <MapRoot role="img" aria-label="精品线路覆盖省份三维地形地图">
-      {showXinjiangCoalLegend && <XinjiangColaLegend />}
+      {showXinjiangCoalLegend && <XinjiangCoalLegend />}
       <MapCanvasLayer
         $duration={transitionDuration}
         $phase={phase}

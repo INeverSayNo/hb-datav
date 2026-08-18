@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { memo, useMemo, useRef } from "react";
 import { Quaternion, Vector3 } from "three";
 
+import hbMainPorts from "@/assets/hb-main-port.json";
 import { useScreenBaseDataStore } from "@/store/useScreenBaseData";
 
 import {
@@ -17,6 +18,7 @@ import {
   AIR_PLANE_SIZE,
   POI_LINE_Z,
   POI_NODE_Z,
+  POI_RING_WUHAN,
   POI_SEGMENT_COLORS,
 } from "../constants";
 import { bakePoiPoint, getRegionIdAt, getRegionScaleAt } from "../routeLayout";
@@ -26,6 +28,7 @@ import {
   PoiLabel,
   PoiMarkerWrap,
   PoiNode,
+  XinjiangCoalPulseNode,
 } from "../styled";
 import type { ProjectedRouteLayout } from "../types";
 import RouteSegment from "./RouteSegment";
@@ -33,6 +36,13 @@ import { isPointInHubei } from "@/utils/geo";
 
 const EUROPE_REGION_ID = "out-europe";
 const EUROPE_VISUAL_SCALE = 0.6;
+const WUHAN_MARKER = {
+  color: POI_RING_WUHAN,
+  isWuhan: true,
+  label: "武汉",
+  lat: 30.596751149509924,
+  lng: 114.29797353909882,
+} as const;
 
 /** 精品线路 POI 层：按类型画虚线路线，并在有名称的途经点渲染节点图标与标签。 */
 function RoutePoiLayerBase({
@@ -128,6 +138,33 @@ function RoutePoiLayerBase({
       };
     });
   }, [isAirRoute, isXinjiangCoal, layout, route.label, xinjiangCoalRoutes]);
+
+  const xinjiangCoalMarkers = useMemo(() => {
+    if (!isXinjiangCoal) return [];
+
+    return [
+      WUHAN_MARKER,
+      ...hbMainPorts.map((port) => ({
+        color: port.color,
+        isWuhan: false as const,
+        label: port.label,
+        lat: Number(port.lat),
+        lng: Number(port.lng),
+      })),
+    ]
+      .filter(
+        (marker) =>
+          Number.isFinite(marker.lng) && Number.isFinite(marker.lat),
+      )
+      .map((marker) => {
+        const [x, y] = bakePoiPoint(layout, marker.lng, marker.lat);
+        const scale = getRegionScaleAt(layout, marker.lng, marker.lat);
+        return {
+          ...marker,
+          position: [x, y, POI_NODE_Z * scale] as [number, number, number],
+        };
+      });
+  }, [isXinjiangCoal, layout]);
 
   const europeMarkerCount = useMemo(
     () =>
@@ -236,9 +273,16 @@ function RoutePoiLayerBase({
                         {point.name}
                       </EuropePoiLabel>
                     ) : (
-
-                        (!isXinjiangCoal || !point.isXinjiangCoalAndHbPoint) && <PoiLabel $isAirRoute={isAirRoute} $isXinjiangCoal={isXinjiangCoal} $isHbPoi={point.isXinjiangCoalAndHbPoint}>{point.name}</PoiLabel>
-
+                      (!isXinjiangCoal ||
+                        !point.isXinjiangCoalAndHbPoint) && (
+                        <PoiLabel
+                          $isAirRoute={isAirRoute}
+                          $isXinjiangCoal={isXinjiangCoal}
+                          $isHbPoi={point.isXinjiangCoalAndHbPoint}
+                        >
+                          {point.name}
+                        </PoiLabel>
+                      )
                     )}
                   </PoiMarkerWrap>
                 </Html>
@@ -247,6 +291,31 @@ function RoutePoiLayerBase({
           </group>
         );
       })}
+
+      {xinjiangCoalMarkers.map((marker) => (
+        <Html
+          calculatePosition={calculateMapHtmlPosition}
+          key={`xinjiang-coal-marker-${marker.label}`}
+          center
+          eps={0}
+          position={marker.position}
+          distanceFactor={22 / layout.fitScale}
+          zIndexRange={[35, 0]}
+        >
+          <PoiMarkerWrap aria-label={marker.label}>
+            <XinjiangCoalPulseNode
+              $color={marker.color}
+              $size={marker.isWuhan ? 32 : 24}
+              data-poi-icon
+            />
+            {marker.isWuhan && (
+              <PoiLabel $isXinjiangCoal data-poi-label>
+                {marker.label}
+              </PoiLabel>
+            )}
+          </PoiMarkerWrap>
+        </Html>
+      ))}
     </>
   );
 }
