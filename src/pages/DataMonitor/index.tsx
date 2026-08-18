@@ -154,26 +154,26 @@ const LiveDot = styled.span`
   box-shadow: 0 0 14px rgba(53, 225, 124, 0.65);
 `;
 
-const HeadingSpacer = styled.div`
-  flex: 1;
-`;
+// const HeadingSpacer = styled.div`
+//   flex: 1;
+// `;
 
-const NodeLegend = styled.div`
-  display: flex;
-  gap: 28px;
-`;
+// const NodeLegend = styled.div`
+//   display: flex;
+//   gap: 28px;
+// `;
 
-const NodeTag = styled.span`
-  min-width: 178px;
-  padding: 16px 28px;
-  border-radius: 6px;
-  color: #d8f4fb;
-  background: rgba(8, 63, 76, 0.88);
-  font-size: 34px;
-  line-height: 1;
-  text-align: center;
-  letter-spacing: 2px;
-`;
+// const NodeTag = styled.span`
+//   min-width: 178px;
+//   padding: 16px 28px;
+//   border-radius: 6px;
+//   color: #d8f4fb;
+//   background: rgba(8, 63, 76, 0.88);
+//   font-size: 34px;
+//   line-height: 1;
+//   text-align: center;
+//   letter-spacing: 2px;
+// `;
 
 const TableBody = styled.div`
   min-height: 0;
@@ -265,11 +265,11 @@ const Footer = styled.footer`
 function SectionTitle({
   children,
   live,
-  legend,
 }: {
   children: string;
   live?: "scroll" | "live";
   legend?: boolean;
+  show?: boolean;
 }) {
   return (
     <PanelHeading>
@@ -280,15 +280,6 @@ function SectionTitle({
           {live === "live" && <LiveDot />}
           {live === "live" ? "LIVE" : "实时滚动"}
         </LiveLabel>
-      )}
-      {legend && (
-        <>
-          <HeadingSpacer />
-          <NodeLegend aria-label="节点类型图例">
-            <NodeTag>水运节点</NodeTag>
-            <NodeTag>铁路节点</NodeTag>
-          </NodeLegend>
-        </>
       )}
     </PanelHeading>
   );
@@ -395,11 +386,7 @@ const stopLimitColumns: LoopingTableColumn<MonitorStopLimitLoading>[] = [
   {
     title: "站点",
     width: 0.7,
-    render: (item) => (
-      <WarningType>
-        {item.station}
-      </WarningType>
-    ),
+    render: (item) => <WarningType>{item.station}</WarningType>,
   },
   { title: "受限发站", dataIndex: "restrictedDepartureStation", width: 0.72 },
   { title: "开始时间", dataIndex: "stopStartDate", width: 0.8 },
@@ -429,7 +416,9 @@ function MonitorDashboard() {
   //   (state) => state.exceptionWarningList,
   // );
 
-  const stopLimitLoadingList = useMonitorData((state)=>state.stopLimitLoadingList)
+  const stopLimitLoadingList = useMonitorData(
+    (state) => state.stopLimitLoadingList,
+  );
 
   useMonitorStream();
 
@@ -467,7 +456,9 @@ function MonitorDashboard() {
           </SummaryGrid>
 
           <Panel $height={560} $marginTop={32}>
-            <SectionTitle live="scroll">物流托运人</SectionTitle>
+            <SectionTitle >
+              物流托运人
+            </SectionTitle>
             <TableBody>
               <LoopingTable
                 data={shipperList}
@@ -479,7 +470,9 @@ function MonitorDashboard() {
           </Panel>
 
           <Panel $height={926} $marginTop={32}>
-            <SectionTitle live="scroll">物流多式联运服务商</SectionTitle>
+            <SectionTitle >
+              物流多式联运服务商
+            </SectionTitle>
             <TableBody>
               <LoopingTable
                 data={providerList}
@@ -505,7 +498,7 @@ function MonitorDashboard() {
           </Panel>
 
           <Panel $height={905} $marginTop={35}>
-            <SectionTitle live="scroll" legend>
+            <SectionTitle >
               重要物流节点流向
             </SectionTitle>
             <TableBody>
@@ -536,7 +529,9 @@ function MonitorDashboard() {
           </Panel>
 
           <Panel $height={425} $marginTop={35}>
-            <SectionTitle live="scroll">实时公路运力</SectionTitle>
+            <SectionTitle >
+              实时公路运力
+            </SectionTitle>
             <TableBody>
               <LoopingTable
                 data={transportCapacityList}

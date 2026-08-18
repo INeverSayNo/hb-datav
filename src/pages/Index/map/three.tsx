@@ -194,8 +194,8 @@ const PoiMarker = styled.div`
   img {
     position: relative;
     z-index: 2;
-    width: 60px;
-    height: 60px;
+    width: 40px;
+    height: 40px;
     object-fit: contain;
     filter: drop-shadow(0 2px 6px rgba(0, 18, 28, 0.9));
   }
@@ -215,9 +215,21 @@ const PoiTextLabel = styled.span<{ $color: string | undefined }>`
   transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 
+  i {
+    margin-left: 10px;
+  }
   ${(props) => ({
     color: props.$color || "rgba(232, 250, 255, 0.95)",
   })}
+`;
+
+const PoiDotMarker = styled.p<{ $color: string | undefined }>`
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  ${(props) => ({
+    background: props.$color,
+  })};
 `;
 
 const PoiLeader = styled.i<{ $color: string | undefined }>`
@@ -231,9 +243,8 @@ const PoiLeader = styled.i<{ $color: string | undefined }>`
   transform: translateX(-50%);
   pointer-events: none;
   box-shadow: 0 0 7px rgba(32, 219, 219, 0.75);
-
-
-  
+  display: flex;
+  align-items: center;
   ${(props) => ({
     background:
       props.$color ||
@@ -640,8 +651,11 @@ function MapMesh({ baseGeo }: { baseGeo: HubeiBaseGeo }) {
             aria-hidden="true"
           >
             <PoiLeader aria-hidden="true" $color={poi.color} />
-            <img src={poi.icon} alt="" />
-            <PoiTextLabel $color={poi.color}>{poi.label}</PoiTextLabel>
+            <PoiDotMarker $color={poi.color}></PoiDotMarker>
+            <PoiTextLabel $color={poi.color}>
+              <img src={poi.icon} alt="" />
+              <i>{poi.label}</i>
+            </PoiTextLabel>
           </PoiLeaderMarker>
         </Html>
       ))}
@@ -662,9 +676,10 @@ function MapMesh({ baseGeo }: { baseGeo: HubeiBaseGeo }) {
               collisionFramesRef.current = 3;
             }}
           >
-            <img data-poi-icon src={poi.icon} alt={poi.label} />
+            <PoiDotMarker $color={poi.color}></PoiDotMarker>
             <PoiTextLabel data-poi-label $color={poi.color}>
-              {poi.label}
+               <img data-poi-icon src={poi.icon} alt={poi.label} />
+              <i>{poi.label}</i>
             </PoiTextLabel>
           </PoiMarker>
         </Html>
@@ -724,7 +739,7 @@ export default function ThreeHubeiMap({
         // 被上层标记为淡出时冻结渲染循环，避免交叉淡入期间两个 WebGL 场景同时满帧。
         frameloop={paused ? "demand" : "always"}
         gl={{ alpha: true, antialias: true }}
-        camera={{ fov: 30.5, near: 0.1, far: 300, position: [0, 22.5, 18.5] }}
+        camera={{ fov: 32.5, near: 0.1, far: 300, position: [0, 23.5, 18.5] }}
       >
         <Suspense fallback={null}>
           {/* 地图数据位于 XY 平面，整体翻转到 XZ 地面上（+Y 朝上），便于 OrbitControls 交互 */}
@@ -746,6 +761,7 @@ export default function ThreeHubeiMap({
           enableZoom
           enableDamping
           dampingFactor={0.08}
+          target={[0, -2.5, 0]}
           rotateSpeed={controlSpeed}
           panSpeed={controlSpeed}
           zoomSpeed={0.9}
