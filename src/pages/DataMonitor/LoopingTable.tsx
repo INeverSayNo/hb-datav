@@ -37,12 +37,16 @@ const Viewport = styled.div<{ $height: number }>`
 
 const Track = styled.div<{
   $animating: boolean;
+  $direction: "up" | "down";
   $rowHeight: number;
   $duration: number;
 }>`
   transform: translate3d(
     0,
-    ${({ $animating, $rowHeight }) => ($animating ? -$rowHeight : 0)}px,
+    ${({ $animating, $direction, $rowHeight }) => {
+      if ($direction === "down") return $animating ? 0 : -$rowHeight;
+      return $animating ? -$rowHeight : 0;
+    }}px,
     0
   );
   transition: ${({ $animating, $duration }) =>
@@ -99,6 +103,8 @@ interface LoopingTableProps<T extends { id: string }> {
   showHeader?: boolean;
   interval?: number;
   duration?: number;
+  scrollDirection?: "up" | "down";
+  startDelay?: number;
   borderColor?: string;
   headerBackground?: string;
   rowPadding?: string;
@@ -109,13 +115,18 @@ function findSurvivingAnchor<T extends { id: string }>(
   anchorId: string | undefined,
   previousIds: string[],
   data: T[],
+  direction: "up" | "down",
 ) {
   if (anchorId && data.some((item) => item.id === anchorId)) return anchorId;
   if (anchorId) {
     const oldIndex = previousIds.indexOf(anchorId);
     if (oldIndex !== -1) {
+      const step = direction === "down" ? -1 : 1;
       for (let offset = 1; offset <= previousIds.length; offset += 1) {
-        const candidate = previousIds[(oldIndex + offset) % previousIds.length];
+        const candidateIndex =
+          (oldIndex + step * offset + previousIds.length) %
+          previousIds.length;
+        const candidate = previousIds[candidateIndex];
         if (data.some((item) => item.id === candidate)) return candidate;
       }
     }
@@ -132,6 +143,8 @@ export default function LoopingTable<T extends { id: string }>({
   showHeader = true,
   interval = 3000,
   duration = 300,
+  scrollDirection = "up",
+  startDelay = 0,
   borderColor = "rgba(9, 105, 118, 0.88)",
   headerBackground = "rgba(5, 83, 96, 0.92)",
   rowPadding = "0 42px",
@@ -139,6 +152,7 @@ export default function LoopingTable<T extends { id: string }>({
 }: LoopingTableProps<T>) {
   const previousIdsRef = useRef<string[]>([]);
   const dataRef = useRef(data);
+  const hasStartedRef = useRef(false);
   const [anchorId, setAnchorId] = useState<string | undefined>(
     () => data[0]?.id,
   );
@@ -149,6 +163,7 @@ export default function LoopingTable<T extends { id: string }>({
     anchorId,
     previousIdsRef.current,
     data,
+    scrollDirection,
   );
   const shouldScroll = data.length > visibleRows;
 
@@ -160,21 +175,29 @@ export default function LoopingTable<T extends { id: string }>({
 
   useEffect(() => {
     if (!shouldScroll || animating) return;
-    const timer = window.setTimeout(() => setAnimating(true), interval);
+    const delay = interval + (hasStartedRef.current ? 0 : startDelay);
+    const timer = window.setTimeout(() => {
+      hasStartedRef.current = true;
+      setAnimating(true);
+    }, delay);
     return () => window.clearTimeout(timer);
-  }, [animating, interval, shouldScroll]);
+  }, [animating, interval, shouldScroll, startDelay]);
 
   const rows = useMemo(() => {
     if (!data.length) return [];
-    const start = Math.max(
+    const anchorIndex = Math.max(
       0,
       data.findIndex((item) => item.id === resolvedAnchorId),
     );
     const count = shouldScroll ? visibleRows + 1 : data.length;
+    const start =
+      shouldScroll && scrollDirection === "down"
+        ? (anchorIndex - 1 + data.length) % data.length
+        : anchorIndex;
     return Array.from({ length: count }, (_, index) =>
       data[(start + index) % data.length],
     );
-  }, [data, resolvedAnchorId, shouldScroll, visibleRows]);
+  }, [data, resolvedAnchorId, scrollDirection, shouldScroll, visibleRows]);
 
   const handleTransitionEnd = () => {
     if (!animating) return;
@@ -182,9 +205,13 @@ export default function LoopingTable<T extends { id: string }>({
     const currentIndex = current.findIndex(
       (item) => item.id === resolvedAnchorId,
     );
+    const step = scrollDirection === "down" ? -1 : 1;
     const next =
       current.length > 0
-        ? current[(Math.max(0, currentIndex) + 1) % current.length]
+        ? current[
+            (Math.max(0, currentIndex) + step + current.length) %
+              current.length
+          ]
         : undefined;
     setAnchorId(next?.id);
     setAnimating(false);
@@ -209,6 +236,7 @@ export default function LoopingTable<T extends { id: string }>({
         {rows.length ? (
           <Track
             $animating={animating && shouldScroll}
+            $direction={shouldScroll ? scrollDirection : "up"}
             $rowHeight={rowHeight}
             $duration={duration}
             onTransitionEnd={handleTransitionEnd}

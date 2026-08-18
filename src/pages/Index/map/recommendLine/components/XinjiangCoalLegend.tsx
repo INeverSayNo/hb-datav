@@ -66,7 +66,7 @@ export default function XinjiangCoalLegend() {
   return (
     <HbPointLegendPanel>
       <Panel>
-        <Title>图例</Title>
+        <Title>疆煤入鄂主要停靠港口</Title>
         <LegendGrid>
           {hbMainPorts.map((item, index) => (
             <LegendItem key={`${item.label}-${index}`}>
