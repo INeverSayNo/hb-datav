@@ -115,7 +115,7 @@ export default function Modal({
   if (!open) return null;
 
   return createPortal(
-    <Overlay onClick={onClose}>
+    <Overlay >
       <Content $width={width} $height={height} onClick={(e) => e.stopPropagation()}>
         <Header>
           <Title>{title}</Title>

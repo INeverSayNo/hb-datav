@@ -14,7 +14,7 @@ import blueRing from "@/assets/horn-blue.webp";
 import goldRing from "@/assets/horn-orage.webp";
 import freightIcon from "@/assets/intermodal-statistics-volume.webp";
 import countIcon from "@/assets/intermodal-statistics-count.webp"
-import tooltipBg from "@/assets/intermodal-statistics-echart-num-bg.webp";
+// import tooltipBg from "@/assets/intermodal-statistics-echart-num-bg.webp";
 import riseArrow from "@/assets/intermodal-statistics-rise-arrow.webp";
 import chartHeaderTitleIcon from "@/assets/intermodal-statistics-title-arrow.webp";
 import watewayIntermodalTransportChecked from "@/assets/wateway-intermodal-transport-checked.webp";
@@ -358,23 +358,7 @@ const FreightChart = memo(function FreightChart({
           {
             type: "bar",
             barWidth: 18,
-            data: items.map((value) =>
-              value.month === `${new Date().getMonth() - 1}`
-                ? {
-                    value: value.teu,
-                    label: {
-                      show: true,
-                      position: "top",
-                      distance: 22,
-                      formatter: `${value.teu}`,
-                      color: "#eaffff",
-                      fontSize: 31,
-                      fontWeight: 700,
-                      backgroundColor: { image: tooltipBg },
-                      padding: [18, 30, 24, 30],
-                    },
-                  }
-                : value.teu,
+            data: items.map((value) => value.teu,
             ),
             itemStyle: {
               borderRadius: [10, 10, 0, 0],

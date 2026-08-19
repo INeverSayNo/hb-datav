@@ -147,12 +147,40 @@ const LiveLabel = styled.span`
 `;
 
 const LiveDot = styled.span`
-  width: 27px;
-  height: 27px;
-  border: 8px solid rgba(25, 117, 72, 0.75);
+   width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: #3de37d;
-  box-shadow: 0 0 14px rgba(53, 225, 124, 0.65);
+  background: #31d372;
+  border: 7px solid rgba(22, 118, 73, 0.82);
+  box-shadow: 0 0 18px rgba(54, 255, 132, 0.72);
+  animation: breathe 1.8s ease-in-out infinite;
+  transform-origin: center;
+  margin-right: 10px;
+
+  @keyframes breathe {
+    0% {
+      transform: scale(0.96);
+      box-shadow:
+        0 0 10px rgba(54, 255, 132, 0.5),
+        0 0 18px rgba(54, 255, 132, 0.72);
+      opacity: 0.9;
+    }
+    50% {
+      transform: scale(1.12);
+      box-shadow:
+        0 0 16px rgba(54, 255, 132, 0.75),
+        0 0 28px rgba(54, 255, 132, 0.9),
+        0 0 42px rgba(54, 255, 132, 0.5);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(0.96);
+      box-shadow:
+        0 0 10px rgba(54, 255, 132, 0.5),
+        0 0 18px rgba(54, 255, 132, 0.72);
+      opacity: 0.9;
+    }
+  }
 `;
 
 // const HeadingSpacer = styled.div`
@@ -181,15 +209,15 @@ const TableBody = styled.div`
   flex: 1;
 `;
 
-const RequestLine = styled.div`
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-  gap: 28px;
-  font-size: 34px;
-  white-space: nowrap;
-`;
+// const RequestLine = styled.div`
+//   display: flex;
+//   align-items: center;
+//   width: 100%;
+//   min-width: 0;
+//   gap: 28px;
+//   font-size: 34px;
+//   white-space: nowrap;
+// `;
 
 const EventTime = styled.time`
   flex: 0 0 170px;
@@ -318,8 +346,8 @@ const providerColumns: LoopingTableColumn<MonitorProvider>[] = [
 ];
 
 const waybillColumns: LoopingTableColumn<MonitorWaybill>[] = [
-  { title: "运单号", dataIndex: "waybillNo", width: 1.35 },
-  { title: "客户", dataIndex: "shipperName", width: 1.2 },
+  { title: "运单号", dataIndex: "waybillNo", width: 0.5, render: (item) =><span>{`**` + (item.waybillNo || "").slice(-4)}</span> },
+  { title: "客户", dataIndex: "shipperName", width: 1.4 },
   {
     title: "起讫点",
     render: (item) => `${item.origin}→${item.dest}`,
@@ -328,7 +356,7 @@ const waybillColumns: LoopingTableColumn<MonitorWaybill>[] = [
   { title: "品名", dataIndex: "goodsName", width: 0.65 },
   { title: "运载方式", dataIndex: "carriageMethod", width: 0.7 },
   { title: "运输方式", dataIndex: "transportType", width: 0.9 },
-  { title: "运价", render: (item) => formatMoney(item.price), width: 0.62 },
+  { title: "运价", render: (item) => formatMoney(item.price), width: 0.42 },
 ];
 
 const nodeColumns: LoopingTableColumn<MonitorNodeFlow>[] = [
@@ -364,7 +392,7 @@ const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
   //   ),
   // },
   {
-    width: 0.3,
+    width: 0.2,
     render: (item) => <EventTime>{item.eventTime}</EventTime>,
   },
   {
@@ -420,7 +448,7 @@ const stopLimitColumns: LoopingTableColumn<MonitorStopLimitLoading>[] = [
   { title: "开始时间", dataIndex: "stopStartDate", width: 1 },
   { title: "结束时间", dataIndex: "stopEndDate", width: 1 },
   {
-    title: "停限原因",
+    title: "原因",
     width: 1.8,
     align: "center",
     render: (item) => <StopLimitRason>{item.stopReason}</StopLimitRason>,
@@ -554,7 +582,7 @@ function MonitorDashboard() {
           </Panel>
 
           <Panel $height={425} $marginTop={35}>
-            <SectionTitle>实时公路运力</SectionTitle>
+            <SectionTitle>实时运力</SectionTitle>
             <TableBody>
               <LoopingTable
                 data={transportCapacityList}

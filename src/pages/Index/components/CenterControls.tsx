@@ -233,7 +233,7 @@ export default function CenterControls() {
       </Controls>
       {errorMessage && <ErrorTip role="alert">{errorMessage}</ErrorTip>}
       {aiModalOpen && aiSolutionIframeUrl && (
-        <Modal open onClose={() => setAiModalOpen(false)}>
+        <Modal open onClose={() => setAiModalOpen(false)} width="68vw" height="80vh">
           <iframe
             src={aiSolutionIframeUrl}
             title="AI物流规划师"
