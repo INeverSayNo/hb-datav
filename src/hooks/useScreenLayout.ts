@@ -7,6 +7,7 @@ export interface ScreenLayout {
   viewportWidth: number;
   viewportHeight: number;
   isUltraWide: boolean;
+  isTall: boolean;
 }
 
 export const ScreenLayoutContext = createContext<ScreenLayout | null>(null);
@@ -27,4 +28,3 @@ export function useScaledCanvasDpr(min = 0.5, max = 1.5) {
 
   return Math.min(max, Math.max(min, deviceDpr * scale));
 }
-

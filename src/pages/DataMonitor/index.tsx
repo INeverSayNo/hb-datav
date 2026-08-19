@@ -1,5 +1,9 @@
 import AutoFit from "@/components/autoFit";
-import { DESIGN_HEIGHT, DESIGN_WIDTH } from "@/constants/screen";
+import {
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  TALL_SCREEN_MIN_WIDTH,
+} from "@/constants/screen";
 import NumberAnimation from "@/components/numberAnimation";
 import monitorArrow from "@/assets/monitor-arrow.webp";
 import monitorOrderIcon from "@/assets/monitor-order-count.webp";
@@ -40,9 +44,9 @@ const Content = styled.main`
   position: absolute;
   z-index: 2;
   top: 310px;
+  bottom: 220px;
   left: 25px;
   right: 25px;
-  height: 1790px;
   display: grid;
   grid-template-columns: minmax(0, 1670fr) minmax(0, 2120fr) minmax(0, 1670fr);
   gap: 45px;
@@ -53,6 +57,7 @@ const Column = styled.section`
   min-height: 0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 `;
 
 const SummaryGrid = styled.div`
@@ -619,7 +624,8 @@ export default function Index() {
     <AutoFit
       dw={DESIGN_WIDTH}
       dh={DESIGN_HEIGHT}
-      mode="expand-width"
+      mode="expand"
+      expandHeightMinWidth={TALL_SCREEN_MIN_WIDTH}
       aria-label="武汉多式联运服务中心数据大屏"
     >
       <MonitorDashboard />
