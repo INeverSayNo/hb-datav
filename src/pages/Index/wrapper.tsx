@@ -1,6 +1,8 @@
 import styled from "styled-components";
 
 import AutoFit from "@/components/autoFit";
+import HorizontalSliceImage from "@/components/horizontalSliceImage";
+import { DESIGN_HEIGHT, DESIGN_WIDTH } from "@/constants/screen";
 import dashboardBackground from "@/assets/datav-bg.webp";
 import wuhanChannelImage from "@/assets/wh-channel.webp";
 import BottomNavigation, {
@@ -75,8 +77,8 @@ const SHOW_MATRIX_RAIN =
 
 const Dashboard = styled.div`
   position: relative;
-  width: 5600px;
-  height: 2320px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   color: #fff;
   font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
@@ -84,21 +86,15 @@ const Dashboard = styled.div`
   user-select: none;
 `;
 
-const Background = styled.img`
-  position: absolute;
-  inset: 0;
+const Background = styled(HorizontalSliceImage)`
   z-index: 0;
-  width: 5600px;
-  height: 2320px;
-  object-fit: fill;
-  pointer-events: none;
 `;
 
 const CenterGlow = styled.div`
   position: absolute;
   left: 1750px;
+  right: 1750px;
   top: 550px;
-  width: 2100px;
   height: 1340px;
   z-index: 1;
   pointer-events: none;
@@ -113,9 +109,9 @@ const CenterGlow = styled.div`
 const MapStage = styled.div`
   position: absolute;
   left: 1700px;
+  right: 1560px;
   top: 390px;
   z-index: 2;
-  width: 2340px;
   height: 1570px;
 `;
 
@@ -310,7 +306,7 @@ export default function IndexDashboard() {
     updateStore({ loading: true });
 
     const fetchXinjiangCoalRoutes = async () => {
-      const [_err, data] = await GetXinjiangCoalRoutes({
+      const [, data] = await GetXinjiangCoalRoutes({
         channelId: "3a2316ac-9705-cb56-100f-c88047615224",
         thinOut: true,
       });
@@ -472,12 +468,23 @@ export default function IndexDashboard() {
   const navigationView = incomingView ?? currentView;
 
   return (
-    <AutoFit dw={5600} dh={2320} aria-label="武汉多式联运服务中心数据大屏">
+    <AutoFit
+      dw={DESIGN_WIDTH}
+      dh={DESIGN_HEIGHT}
+      mode="expand-width"
+      aria-label="武汉多式联运服务中心数据大屏"
+    >
       <Dashboard>
-        <Background src={dashboardBackground} alt="" />
+        <Background
+          src={dashboardBackground}
+          sourceWidth={DESIGN_WIDTH}
+          sourceHeight={DESIGN_HEIGHT}
+          leftWidth={1700}
+          rightWidth={1560}
+        />
         <CenterGlow />
-        <MatrixRain visible={SHOW_MATRIX_RAIN} />
         <MapStage>
+          <MatrixRain visible={SHOW_MATRIX_RAIN} />
           <MapLayer
             key={currentView}
             $phase={isAnimating ? "exiting" : "current"}
@@ -520,17 +527,17 @@ export default function IndexDashboard() {
           <LoadingSpinner />
           <LoadingText>地图加载中…</LoadingText>
         </MapLoadingOverlay>
+          {currentView === "province" && <MapLegend />}
+          {currentView === "recommendLine" && (
+            <RouteButtons
+              activeRoute={activeRoute.label}
+              disabled={isRouteTransitioning}
+              routes={RECOMMEND_ROUTES}
+              onRouteChange={handleRouteChange}
+              onRouteIntent={handleRouteIntent}
+            />
+          )}
         </MapStage>
-        {currentView === "province" && <MapLegend />}
-        {currentView === "recommendLine" && (
-          <RouteButtons
-            activeRoute={activeRoute.label}
-            disabled={isRouteTransitioning}
-            routes={RECOMMEND_ROUTES}
-            onRouteChange={handleRouteChange}
-            onRouteIntent={handleRouteIntent}
-          />
-        )}
         <DashboardHeader type="home" title="武汉多式联运服务中心" />
         <LeftPanels />
         <CenterControls />

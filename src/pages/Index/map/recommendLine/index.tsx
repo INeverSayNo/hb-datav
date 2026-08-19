@@ -12,6 +12,7 @@ import { MOUSE, TOUCH, type PerspectiveCamera } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
 import type { RecommendRoute } from "../../recommendLineRoutes";
+import { useScaledCanvasDpr } from "@/hooks/useScreenLayout";
 import { MapRoot, useControlSpeed } from "../threeShared";
 import RecommendLineScene from "./Scene";
 import { ENTER_DURATION } from "./constants";
@@ -46,6 +47,7 @@ function RecommendLineMap({
   paused = false,
   route,
 }: RecommendLineMapProps) {
+  const renderDpr = useScaledCanvasDpr();
   const controlSpeed = useControlSpeed();
   const controlsRef = useRef<OrbitControlsImpl>(null!);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
@@ -218,7 +220,7 @@ function RecommendLineMap({
         aria-busy={phase !== "visible"}
       >
         <Canvas
-          dpr={[1, 1.5]}
+          dpr={renderDpr}
           resize={{ offsetSize: true }}
           frameloop={paused || phase === "exiting" ? "demand" : "always"}
           gl={{ alpha: true, antialias: true }}

@@ -6,6 +6,8 @@ import { useConfigStore } from "@/store/useLocationStore";
 import type { WeatherInfo } from "@/types/weather";
 import BackHomeIcon from "@/assets/monitor-back.webp";
 import monitorHeaderBackground from "@/assets/monitor-header.webp";
+import HorizontalSliceImage from "@/components/horizontalSliceImage";
+import { DESIGN_WIDTH } from "@/constants/screen";
 
 interface DashboardHeaderProps {
   type: "monitor" | "home";
@@ -115,6 +117,7 @@ const StatusDot = styled.span`
 
 const MainTitle = styled.h1<{ $type: DashboardHeaderProps["type"] }>`
   position: absolute;
+  left: 50%;
   top: 62px;
   height: 118px;
   margin: 0;
@@ -127,9 +130,9 @@ const MainTitle = styled.h1<{ $type: DashboardHeaderProps["type"] }>`
   line-height: 1;
   letter-spacing: 18px;
   white-space: nowrap;
+  transform: translateX(-50%);
 
   ${(props) => ({
-    left: props.$type === "monitor" ? "1887px" : "2033px",
     width: props.$type === "monitor" ? "1834px" : "1534px",
   })}
   color: rgba(255, 254, 254, 0);
@@ -185,13 +188,7 @@ const BackWrap = styled.button`
   }
 `;
 
-const HeaderBg = styled.img`
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 100%;
-  width: 100%;
-`;
+const HeaderBg = styled(HorizontalSliceImage)``;
 
 const BackIcon = styled.img`
   width: 42px;
@@ -260,7 +257,15 @@ export default function DashboardHeader({
           <span>返回</span>
         </BackWrap>
       )}
-      {type === "monitor" && <HeaderBg src={monitorHeaderBackground} />}
+      {type === "monitor" && (
+        <HeaderBg
+          src={monitorHeaderBackground}
+          sourceWidth={DESIGN_WIDTH}
+          sourceHeight={235}
+          leftWidth={1700}
+          rightWidth={1560}
+        />
+      )}
       <MainTitle $type={type}>{title}</MainTitle>
       <Environment>
         <time dateTime={now.toISOString()}>{formatTime(now)}</time>

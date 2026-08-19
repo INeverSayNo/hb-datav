@@ -87,8 +87,8 @@ const NODE_ITEMS = [
 
 const LegendPanel = styled.section`
   position: absolute;
-  left: 1780px;
-  top: 1875px;
+  left: 80px;
+  top: 1485px;
   z-index: 3;
   display: flex;
   align-items: stretch;

@@ -29,7 +29,7 @@ import { useNavigate } from "react-router";
 
 const RightRail = styled.aside`
   position: absolute;
-  left: 4110px;
+  right: 70px;
   top: 284px;
   width: 1420px;
   height: 1880px;

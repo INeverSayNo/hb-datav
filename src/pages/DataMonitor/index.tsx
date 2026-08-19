@@ -1,4 +1,5 @@
 import AutoFit from "@/components/autoFit";
+import { DESIGN_HEIGHT, DESIGN_WIDTH } from "@/constants/screen";
 import NumberAnimation from "@/components/numberAnimation";
 import monitorArrow from "@/assets/monitor-arrow.webp";
 import monitorOrderIcon from "@/assets/monitor-order-count.webp";
@@ -24,8 +25,8 @@ import { useMonitorStream } from "./useMonitorStream";
 
 const Dashboard = styled.div`
   position: relative;
-  width: 5600px;
-  height: 2320px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   color: #fff;
   font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
@@ -43,7 +44,7 @@ const Content = styled.main`
   right: 25px;
   height: 1790px;
   display: grid;
-  grid-template-columns: 1670px 2120px 1670px;
+  grid-template-columns: minmax(0, 1670fr) minmax(0, 2120fr) minmax(0, 1670fr);
   gap: 45px;
 `;
 
@@ -571,7 +572,12 @@ function MonitorDashboard() {
 
 export default function Index() {
   return (
-    <AutoFit dw={5600} dh={2320} aria-label="武汉多式联运服务中心数据大屏">
+    <AutoFit
+      dw={DESIGN_WIDTH}
+      dh={DESIGN_HEIGHT}
+      mode="expand-width"
+      aria-label="武汉多式联运服务中心数据大屏"
+    >
       <MonitorDashboard />
     </AutoFit>
   );

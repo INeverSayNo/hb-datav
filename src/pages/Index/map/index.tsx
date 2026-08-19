@@ -37,14 +37,15 @@ const MapRoot = styled.section`
 
 const DemLayer = styled.img`
   position: absolute;
-  left: 13.1%;
+  left: 50%;
   top: 7.2%;
   z-index: 2;
-  width: 73.8%;
-  height: auto;
+  width: auto;
+  height: 70.3%;
   opacity: 0.28;
   object-fit: contain;
   pointer-events: none;
+  transform: translateX(-50%);
   mix-blend-mode: screen;
   filter: sepia(1) saturate(4) hue-rotate(130deg) brightness(0.76)
     contrast(1.18);

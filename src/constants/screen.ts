@@ -1,0 +1,5 @@
+export const DESIGN_WIDTH = 5600;
+export const DESIGN_HEIGHT = 2320;
+
+export const DESIGN_ASPECT_RATIO = DESIGN_WIDTH / DESIGN_HEIGHT;
+

@@ -3,17 +3,18 @@ import styled from "styled-components";
 import plannerImage from "@/assets/ai-solution-bg.webp";
 import aiSolution from "@/assets/ai.webp";
 import Modal from "@/components/modal";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AI_SOLUTION_URL, runtimeConfig } from "@/axios-config/request";
 import { AccountLogin } from "@/api/modules/baseDataApi";
 import { createPortal } from "react-dom";
 
 const Center = styled.main`
   position: absolute;
-  left: 1580px;
+  left: 50%;
   top: 285px;
   width: 2440px;
   height: 1810px;
+  transform: translateX(-50%);
   z-index: 3;
   pointer-events: none;
 `;
@@ -180,9 +181,9 @@ export default function CenterControls() {
 
   const [aiSolutionIframeUrl, setAiSolutionIframeUrl] = useState("");
 
-  let timer: any = null;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openAiSolutionModal = async () => {
-    clearTimeout(timer);
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
     setLoading(true);
     setErrorMessage("");
     setAiSolutionIframeUrl("");
@@ -198,9 +199,9 @@ export default function CenterControls() {
       setErrorMessage(
         "AI 物流规划师暂时无法打开，请稍后重试，或检查网络连接后再试。",
       );
-      timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setErrorMessage("");
-        clearTimeout(timer);
+        timerRef.current = null;
       }, 2000);
     }
   };

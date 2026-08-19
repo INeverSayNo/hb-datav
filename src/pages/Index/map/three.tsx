@@ -32,6 +32,7 @@ import {
 } from "three";
 
 import ShapeBox from "./shape";
+import { useScaledCanvasDpr } from "@/hooks/useScreenLayout";
 import {
   FirstFrameProbe,
   GLOW_EMISSIVE_COLOR,
@@ -713,6 +714,7 @@ export default function ThreeHubeiMap({
   paused = false,
 }: ThreeHubeiMapProps) {
   const controlSpeed = useControlSpeed();
+  const renderDpr = useScaledCanvasDpr();
   const [baseGeo, setBaseGeo] = useState<HubeiBaseGeo | null>(null);
 
   // 底图数据（市界 + 省界轮廓，约 360KB）改成运行时 fetch：静态 import 会被 Vite
@@ -734,7 +736,7 @@ export default function ThreeHubeiMap({
   return (
     <MapRoot role="img" aria-label="湖北省三维地形地图">
       <Canvas
-        dpr={[1, 1.5]}
+        dpr={renderDpr}
         resize={{ offsetSize: true }}
         // 被上层标记为淡出时冻结渲染循环，避免交叉淡入期间两个 WebGL 场景同时满帧。
         frameloop={paused ? "demand" : "always"}

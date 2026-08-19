@@ -1,10 +1,7 @@
 import { useEffect, useRef } from "react";
 import styled from "styled-components";
 
-// 数字雨覆盖区域（大屏 5600x2320 坐标系），略大于中央地图舞台，
-// 中间部分会被地图遮挡，四周通过 mask 渐隐、避免压到左右面板
-const RAIN_LEFT = 1430;
-const RAIN_TOP = 230;
+// 数字雨挂在中央地图舞台内，超宽屏时始终跟随地图居中。
 const RAIN_WIDTH = 2760;
 const RAIN_HEIGHT = 1760;
 
@@ -16,10 +13,11 @@ const TRAIL_FADE = 0.13; // 每步拖尾衰减量，值越大拖尾越短
 
 const Canvas = styled.canvas`
   position: absolute;
-  left: ${RAIN_LEFT}px;
-  top: ${RAIN_TOP}px;
+  left: calc(50% - 60px);
+  top: -160px;
   width: ${RAIN_WIDTH}px;
   height: ${RAIN_HEIGHT}px;
+  transform: translateX(-50%);
   z-index: 1;
   opacity: 0.62;
   pointer-events: none;

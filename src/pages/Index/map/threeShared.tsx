@@ -14,6 +14,7 @@ import {
 } from "three";
 
 import worldTerrain from "@/assets/scene-transparent.webp";
+import { useScreenLayout } from "@/hooks/useScreenLayout";
 
 /** 地图挤出厚度（地图整体宽度约 21 个投影单位）。 */
 export const MAP_DEPTH = 0.66;
@@ -188,22 +189,9 @@ const WorldBaseMaterial = extend(
 
 /** 补偿 AutoFit 的 CSS 缩放，使两张地图的鼠标手感一致。 */
 export function useControlSpeed() {
-  const [speed, setSpeed] = useState(1);
+  const { scale } = useScreenLayout();
 
-  useLayoutEffect(() => {
-    const update = () => {
-      const scale = Math.min(
-        window.innerWidth / 5600,
-        window.innerHeight / 2320,
-      );
-      setSpeed(Math.min(4, 1 / Math.max(scale, 0.2)));
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  return speed;
+  return Math.min(4, 1 / Math.max(scale, 0.2));
 }
 
 export function WorldBase({
