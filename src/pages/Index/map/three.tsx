@@ -325,6 +325,25 @@ function MapMesh({ baseGeo }: { baseGeo: HubeiBaseGeo }) {
       });
     });
 
+    // for (let i = 0; i < outlineData.features.length; i++) {
+    //   const feature = outlineData.features[i];
+    //   for (let j = 0; j < feature.geometry.coordinates.length; j++) {
+    //     const polygon = feature.geometry.coordinates[j];
+    //     const rings = polygon.map((e) =>
+    //       e.filter((v) => isPointInHubei(v[0], v[1])).map(project),
+    //     );
+    //     const outer = rings[0];
+    //     if (!ShapeUtils.isClockWise(outer)) outer.reverse();
+
+    //     const shape = new Shape(outer);
+    //     rings.slice(1).forEach((ring) => {
+    //       if (ShapeUtils.isClockWise(ring)) ring.reverse();
+    //       shape.holes.push(new Path(ring));
+    //     });
+    //     shapes.push(shape);
+    //   }
+    // }
+
     const boundaryPositions: number[] = [];
     mapData.features.forEach((feature) => {
       feature.geometry.coordinates.forEach((polygon) => {
@@ -679,7 +698,7 @@ function MapMesh({ baseGeo }: { baseGeo: HubeiBaseGeo }) {
           >
             <PoiDotMarker $color={poi.color}></PoiDotMarker>
             <PoiTextLabel data-poi-label $color={poi.color}>
-               <img data-poi-icon src={poi.icon} alt={poi.label} />
+              <img data-poi-icon src={poi.icon} alt={poi.label} />
               <i>{poi.label}</i>
             </PoiTextLabel>
           </PoiMarker>

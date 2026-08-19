@@ -31,6 +31,7 @@ import capacityHighwayIcon from "@/assets/capacity-highway.webp";
 import capacityRailwayIcon from "@/assets/capacity-railway.webp";
 import capacityAirwayIcon from "@/assets/capacity-airway.webp";
 import capacityWaterwayIcon from "@/assets/capacity-waterway.webp";
+import ArrowIconImg from "@/assets/arrow.png";
 import { CapacityTypeEnum } from "@/utils/monitorEnum";
 
 const Dashboard = styled.div`
@@ -306,17 +307,22 @@ const Footer = styled.footer`
 `;
 
 const CapacityTitle = styled.div`
-display: flex;
-align-items: center;
-span {
-  margin-left: 20px;
-}
-`
+  display: flex;
+  align-items: center;
+  span {
+    margin-left: 20px;
+  }
+`;
 
 const CapacityImg = styled.img`
   width: 54px;
   height: 54px;
-`
+`;
+
+const ArrowIcon = styled.img`
+  width: 54px;
+  height: 34px;
+`;
 
 function SectionTitle({
   children,
@@ -408,13 +414,12 @@ const nodeColumns: LoopingTableColumn<MonitorNodeFlow>[] = [
   { title: "运营单位", dataIndex: "providerName", width: 1.3 },
 ];
 
-
 const getTransitTime = (start: string | number, end: string | number) => {
   const min = Number(start).toFixed(0);
   const max = Number(end).toFixed(0);
-  if(min === max) return max;
-  return `${min} - ${max}`
-}
+  if (min === max) return max;
+  return `${min} - ${max}`;
+};
 
 const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
   // {
@@ -439,7 +444,7 @@ const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
         <EventRoute>{`${item.origin}至${item.dest}`}</EventRoute>
         <EventGoods>{item.goodsName}</EventGoods>
         <EventPrice>{formatUnitPrice(item.price, item.unit)}</EventPrice>
-        
+
         <EventTransit>{`预估时效：${getTransitTime(item.transitBegin, item.transitEnd)}天`}</EventTransit>
       </>
     ),
@@ -472,8 +477,36 @@ const capacityColumns: LoopingTableColumn<MonitorTransportCapacity>[] = [
     ),
   },
   { dataIndex: "f1", width: 1.1 },
-  { dataIndex: "f2", width: 1.1},
-  { dataIndex: "f3", width: 0.8 },
+  {
+    dataIndex: "f1",
+    width: 0.5,
+    render: (item) => {
+      return (
+        [
+          CapacityTypeEnum.Enum.Railway.id,
+          CapacityTypeEnum.Enum.Airway.id,
+        ].some((id) => id === item.type) && <ArrowIcon src={ArrowIconImg} />
+      );
+    },
+  },
+  {
+    dataIndex: "f2",
+    width: 1.1,
+    render: (item) => {
+      return [CapacityTypeEnum.Enum.Highway.id].some((id) => id === item.type)
+        ? `${item.f2}T`
+        : item.f2;
+    },
+  },
+  {
+    dataIndex: "f3",
+    width: 0.8,
+    render: (item) => {
+      return [CapacityTypeEnum.Enum.Highway.id].some((id) => id === item.type)
+        ? `${item.f3}M`
+        : item.f3;
+    },
+  },
   { dataIndex: "f4", width: 0.7 },
 ];
 

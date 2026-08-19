@@ -24,6 +24,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import { MAP_DEPTH } from "./threeShared";
 import { HB_PROJECTION_CENTER } from "./hbProjection.generated";
 import { loadHubeiRoadGeo, type HubeiRoadGeo } from "./threeResources";
+import { isPointInHubei } from "@/utils/geo";
 
 /** 高速公路线宽（屏幕像素） */
 const HIGHWAY_WIDTH = 4;
@@ -86,6 +87,9 @@ function createProjector() {
 function buildRoadNetwork(geo: HubeiRoadGeo): BuiltRoadNetwork {
   const project = createProjector();
 
+  console.log(geo)
+  
+
   // ---- 高速路网：构建期已投影，这里只把「点序列」展开成「线段端点对」 ----
   // LineSegmentsGeometry 要的是每段两个端点，相邻段共享的端点必须重复一次，
   // 所以二进制里存点、运行时展开，比直接存展开后的段省 60% 体积。
@@ -144,6 +148,9 @@ function buildRoadNetwork(geo: HubeiRoadGeo): BuiltRoadNetwork {
     let dashRemaining = RAILWAY_DASH_LENGTH;
 
     for (let index = 1; index < coordinates.length; index += 1) {
+      if(!isPointInHubei(coordinates[index][0], coordinates[index][1])) {
+        continue
+      }
       const current = project(coordinates[index]);
       const segmentLength = previous.distanceTo(current);
       if (segmentLength <= EPSILON) {
@@ -224,7 +231,8 @@ function buildRoadNetwork(geo: HubeiRoadGeo): BuiltRoadNetwork {
 
   geo.waterway.coordinates.forEach((coordinates) => {
     if (coordinates.length < 2) return;
-    const points = coordinates.map(project);
+    
+    const points = coordinates.filter(e=>isPointInHubei(e[0], e[1])).map(project);
 
     // 先量出整条线的累计弧长，渐变才能按长度而非顶点序号归一化
     const cumulative = [0];
