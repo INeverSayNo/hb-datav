@@ -64,10 +64,12 @@ export interface MonitorRequestEvent {
 }
 
 export interface MonitorTransportCapacity {
-  id: string;
-  plateNo: string;
-  driverName: string;
-  driverPhone: string;
+  type: number;
+  f1: string;
+  f2: string;
+  f3: string;
+  f4: string;
+  id: string
 }
 
 export interface MonitorExceptionWarning {

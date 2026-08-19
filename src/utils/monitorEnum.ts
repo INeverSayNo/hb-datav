@@ -34,9 +34,8 @@ export const TransportTypeDefinitions = {
 
 export type TransportTypeId =
   (typeof TransportTypeDefinitions)[keyof typeof TransportTypeDefinitions]["id"];
-  export type TransportTypeName =
+export type TransportTypeName =
   (typeof TransportTypeDefinitions)[keyof typeof TransportTypeDefinitions]["label"];
-
 
 class TransportTypeEntity extends EnumEntity {
   Enum = TransportTypeDefinitions;
@@ -95,7 +94,7 @@ export const CarriageTypeDefinitions = {
 export type CarriageTypeId =
   (typeof CarriageTypeDefinitions)[keyof typeof CarriageTypeDefinitions]["id"];
 
-  export type CarriageTypeName =
+export type CarriageTypeName =
   (typeof CarriageTypeDefinitions)[keyof typeof CarriageTypeDefinitions]["label"];
 
 class CarriageTypeEntity extends EnumEntity {
@@ -127,7 +126,7 @@ export const ExceptionTypeDefinitions = {
 export type ExceptionTypeId =
   (typeof ExceptionTypeDefinitions)[keyof typeof ExceptionTypeDefinitions]["id"];
 
-  export type ExceptionTypeName =
+export type ExceptionTypeName =
   (typeof ExceptionTypeDefinitions)[keyof typeof ExceptionTypeDefinitions]["label"];
 
 class ExceptionTypeEntity extends EnumEntity {
@@ -156,3 +155,35 @@ class LogisticNodeTypeEntity extends EnumEntity {
 }
 
 export const LogisticNodeTypeEnum = new LogisticNodeTypeEntity();
+
+// 运力（Capacitytype）
+export const CapacityTypeDefinitions = {
+  Highway: {
+    id: 0,
+    label: "公路",
+  },
+  Railway: {
+    id: 1,
+    label: "铁路",
+  },
+  Waterway: {
+    id: 2,
+    label: "水运",
+  },
+  Airway: {
+    id: 3,
+    label: "空运",
+  },
+} as const;
+
+export type CapacityTypeId =
+  (typeof CapacityTypeDefinitions)[keyof typeof CapacityTypeDefinitions]["id"];
+
+export type CapacityTypeName =
+  (typeof CapacityTypeDefinitions)[keyof typeof CapacityTypeDefinitions]["label"];
+
+class CapacityTypeEntity extends EnumEntity {
+  Enum = CapacityTypeDefinitions;
+}
+
+export const CapacityTypeEnum = new CapacityTypeEntity();

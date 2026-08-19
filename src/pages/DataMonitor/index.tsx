@@ -27,6 +27,12 @@ import DashboardHeader from "../Index/components/DashboardHeader";
 import LoopingTable, { type LoopingTableColumn } from "./LoopingTable";
 import { useMonitorStream } from "./useMonitorStream";
 
+import capacityHighwayIcon from "@/assets/capacity-highway.webp";
+import capacityRailwayIcon from "@/assets/capacity-railway.webp";
+import capacityAirwayIcon from "@/assets/capacity-airway.webp";
+import capacityWaterwayIcon from "@/assets/capacity-waterway.webp";
+import { CapacityTypeEnum } from "@/utils/monitorEnum";
+
 const Dashboard = styled.div`
   position: relative;
   width: 100%;
@@ -107,8 +113,9 @@ const SummaryLabel = styled.div`
   white-space: nowrap;
 `;
 
-const Panel = styled.section<{ $height: number; $marginTop?: number }>`
-  height: ${({ $height }) => $height}px;
+const Panel = styled.section<{ $height: number | string; $marginTop?: number }>`
+  height: ${({ $height }) =>
+    typeof $height === "number" ? $height + "px" : $height};
   margin-top: ${({ $marginTop = 0 }) => $marginTop}px;
   min-height: 0;
   display: flex;
@@ -152,7 +159,7 @@ const LiveLabel = styled.span`
 `;
 
 const LiveDot = styled.span`
-   width: 34px;
+  width: 34px;
   height: 34px;
   border-radius: 50%;
   background: #31d372;
@@ -298,6 +305,19 @@ const Footer = styled.footer`
   letter-spacing: 2px;
 `;
 
+const CapacityTitle = styled.div`
+display: flex;
+align-items: center;
+span {
+  margin-left: 20px;
+}
+`
+
+const CapacityImg = styled.img`
+  width: 54px;
+  height: 54px;
+`
+
 function SectionTitle({
   children,
   live,
@@ -351,7 +371,12 @@ const providerColumns: LoopingTableColumn<MonitorProvider>[] = [
 ];
 
 const waybillColumns: LoopingTableColumn<MonitorWaybill>[] = [
-  { title: "运单号", dataIndex: "waybillNo", width: 0.5, render: (item) =><span>{`**` + (item.waybillNo || "").slice(-4)}</span> },
+  {
+    title: "运单号",
+    dataIndex: "waybillNo",
+    width: 0.5,
+    render: (item) => <span>{`**` + (item.waybillNo || "").slice(-4)}</span>,
+  },
   { title: "客户", dataIndex: "shipperName", width: 1.4 },
   {
     title: "起讫点",
@@ -383,6 +408,14 @@ const nodeColumns: LoopingTableColumn<MonitorNodeFlow>[] = [
   { title: "运营单位", dataIndex: "providerName", width: 1.3 },
 ];
 
+
+const getTransitTime = (start: string | number, end: string | number) => {
+  const min = Number(start).toFixed(0);
+  const max = Number(end).toFixed(0);
+  if(min === max) return max;
+  return `${min} - ${max}`
+}
+
 const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
   // {
   //   width: 1,
@@ -406,16 +439,42 @@ const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
         <EventRoute>{`${item.origin}至${item.dest}`}</EventRoute>
         <EventGoods>{item.goodsName}</EventGoods>
         <EventPrice>{formatUnitPrice(item.price, item.unit)}</EventPrice>
-        <EventTransit>{`预估时效：${Number(item.transitBegin).toFixed(0)}-${Number(item.transitEnd).toFixed(0)}天`}</EventTransit>
+        
+        <EventTransit>{`预估时效：${getTransitTime(item.transitBegin, item.transitEnd)}天`}</EventTransit>
       </>
     ),
   },
 ];
 
+const getCapatityIcon = (payload: number) => {
+  switch (payload) {
+    case CapacityTypeEnum.Enum.Airway.id:
+      return capacityAirwayIcon;
+    case CapacityTypeEnum.Enum.Waterway.id:
+      return capacityWaterwayIcon;
+    case CapacityTypeEnum.Enum.Railway.id:
+      return capacityRailwayIcon;
+    case CapacityTypeEnum.Enum.Highway.id:
+    default:
+      return capacityHighwayIcon;
+  }
+};
+
 const capacityColumns: LoopingTableColumn<MonitorTransportCapacity>[] = [
-  { dataIndex: "plateNo", width: 1 },
-  { dataIndex: "driverName", width: 0.8 },
-  { dataIndex: "driverPhone", width: 1.05 },
+  {
+    dataIndex: "type",
+    width: 0.7,
+    render: (item) => (
+      <CapacityTitle>
+        <CapacityImg src={getCapatityIcon(item.type)} />
+        <span>{CapacityTypeEnum.getSelf(item.type)?.label}</span>
+      </CapacityTitle>
+    ),
+  },
+  { dataIndex: "f1", width: 1.1 },
+  { dataIndex: "f2", width: 1.1},
+  { dataIndex: "f3", width: 0.8 },
+  { dataIndex: "f4", width: 0.7 },
 ];
 
 // const warningColumns: LoopingTableColumn<MonitorExceptionWarning>[] = [
@@ -514,92 +573,33 @@ function MonitorDashboard() {
             </SummaryCard>
           </SummaryGrid>
 
-          <Panel $height={926} $marginTop={32}>
+          <Panel $height={1000} $marginTop={0}>
             <SectionTitle>物流托运人</SectionTitle>
             <TableBody>
               <LoopingTable
                 data={shipperList}
                 columns={shipperColumns}
-                visibleRows={7}
+                visibleRows={8}
                 rowHeight={108}
                 startDelay={1200}
               />
             </TableBody>
           </Panel>
 
-          <Panel $height={560} $marginTop={32}>
+          <Panel $height={670} $marginTop={0}>
             <SectionTitle>物流多式联运服务商</SectionTitle>
             <TableBody>
               <LoopingTable
                 data={providerList}
                 columns={providerColumns}
-                visibleRows={4}
+                visibleRows={6}
                 rowHeight={98}
                 startDelay={1800}
               />
             </TableBody>
           </Panel>
-        </Column>
 
-        <Column>
-          <Panel $height={850}>
-            <SectionTitle live="scroll">多式联运整体数据概览</SectionTitle>
-            <TableBody>
-              <LoopingTable
-                data={waybillList}
-                columns={waybillColumns}
-                visibleRows={7}
-                rowHeight={97}
-                scrollDirection="down"
-              />
-            </TableBody>
-          </Panel>
-
-          <Panel $height={905} $marginTop={35}>
-            <SectionTitle>重要物流节点</SectionTitle>
-            <TableBody>
-              <LoopingTable
-                data={nodeFlowList}
-                columns={nodeColumns}
-                visibleRows={7}
-                rowHeight={105}
-                startDelay={2400}
-              />
-            </TableBody>
-          </Panel>
-        </Column>
-
-        <Column>
-          <Panel $height={850}>
-            <SectionTitle live="live">实时需求事件流</SectionTitle>
-            <TableBody>
-              <LoopingTable
-                data={requestEventList}
-                columns={requestColumns}
-                visibleRows={7}
-                rowHeight={110}
-                showHeader={false}
-                rowPadding="0 34px"
-                scrollDirection="down"
-                startDelay={600}
-              />
-            </TableBody>
-          </Panel>
-
-          <Panel $height={425} $marginTop={35}>
-            <SectionTitle>实时运力</SectionTitle>
-            <TableBody>
-              <LoopingTable
-                data={transportCapacityList}
-                columns={capacityColumns}
-                visibleRows={3}
-                rowHeight={115}
-                showHeader={false}
-              />
-            </TableBody>
-          </Panel>
-
-          <Panel $height={445} $marginTop={35}>
+          <Panel $height={465} $marginTop={0}>
             <SectionTitle>异常预警</SectionTitle>
             <TableBody>
               <LoopingTable
@@ -609,6 +609,65 @@ function MonitorDashboard() {
                 rowHeight={136}
                 borderColor="rgba(117, 28, 65, 0.96)"
                 headerBackground="rgba(112, 28, 62, 0.94)"
+              />
+            </TableBody>
+          </Panel>
+        </Column>
+
+        <Column>
+          <Panel $height={"50.5%"}>
+            <SectionTitle live="scroll">多式联运整体数据概览</SectionTitle>
+            <TableBody>
+              <LoopingTable
+                data={waybillList}
+                columns={waybillColumns}
+                visibleRows={11}
+                rowHeight={107}
+                scrollDirection="down"
+              />
+            </TableBody>
+          </Panel>
+
+          <Panel $height={"46.5%"} $marginTop={0}>
+            <SectionTitle>重要物流节点</SectionTitle>
+            <TableBody>
+              <LoopingTable
+                data={nodeFlowList}
+                columns={nodeColumns}
+                visibleRows={11}
+                rowHeight={105}
+                startDelay={2400}
+              />
+            </TableBody>
+          </Panel>
+        </Column>
+
+        <Column>
+          <Panel $height={"40%"}>
+            <SectionTitle live="live">实时需求事件流</SectionTitle>
+            <TableBody>
+              <LoopingTable
+                data={requestEventList}
+                columns={requestColumns}
+                visibleRows={9}
+                rowHeight={110}
+                showHeader={false}
+                rowPadding="0 34px"
+                scrollDirection="down"
+                startDelay={600}
+              />
+            </TableBody>
+          </Panel>
+
+          <Panel $height={"58%"} $marginTop={0}>
+            <SectionTitle>实时运力 (铁-公-水-空)</SectionTitle>
+            <TableBody>
+              <LoopingTable
+                data={transportCapacityList}
+                columns={capacityColumns}
+                visibleRows={14}
+                rowHeight={112}
+                showHeader={false}
               />
             </TableBody>
           </Panel>
