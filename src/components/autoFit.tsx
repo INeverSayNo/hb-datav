@@ -38,10 +38,11 @@ export type AutoFitProps = PropsWithChildren<
     dw?: number;
     dh?: number;
     mode?: AutoFitMode;
+    expandHeightMinWidth?: number;
   }
 >;
 
-export type AutoFitMode = "contain" | "expand-width";
+export type AutoFitMode = "contain" | "expand-width" | "expand";
 
 function getViewportSize() {
   return {
@@ -54,22 +55,31 @@ function calculateLayout(
   dw: number,
   dh: number,
   mode: AutoFitMode,
+  expandHeightMinWidth: number,
 ): ScreenLayout {
   const viewport = getViewportSize();
   const viewportAspect = viewport.width / Math.max(viewport.height, 1);
   const designAspect = dw / dh;
-  const isUltraWide = mode === "expand-width" && viewportAspect > designAspect;
+  const canExpandWidth = mode === "expand-width" || mode === "expand";
+  const isUltraWide = canExpandWidth && viewportAspect > designAspect;
+  const isTall =
+    mode === "expand" &&
+    viewportAspect < designAspect &&
+    viewport.width >= expandHeightMinWidth;
   const scale = isUltraWide
     ? viewport.height / dh
-    : Math.min(viewport.width / dw, viewport.height / dh);
+    : isTall
+      ? viewport.width / dw
+      : Math.min(viewport.width / dw, viewport.height / dh);
 
   return {
     scale,
     stageWidth: isUltraWide ? viewport.width / Math.max(scale, 0.0001) : dw,
-    stageHeight: dh,
+    stageHeight: isTall ? viewport.height / Math.max(scale, 0.0001) : dh,
     viewportWidth: viewport.width,
     viewportHeight: viewport.height,
     isUltraWide,
+    isTall,
   };
 }
 
@@ -77,16 +87,17 @@ export default function AutoFit({
   dw = 1920,
   dh = 1080,
   mode = "contain",
+  expandHeightMinWidth = 0,
   children,
   ...props
 }: AutoFitProps) {
   const [layout, setLayout] = useState<ScreenLayout>(() =>
-    calculateLayout(dw, dh, mode),
+    calculateLayout(dw, dh, mode, expandHeightMinWidth),
   );
 
   useLayoutEffect(() => {
     const updateLayout = () => {
-      setLayout(calculateLayout(dw, dh, mode));
+      setLayout(calculateLayout(dw, dh, mode, expandHeightMinWidth));
     };
 
     updateLayout();
@@ -96,7 +107,7 @@ export default function AutoFit({
       window.removeEventListener("resize", updateLayout);
       window.visualViewport?.removeEventListener("resize", updateLayout);
     };
-  }, [dw, dh, mode]);
+  }, [dw, dh, mode, expandHeightMinWidth]);
 
   return (
     <Viewport>
