@@ -44,7 +44,7 @@ export const serviceMetrics: ServiceMetric[] = [
   { unit: "家", label: "物流供应链企业", key: "supplyCount" },
   { unit: "单", label: "运输需求数量", key: "requestCount" },
   { unit: "单", label: "运单数量", key: "waybillCount" },
-  { unit: "万元", label: "运费总额", key: "freightVolume" },
+  { unit: "万元", label: "货值", key: "freightVolume" },
   { unit: "条", label: "精品线路", key: "lineCount" },
 ];
 

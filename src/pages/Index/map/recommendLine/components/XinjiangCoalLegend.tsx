@@ -25,7 +25,7 @@ const Panel = styled.section`
 `;
 
 const Title = styled.h3`
-  margin: 0;
+  margin-bottom: 20px;
   color: #f2f9fc;
   font-size: 34px;
   line-height: 44px;
