@@ -7,12 +7,15 @@ import serviceIcon4 from "@/assets/intermodal-order-count.webp";
 import serviceIcon5 from "@/assets/intermodal-order-total-price.webp";
 import serviceIcon6 from "@/assets/intermodal-boutique-line.webp";
 
-import nodeImage1 from "@/assets/platform-node-logistic-park.webp";
-import nodeImage2 from "@/assets/platform-node-highway.webp";
-import nodeImage3 from "@/assets/platform-node-railway-privateline.webp";
-import nodeImage4 from "@/assets/platform-node-waterway-port.webp";
-import nodeImage5 from "@/assets/platform-node-railway-station.webp";
-import nodeImage6 from "@/assets/platform-node-waterway-ship.webp";
+import nodeParkImg from "@/assets/platform-node-logistic-park.webp";
+import nodeHighwayImg from "@/assets/platform-node-highway.webp";
+import nodePrivateLineImg from "@/assets/platform-node-railway-privateline.webp";
+import nodeWaterPortImg from "@/assets/platform-node-waterway-port.webp";
+import nodeRailwayStationImg from "@/assets/platform-node-railway-station.webp";
+import nodeAirImg from "@/assets/platform-node-airway.webp";
+import nodeAreaShipImg from "@/assets/platform-node-area.webp";
+import nodePoehipImg from "@/assets/platform-node-poe.webp";
+import nodeWaterShipImg from "@/assets/platform-node-waterway-ship.webp"
 
 import routeBlue from "@/assets/line-service-blue-bg.webp";
 import routeGreen from "@/assets/line-service-cyan-blue-bg.webp";
@@ -44,16 +47,16 @@ const Panel = styled.section`
 
 const ServicePanel = styled(Panel)`
   top: 0;
-  height: 620px;
+  height: 500px;
 `;
 
 const NodePanel = styled(Panel)`
-  top: 690px;
-  height: 610px;
+  top: 540px;
+  height: 710px;
 `;
 
 const RoutePanel = styled(Panel)`
-  top: 1370px;
+  top: 1420px;
   height: 480px;
 `;
 
@@ -61,11 +64,11 @@ const ServiceGrid = styled.div`
   position: absolute;
   left: 22px;
   right: 22px;
-  top: 128px;
+  top: 107px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-auto-rows: 205px;
-  gap: 20px 16px;
+  gap: 0px 10px;
 `;
 
 const ServiceItem = styled.div`
@@ -77,7 +80,7 @@ const ServiceItem = styled.div`
 
 const ServiceIcon = styled.img`
   width: 141px;
-  height: 159px;
+  height: 150px;
   flex: 0 0 auto;
   object-fit: contain;
   margin-right: 14px;
@@ -132,6 +135,7 @@ const NodeItemBackground = styled.img`
   width: 266px;
   height: 146px;
   top: -14px;
+  z-index: -1;
 `;
 
 const NodeItem = styled.div`
@@ -300,12 +304,15 @@ const serviceIcons = [
 ];
 
 const nodeImages = [
-  nodeImage1,
-  nodeImage2,
-  nodeImage3,
-  nodeImage4,
-  nodeImage5,
-  nodeImage6,
+  nodeAirImg,
+  nodeAreaShipImg,
+  nodePoehipImg,
+  nodeParkImg,
+  nodeRailwayStationImg,
+  nodeWaterPortImg,
+  nodeHighwayImg,
+  nodePrivateLineImg,
+  nodeWaterShipImg,
 ];
 
 const routeBackgrounds = [routeBlue, routeGreen, routeGold];

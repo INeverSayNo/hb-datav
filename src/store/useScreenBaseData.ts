@@ -30,6 +30,9 @@ export interface ScreenBaseData {
     transportCapacity: number;
     privateLine: number;
     shipCount: number;
+    coopPort: string;
+    rcr: string;
+    airway: string;
   };
   loading: boolean;
   rightBottomPanel: { text1: string; text2: string }[];
@@ -130,6 +133,9 @@ export const useScreenBaseDataStore = create<ScreenBaseDataStore>()(
       transportCapacity: 0,
       privateLine: 0,
       shipCount: 0,
+      airway: "0",
+      coopPort: "0",
+      rcr: "0",
     },
     rightBottomPanel: [],
     xinjiangCoalRoutes: null,

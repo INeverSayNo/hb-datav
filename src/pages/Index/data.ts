@@ -49,6 +49,10 @@ export const serviceMetrics: ServiceMetric[] = [
 ];
 
 export const nodeMetrics: NodeMetric[] = [
+  { key: "airway", label: "航线" },
+  { key: "rcr", label: "辐射国家/地区" },
+  { key: "coopPort", label: "合作口岸" },
+
   { key: "parkCount", label: "物流/产业园区" },
   { key: "stationCount", label: "铁路货运站点" },
   { key: "portCount", label: "水运货运港口" },

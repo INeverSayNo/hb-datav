@@ -210,12 +210,14 @@ const EventGoods = styled.span`
   overflow: hidden;
   color: #e8f1f4;
   text-overflow: ellipsis;
+  margin: 0 10px;
 `;
 
 const EventPrice = styled.span`
   flex: 0 0 auto;
   color: #ff9c14;
   font-weight: 700;
+  margin-right: 10px;
 `;
 
 const EventTransit = styled.span`
@@ -302,14 +304,14 @@ function formatUnitPrice(value: number, unit: string) {
 }
 
 const shipperColumns: LoopingTableColumn<MonitorShipper>[] = [
-  { title: "名称", dataIndex: "name", width:1.8 },
+  { title: "名称", dataIndex: "name", width: 1.8 },
   { title: "联系人", dataIndex: "contact", width: 0.6 },
   { title: "联系电话", dataIndex: "phone", width: 1.15 },
   { title: "托运方式", dataIndex: "method", width: 0.8 },
 ];
 
 const providerColumns: LoopingTableColumn<MonitorProvider>[] = [
-  { title: "名称", dataIndex: "name", width:1.8 },
+  { title: "名称", dataIndex: "name", width: 1.8 },
   { title: "联系人", dataIndex: "contact", width: 0.6 },
   { title: "联系电话", dataIndex: "phone", width: 1.15 },
   { title: "服务能力", dataIndex: "type", width: 0.8 },
@@ -349,16 +351,30 @@ const nodeColumns: LoopingTableColumn<MonitorNodeFlow>[] = [
 ];
 
 const requestColumns: LoopingTableColumn<MonitorRequestEvent>[] = [
+  // {
+  //   width: 1,
+  //   render: (item) => (
+  //     <RequestLine>
+  //       <EventTime>{item.eventTime}</EventTime>
+  //       <EventRoute>{`${item.origin}至${item.dest}`}</EventRoute>
+  //       <EventGoods>品名:{item.goodsName}</EventGoods>
+  //       <EventPrice>{formatUnitPrice(item.price, item.unit)}</EventPrice>
+  //       <EventTransit>{`时效要求:${Number(item.transitBegin).toFixed(0)}-${Number(item.transitEnd).toFixed(0)}天`}</EventTransit>
+  //     </RequestLine>
+  //   ),
+  // },
   {
-    width: 1,
+    width: 0.3,
+    render: (item) => <EventTime>{item.eventTime}</EventTime>,
+  },
+  {
     render: (item) => (
-      <RequestLine>
-        <EventTime>{item.eventTime}</EventTime>
+      <>
         <EventRoute>{`${item.origin}至${item.dest}`}</EventRoute>
-        <EventGoods>品名:{item.goodsName}</EventGoods>
+        <EventGoods>{item.goodsName}</EventGoods>
         <EventPrice>{formatUnitPrice(item.price, item.unit)}</EventPrice>
-        <EventTransit>{`时效要求:${Number(item.transitBegin).toFixed(0)}-${Number(item.transitEnd).toFixed(0)}天`}</EventTransit>
-      </RequestLine>
+        <EventTransit>{`预估时效：${Number(item.transitBegin).toFixed(0)}-${Number(item.transitEnd).toFixed(0)}天`}</EventTransit>
+      </>
     ),
   },
 ];
