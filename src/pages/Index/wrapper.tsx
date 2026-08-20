@@ -2,7 +2,11 @@ import styled from "styled-components";
 
 import AutoFit from "@/components/autoFit";
 import HorizontalSliceImage from "@/components/horizontalSliceImage";
-import { DESIGN_HEIGHT, DESIGN_WIDTH } from "@/constants/screen";
+import {
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  TALL_SCREEN_MIN_WIDTH,
+} from "@/constants/screen";
 import dashboardBackground from "@/assets/datav-bg.webp";
 import wuhanChannelImage from "@/assets/wh-channel.webp";
 import BottomNavigation, {
@@ -471,7 +475,8 @@ export default function IndexDashboard() {
     <AutoFit
       dw={DESIGN_WIDTH}
       dh={DESIGN_HEIGHT}
-      mode="expand-width"
+      mode="expand"
+      expandHeightMinWidth={TALL_SCREEN_MIN_WIDTH}
       aria-label="武汉多式联运服务中心数据大屏"
     >
       <Dashboard>
