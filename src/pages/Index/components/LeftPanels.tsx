@@ -29,7 +29,7 @@ import { formatNumber } from "@/utils/num";
 const LeftRail = styled.aside`
   position: absolute;
   left: 70px;
-  top: 284px;
+  top: 414px;
   width: 1460px;
   height: 1880px;
   z-index: 2;
@@ -43,16 +43,16 @@ const Panel = styled.section`
 
 const OverviewPanel = styled(Panel)`
   top: 0;
-  height: 410px;
+  height: 638px;
 `;
 
 const FreightPanel = styled(Panel)`
-  top: 448px;
+  top: 728px;
   height: 820px;
 `;
 
 const SummaryPanel = styled(Panel)`
-  top: 1300px;
+  top: 1840px;
   height: 540px;
 `;
 
@@ -60,7 +60,7 @@ const OverviewList = styled.div`
   position: absolute;
   left: 80px;
   right: 35px;
-  top: 112px;
+  top: 240px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
@@ -107,7 +107,7 @@ const MetricLabel = styled.div`
 
 const SummaryStats = styled.div`
   position: absolute;
-  top: 116px;
+  top: 168px;
   left: 76px;
   display: grid;
   grid-template-columns: 570px 570px;
@@ -173,7 +173,7 @@ const ChartHeader = styled.div`
   position: absolute;
   left: 72px;
   right: 90px;
-  top: 310px;
+  top: 420px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -218,8 +218,8 @@ const ChartBox = styled.div`
   position: absolute;
   left: 66px;
   right: 56px;
-  top: 370px;
-  height: 386px;
+  top: 480px;
+  height: 400px;
 `;
 
 const Tabs = styled.div`
@@ -266,7 +266,7 @@ const OverviewTabImg = styled.img`
 
 const YearGrid = styled.div`
   position: absolute;
-  left: 86px;
+  left: 126px;
   right: 78px;
   top: 230px;
   display: grid;

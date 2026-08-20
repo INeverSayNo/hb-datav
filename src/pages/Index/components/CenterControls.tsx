@@ -20,14 +20,15 @@ const Center = styled.main`
 `;
 
 const Subtitle = styled.h2`
-  margin: 6px 0 0;
+  margin: 202px 0;
   color: #f6fbff;
-  font-size: 62px;
   line-height: 82px;
   font-weight: 500;
-  letter-spacing: 6px;
   text-align: center;
   text-shadow: 0 0 18px rgba(99, 205, 255, 0.28);
+
+  letter-spacing: 14px;
+  font-size: 70px;
 `;
 
 const Controls = styled.div`
@@ -75,8 +76,9 @@ const Controls = styled.div`
 // `;
 
 const PlannerButton = styled.button`
+    width: 400px;
+    justify-content: center;
   position: relative;
-  width: 367px;
   height: 100px;
   padding: 0 20px;
   border: 0;
@@ -101,7 +103,7 @@ const PlannerButton = styled.button`
 
   img {
     display: block;
-    width: 367px;
+    width: 400px;
     height: 100px;
   }
 `;
@@ -233,7 +235,12 @@ export default function CenterControls() {
       </Controls>
       {errorMessage && <ErrorTip role="alert">{errorMessage}</ErrorTip>}
       {aiModalOpen && aiSolutionIframeUrl && (
-        <Modal open onClose={() => setAiModalOpen(false)} width="68vw" height="80vh">
+        <Modal
+          open
+          onClose={() => setAiModalOpen(false)}
+          width="68vw"
+          height="80vh"
+        >
           <iframe
             src={aiSolutionIframeUrl}
             title="AI物流规划师"

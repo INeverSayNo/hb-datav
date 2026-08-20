@@ -22,16 +22,17 @@ const Rail = styled.img`
   pointer-events: none;
 `;
 
+
 const Title = styled.h2<{ $align: "left" | "right" }>`
   position: relative;
   z-index: 1;
-  margin: -15px ${({ $align }) => ($align === "right" ? 100 : 88)}px 0;
+  margin: -15px ${({ $align }) => ($align === "right" ? 130 : 128)}px 0;
   color: #fff;
   font-family: "YouSheBiaoTiHei", "Microsoft YaHei", sans-serif;
-  font-size: 72px;
+  font-size: 80px;
   font-weight: 400;
   line-height: 82px;
-  letter-spacing: 2px;
+  letter-spacing: 6px;
   white-space: nowrap;
   text-shadow: 0 5px 7px rgba(0, 0, 0, 0.62), 0 0 14px rgba(83, 218, 255, 0.5);
 `;

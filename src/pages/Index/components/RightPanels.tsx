@@ -15,7 +15,7 @@ import nodeRailwayStationImg from "@/assets/platform-node-railway-station.webp";
 import nodeAirImg from "@/assets/platform-node-airway.webp";
 import nodeAreaShipImg from "@/assets/platform-node-area.webp";
 import nodePoehipImg from "@/assets/platform-node-poe.webp";
-import nodeWaterShipImg from "@/assets/platform-node-waterway-ship.webp"
+import nodeWaterShipImg from "@/assets/platform-node-waterway-ship.webp";
 
 import routeBlue from "@/assets/line-service-blue-bg.webp";
 import routeGreen from "@/assets/line-service-cyan-blue-bg.webp";
@@ -33,7 +33,7 @@ import { useNavigate } from "react-router";
 const RightRail = styled.aside`
   position: absolute;
   right: 70px;
-  top: 284px;
+  top: 414px;
   width: 1420px;
   height: 1880px;
   z-index: 2;
@@ -51,12 +51,12 @@ const ServicePanel = styled(Panel)`
 `;
 
 const NodePanel = styled(Panel)`
-  top: 540px;
+  top: 728px;
   height: 710px;
 `;
 
 const RoutePanel = styled(Panel)`
-  top: 1420px;
+  top: 1860px;
   height: 480px;
 `;
 
@@ -64,11 +64,11 @@ const ServiceGrid = styled.div`
   position: absolute;
   left: 22px;
   right: 22px;
-  top: 107px;
+  top: 157px;
+  gap: 30px 40px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-auto-rows: 205px;
-  gap: 0px 10px;
 `;
 
 const ServiceItem = styled.div`
@@ -118,14 +118,13 @@ const ServiceLabel = styled.div`
 
 const NodeGrid = styled.div`
   position: absolute;
-  left: 22px;
+  left: 54px;
   right: 18px;
-  top: 126px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-auto-rows: 205px;
-  column-gap: 18px;
-  row-gap: 20px;
+  top: 166px;
+  gap: 70px 18px;
 `;
 
 const NodeItemBackground = styled.img`
@@ -184,7 +183,7 @@ const RouteViewport = styled.div`
   position: absolute;
   left: 0;
   right: 0;
-  top: 130px;
+  top: 150px;
   height: 360px;
   overflow: hidden;
   -webkit-mask-image: linear-gradient(

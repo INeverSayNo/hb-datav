@@ -7,9 +7,9 @@ import rightButton from "@/assets/network-button-bg.webp";
 const Navigation = styled.nav`
   position: absolute;
   left: 50%;
-  bottom: -12px;
+  bottom: 173px;
   z-index: 6;
-  width: 1250px;
+  width: 1650px;
   height: 190px;
   transform: translateX(-50%);
   display: flex;
@@ -19,9 +19,9 @@ const Navigation = styled.nav`
 
 const NavButton = styled.button<{ $active?: boolean; $side?: "left" | "right" }>`
   position: relative;
-  width: ${({ $active }) => ($active ? 515 : 354)}px;
-  height: ${({ $active }) => ($active ? 184 : 166)}px;
-  margin: 0 ${({ $active }) => ($active ? -38 : 12)}px;
+  width: ${({ $active }) => ($active ? 560 : 445)}px;
+  height: ${({ $active }) => ($active ? 248 : 206)}px;
+  margin: 0 ${({ $active }) => ($active ? -38 : 32)}px;
   padding: 0;
   border: 0;
   background: transparent;

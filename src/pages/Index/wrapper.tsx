@@ -96,10 +96,10 @@ const Background = styled(HorizontalSliceImage)`
 
 const CenterGlow = styled.div`
   position: absolute;
-  left: 1750px;
-  right: 1750px;
-  top: 550px;
-  height: 1340px;
+  left: 1650px;
+  right: 1650px;
+  top: 950px;
+  height: 1440px;
   z-index: 1;
   pointer-events: none;
   background: radial-gradient(
@@ -110,13 +110,17 @@ const CenterGlow = styled.div`
   );
 `;
 
+
+
+
+
 const MapStage = styled.div`
   position: absolute;
-  left: 1700px;
-  right: 1560px;
-  top: 390px;
-  z-index: 2;
-  height: 1570px;
+    left: 1700px;
+    right: 1560px;
+    top: 790px;
+    z-index: 2;
+    height: 1670px;
 `;
 
 const WuhanChannelStage = styled.section`
@@ -466,7 +470,7 @@ export default function IndexDashboard() {
     return () => window.clearTimeout(timer);
   }, []);
 
-    const initialLoadingVisible =
+  const initialLoadingVisible =
     !loadingMinElapsed || screenLoading || !initialMapReady;
 
   const navigationView = incomingView ?? currentView;
@@ -527,11 +531,11 @@ export default function IndexDashboard() {
             <LoadingText>地图加载中…</LoadingText>
           </MapLoadingOverlay> */}
           <MapLoadingOverlay
-          $visible={initialMapReady && incomingView !== null}
-        >
-          <LoadingSpinner />
-          <LoadingText>地图加载中…</LoadingText>
-        </MapLoadingOverlay>
+            $visible={initialMapReady && incomingView !== null}
+          >
+            <LoadingSpinner />
+            <LoadingText>地图加载中…</LoadingText>
+          </MapLoadingOverlay>
           {currentView === "province" && <MapLegend />}
           {currentView === "recommendLine" && (
             <RouteButtons

@@ -87,14 +87,14 @@ const NODE_ITEMS = [
 
 const LegendPanel = styled.section`
   position: absolute;
-  left: 80px;
-  top: 1485px;
   z-index: 3;
   display: flex;
   align-items: stretch;
   gap: 28px;
   max-width: 3200px;
   pointer-events: none;
+  left: 70px;
+  top: 1660px;
 `;
 
 export default function MapLegend() {

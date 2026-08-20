@@ -66,9 +66,7 @@ const Header = styled.header`
 `;
 
 const Status = styled.div`
-  position: absolute;
   left: 230px;
-  top: 58px;
   display: flex;
   align-items: center;
   gap: 25px;
@@ -77,6 +75,8 @@ const Status = styled.div`
   font-weight: 700;
   letter-spacing: 2px;
   text-shadow: 0 0 18px rgba(30, 255, 178, 0.55);
+  position: fixed;
+  top: 248px;
 `;
 
 const StatusDot = styled.span`
@@ -136,16 +136,18 @@ const MainTitle = styled.h1<{ $type: DashboardHeaderProps["type"] }>`
     width: props.$type === "monitor" ? "1834px" : "1534px",
   })}
   color: rgba(255, 254, 254, 0);
-background: linear-gradient(0deg, rgba(169,222,254,0.93) 0%, #ffffff 38.7939453125%, rgba(255,251,251,0.93) 100%);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
-
+  background: linear-gradient(
+    0deg,
+    rgba(169, 222, 254, 0.93) 0%,
+    #ffffff 38.7939453125%,
+    rgba(255, 251, 251, 0.93) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 `;
 
-const Environment = styled.div`
-  position: absolute;
+const Environment = styled.div<{ $type: DashboardHeaderProps["type"] }>`
   right: 228px;
-  top: 60px;
   display: flex;
   align-items: center;
   gap: 76px;
@@ -154,6 +156,10 @@ const Environment = styled.div`
   font-weight: 600;
   letter-spacing: 2px;
   text-shadow: 0 0 12px rgba(91, 190, 246, 0.35);
+  ${(props) => ({
+    position: props.$type === "monitor" ? "absolute" : "fixed",
+    top: props.$type === "monitor" ? "60px" : "248px",
+  })}
 `;
 
 const Weather = styled.div`
@@ -267,7 +273,7 @@ export default function DashboardHeader({
         />
       )}
       <MainTitle $type={type}>{title}</MainTitle>
-      <Environment>
+      <Environment $type={type}>
         <time dateTime={now.toISOString()}>{formatTime(now)}</time>
         <Weather>
           <AliIcon name={weatherIcon}></AliIcon>
