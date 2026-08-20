@@ -760,7 +760,7 @@ export default function ThreeHubeiMap({
         // 被上层标记为淡出时冻结渲染循环，避免交叉淡入期间两个 WebGL 场景同时满帧。
         frameloop={paused ? "demand" : "always"}
         gl={{ alpha: true, antialias: true }}
-        camera={{ fov: 32.5, near: 0.1, far: 300, position: [0, 23.5, 18.5] }}
+        camera={{ fov: 30.5, near: 0.1, far: 300, position: [0, 23.5, 18.5] }}
       >
         <Suspense fallback={null}>
           {/* 地图数据位于 XY 平面，整体翻转到 XZ 地面上（+Y 朝上），便于 OrbitControls 交互 */}

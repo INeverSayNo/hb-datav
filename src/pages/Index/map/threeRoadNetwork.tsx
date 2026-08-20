@@ -86,13 +86,6 @@ function createProjector() {
 
 function buildRoadNetwork(geo: HubeiRoadGeo): BuiltRoadNetwork {
   const project = createProjector();
-
-  console.log(geo)
-  
-
-  // ---- 高速路网：构建期已投影，这里只把「点序列」展开成「线段端点对」 ----
-  // LineSegmentsGeometry 要的是每段两个端点，相邻段共享的端点必须重复一次，
-  // 所以二进制里存点、运行时展开，比直接存展开后的段省 60% 体积。
   const highwayZ = MAP_DEPTH + 0.08;
   const { lineLengths, xy } = geo.highway;
   const highwaySegmentCount = xy.length / 2 - lineLengths.length;
